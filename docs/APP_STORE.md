@@ -121,5 +121,4 @@ Velg bygget under «Bygg», svar på eksportspørsmålet (krypteringen er allere
 
 ## Etter godkjenning
 
-- Legg inn Apple Team ID i `public/.well-known/apple-app-site-association` (erstatt `YOUR_APPLE_TEAM_ID`), så åpner invitasjonslenker appen direkte.
-- Sett `APP_STORE_URL` i `src/lib/config.ts` til den ekte App Store-lenken.
+- Sett `APP_STORE_URL` i `src/lib/config.ts` til `https://apps.apple.com/app/id6819851126` (da vises nedlastingslenken for gjester).

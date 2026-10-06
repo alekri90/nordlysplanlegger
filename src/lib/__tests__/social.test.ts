@@ -44,17 +44,22 @@ describe('suggestGroupName', () => {
 });
 
 describe('shortNames', () => {
-  it('uses first names, adding the last initial only when first names collide', () => {
+  it('uses first names, adding the initial of the next name only when first names collide', () => {
     const names = shortNames([
-      { id: 'a', name: 'Alexander Kristensen' },
+      { id: 'a', name: 'Alexander Sandvand Kristensen' },
       { id: 'b', name: 'alexander berg' },
       { id: 'c', name: 'Marius Holm' },
       { id: 'd', name: 'Alexander' },
     ]);
-    assert.equal(names.get('a'), 'Alexander K.');
+    assert.equal(names.get('a'), 'Alexander S.');
     assert.equal(names.get('b'), 'alexander B.');
     assert.equal(names.get('c'), 'Marius');
     assert.equal(names.get('d'), 'Alexander');
+  });
+  it('uses the whole next name when the initials collide too', () => {
+    const names = shortNames([{ id: 'a', name: 'Ida Hansen' }, { id: 'b', name: 'Ida Holm' }]);
+    assert.equal(names.get('a'), 'Ida Hansen');
+    assert.equal(names.get('b'), 'Ida Holm');
   });
   it('counts the same person once', () => {
     const names = shortNames([{ id: 'a', name: 'Ida Hansen' }, { id: 'a', name: 'Ida Hansen' }]);
