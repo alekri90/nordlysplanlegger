@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="nb">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <!-- viewport-fit=cover lets the app respect the iPhone home indicator / notch (safe areas). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <title>%WEB_TITLE%</title>
+    <meta name="description" content="Få gjengen samlet. Finn en dato som passer alle – gjestene svarer uten app eller konto." />
+
+    <!-- Installable web app: opens full screen from the home screen, without the browser address bar. -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#FBF8F6" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Planlegger" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+
+    <!-- Link previews (SMS, Messenger, WhatsApp). -->
+    <meta property="og:site_name" content="Nordlys Planlegger" />
+    <meta property="og:title" content="Nordlys Planlegger" />
+    <meta property="og:description" content="Få gjengen samlet. Trykk på dagene du ikke kan – ferdig." />
+    <meta property="og:image" content="https://nordlysplanlegger.vercel.app/icon-512.png" />
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+        background-color: #fbf8f6;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+        /* No grey flash when tapping on iOS. */
+        -webkit-tap-highlight-color: transparent;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript>
+      Du må slå på JavaScript for å bruke Nordlys Planlegger.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>
