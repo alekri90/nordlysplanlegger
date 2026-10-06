@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["YOUR_APPLE_TEAM_ID.no.nordlys.planlegger"],
+        "components": [
+          { "/": "/i/*", "comment": "Invitation links open the app when installed" },
+          { "/": "/@*", "comment": "Profile links (planlegger.nordlyskapital.no/@username)" }
+        ]
+      }
+    ]
+  }
+}
