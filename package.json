@@ -57,7 +57,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "test": "node --test \"src/**/*.test.ts\"",
-    "test:db": "node supabase/tests/db.test.mjs"
+    "test:db": "node supabase/tests/db.test.mjs",
+    "check:queries": "node supabase/tests/live-queries.mjs"
   },
   "private": true
 }

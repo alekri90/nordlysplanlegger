@@ -189,6 +189,16 @@ await check('public profile: mutual friends, anonymous view of an "everyone" pro
   assert.equal(anon.friendship, 'anonymous');
 });
 
+await check('anonymous visitors cannot list profiles, but an exact /@username link works', async () => {
+  await as(null);
+  await db.exec('set role anon');
+  const rows = await q(`select id from profiles`);
+  await db.exec('reset role');
+  assert.equal(rows.length, 0, 'no anonymous enumeration');
+  assert.ok((await q(`select get_public_profile('alexk') p`))[0].p, 'link still opens');
+  assert.equal((await q(`select get_public_profile(null, $1) p`, [alex]))[0].p, null, 'no anonymous lookup by id');
+});
+
 console.log('\nGroups');
 let poker;
 await check('create group with friends + a guest by name; strangers ignored', async () => {

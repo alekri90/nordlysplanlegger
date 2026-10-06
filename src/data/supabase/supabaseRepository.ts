@@ -72,7 +72,7 @@ const EVENT_SELECT = `
   start_time, selected_date, selected_option_id, description, created_at, locked_at,
   organizer:profiles!events_organizer_id_fkey(id, display_name, avatar_url, username),
   location:event_locations(name, address, details_pending),
-  options:event_date_options(id, date),
+  options:event_date_options!event_date_options_event_id_fkey(id, date),
   members:event_members(id, user_id, guest_id, display_name, role, status, responded_at,
     profile:profiles(id, display_name, avatar_url, username),
     availability:event_availability(date_option_id, status)),
