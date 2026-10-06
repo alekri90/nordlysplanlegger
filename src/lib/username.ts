@@ -54,7 +54,7 @@ export function usernameFromName(name: string): string {
   return sanitizeUsernameInput(first).toLowerCase();
 }
 
-/** Profile link: https://planlegger.nordlyskapital.no/@alexk */
+/** Profile link: https://planlegger.nkx.no/@alexk */
 export function profilePath(username: string) {
   return `/@${username}`;
 }

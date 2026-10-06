@@ -4,7 +4,7 @@ import Constants from 'expo-constants';
 export const env = {
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
-  webUrl: (process.env.EXPO_PUBLIC_WEB_URL ?? (Constants.expoConfig?.extra?.webUrl as string | undefined) ?? 'https://planlegger.nordlyskapital.no').replace(/\/$/, ''),
+  webUrl: (process.env.EXPO_PUBLIC_WEB_URL ?? (Constants.expoConfig?.extra?.webUrl as string | undefined) ?? 'https://planlegger.nkx.no').replace(/\/$/, ''),
   easProjectId:
     process.env.EXPO_PUBLIC_EAS_PROJECT_ID ??
     (Constants.expoConfig?.extra?.eas?.projectId as string | undefined) ??

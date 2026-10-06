@@ -1,7 +1,7 @@
 import type { ExpoConfig } from 'expo/config';
 
 // Public, non-secret configuration only. Secrets never go in the client.
-const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://planlegger.nordlyskapital.no';
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://planlegger.nkx.no';
 const webHost = new URL(WEB_URL).host;
 const EAS_PROJECT_ID = process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
 
