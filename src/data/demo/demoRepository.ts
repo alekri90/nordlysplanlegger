@@ -33,7 +33,8 @@ const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
 const now = () => new Date().toISOString();
 
 type DirectoryEntry = Person & { username: string; discoverability: Discoverability };
-type Account = { email: string; password: string; profile: Profile };
+/** password is null for accounts created with an e-mail code. */
+type Account = { email: string; password: string | null; profile: Profile };
 
 let state: DemoState = createSeed();
 let prefs: NotificationPreferences = { invites: true, responses: true, dateLocked: true, reminders: true, groupNudges: true };
@@ -324,7 +325,6 @@ export const demoRepository: Repository = {
     await wait(700);
     const email = input.email.trim().toLowerCase();
     if (accounts.some((a) => a.email === email) || email === ME.email) throw new Error('Det finnes allerede en konto med denne e-posten');
-    if (input.password.length < 8) throw new Error('Passordet må ha minst 8 tegn');
     const check = checkUsernameSync(input.username, input.displayName);
     if (!check.available) throw new Error(`@${check.normalized} er opptatt`);
     const profile: Profile = {
@@ -338,9 +338,8 @@ export const demoRepository: Repository = {
       tier: 'free',
       email,
     };
-    accounts.push({ email, password: input.password, profile });
-    setSignedIn(true, profile);
-    return 'signed_in';
+    // Signed in by verifyOtp with the e-mailed code.
+    accounts.push({ email, password: null, profile });
   },
 
   async signInWithPassword(email, password) {

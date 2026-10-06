@@ -15,6 +15,9 @@ import { usernameFromName } from '@/lib/username';
 import { useMe, useSession } from '@/state/session';
 import { spacing, useColors } from '@/theme';
 
+const OTP_MIN = 6;
+const OTP_MAX = 8;
+
 const BENEFITS: { icon: IconName; text: string }[] = [
   { icon: 'edit-3', text: 'Du slipper å skrive inn navnet neste gang' },
   { icon: 'user-plus', text: 'Venner kan invitere deg direkte' },
@@ -33,28 +36,25 @@ export default function SignUp() {
   const [username, setUsername] = useState(prefillName ? usernameFromName(prefillName) : '');
   const [usernameValid, setUsernameValid] = useState(false);
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [code, setCode] = useState('');
+  const [codeError, setCodeError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [step, setStep] = useState<'form' | 'confirm_email' | 'done'>('form');
+  const [step, setStep] = useState<'form' | 'code' | 'done'>('form');
   const onValid = useCallback((v: boolean) => setUsernameValid(v), []);
 
   const emailValid = /^\S+@\S+\.\S+$/.test(email.trim());
-  const canSubmit = displayName.trim().length > 0 && usernameValid && emailValid && password.length >= 8;
+  const canSubmit = displayName.trim().length > 0 && usernameValid && emailValid;
 
+  // No password: the e-mailed code both verifies the address and signs in (same as logging in).
   const submit = async () => {
     setBusy(true);
     try {
-      // Remember the personal link so the guest seat is linked even if e-mail confirmation happens later.
+      // Remember the personal link so the guest seat is linked to the new profile.
       if (token) await setPendingClaimToken(token);
-      const result = await repo.signUp({ displayName: displayName.trim(), username: username.trim(), email: email.trim(), password });
-      if (result === 'confirm_email') {
-        setStep('confirm_email');
-        return;
-      }
-      await repo.claimGuest({ inviteToken: token });
-      queryClient.invalidateQueries();
-      setStep('done');
+      await repo.signUp({ displayName: displayName.trim(), username: username.trim(), email: email.trim() });
+      setCode('');
+      setCodeError(null);
+      setStep('code');
     } catch (e) {
       toast({ message: e instanceof Error ? e.message : 'Kunne ikke opprette profilen', tone: 'error' });
     } finally {
@@ -62,21 +62,76 @@ export default function SignUp() {
     }
   };
 
+  const resend = async () => {
+    try {
+      await repo.sendOtp({ email: email.trim() });
+      toast({ message: 'Ny kode sendt', tone: 'success' });
+    } catch (e) {
+      toast({ message: e instanceof Error ? e.message : 'Kunne ikke sende koden', tone: 'error' });
+    }
+  };
+
+  const verify = async (value = code) => {
+    if (value.length < OTP_MIN || busy) return;
+    setBusy(true);
+    setCodeError(null);
+    try {
+      await repo.verifyOtp({ email: email.trim() }, value);
+      await repo.claimGuest({ inviteToken: token });
+      queryClient.invalidateQueries();
+      setStep('done');
+    } catch {
+      setCodeError('Koden stemmer ikke eller er utløpt. Prøv igjen eller send en ny.');
+    } finally {
+      setBusy(false);
+    }
+  };
   if (step === 'done') return <SignedUpView token={token} />;
 
-  if (step === 'confirm_email') {
+  if (step === 'code') {
     return (
       <Screen>
-        <Header back="close" />
-        <ScreenScroll contentContainerStyle={{ paddingTop: spacing.huge, alignItems: 'center' }}>
-          <Icon name="mail" size={44} color="primary" />
-          <Text variant="title1" align="center" style={{ marginTop: spacing.lg }}>
-            Sjekk e-posten din
-          </Text>
-          <Text variant="body" color="textSecondary" align="center" style={{ marginTop: spacing.sm }}>
-            Vi har sendt en lenke til {email.trim()}. Trykk på den for å bekrefte – svarene dine blir koblet til profilen.
-          </Text>
-        </ScreenScroll>
+        <KeyboardAware>
+          <Header back="back" onBack={() => setStep('form')} />
+          <ScreenScroll>
+            <Animated.View entering={FadeIn.duration(220)}>
+              <Text variant="title1" accessibilityRole="header">
+                Skriv inn koden
+              </Text>
+              <Text variant="body" color="textSecondary" style={{ marginTop: spacing.sm, marginBottom: spacing.xl }}>
+                Vi sendte en kode til {email.trim()}. Sjekk søppelpost hvis du ikke finner den.
+              </Text>
+              <Input
+                size="lg"
+                value={code}
+                onChangeText={(t) => {
+                  const digits = t.replace(/\D/g, '').slice(0, OTP_MAX);
+                  // Pasted or auto-filled → submit right away; typed → submit at full length.
+                  const pasted = digits.length - code.length > 1;
+                  setCode(digits);
+                  if (digits.length === OTP_MAX || (pasted && digits.length >= OTP_MIN)) verify(digits);
+                }}
+                placeholder="Kode"
+                keyboardType="number-pad"
+                autoComplete="one-time-code"
+                textContentType="oneTimeCode"
+                maxLength={OTP_MAX}
+                autoFocus
+                style={{ letterSpacing: 8, fontSize: 24 }}
+                error={codeError}
+                accessibilityLabel="Engangskode"
+              />
+              <PressableScale onPress={resend} hitSlop={10} style={{ alignSelf: 'center', marginTop: spacing.lg }} accessibilityLabel="Send ny kode">
+                <Text variant="footnote" color="textSecondary">
+                  Fikk du ingen kode? <Text variant="footnote" color="primary">Send på nytt</Text>
+                </Text>
+              </PressableScale>
+            </Animated.View>
+          </ScreenScroll>
+          <BottomBar>
+            <Button title="Bekreft" variant="ink" disabled={code.length < OTP_MIN} loading={busy} onPress={() => verify()} />
+          </BottomBar>
+        </KeyboardAware>
       </Screen>
     );
   }
@@ -109,30 +164,8 @@ export default function SignUp() {
             <Field label="Brukernavn" visibility="public" hint="Brukes for å finne og legge deg til.">
               <UsernameField value={username} onChange={setUsername} displayName={displayName} onValidChange={onValid} />
             </Field>
-            <Field label="E-post" visibility="private" hint="Kun brukt til innlogging og konto. Vises aldri for andre.">
+            <Field label="E-post" visibility="private" hint="Vi sender deg en kode her – ingen passord å huske. Vises aldri for andre.">
               <Input value={email} onChangeText={setEmail} placeholder="navn@epost.no" keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" accessibilityLabel="E-post" />
-            </Field>
-            <Field label="Passord" visibility="private" hint="Minst 8 tegn.">
-              <View>
-                <Input
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="••••••••"
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoComplete="new-password"
-                  textContentType="newPassword"
-                  accessibilityLabel="Passord"
-                />
-                <PressableScale
-                  onPress={() => setShowPassword((v) => !v)}
-                  accessibilityLabel={showPassword ? 'Skjul passord' : 'Vis passord'}
-                  hitSlop={10}
-                  style={{ position: 'absolute', right: spacing.lg, top: 16 }}
-                >
-                  <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} color="textTertiary" />
-                </PressableScale>
-              </View>
             </Field>
           </View>
 
@@ -143,7 +176,7 @@ export default function SignUp() {
           </PressableScale>
         </ScreenScroll>
         <BottomBar>
-          <Button title="Opprett profil" variant="ink" disabled={!canSubmit} loading={busy} onPress={submit} />
+          <Button title="Send kode" variant="ink" disabled={!canSubmit} loading={busy} onPress={submit} />
         </BottomBar>
       </KeyboardAware>
     </Screen>

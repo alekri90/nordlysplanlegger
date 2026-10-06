@@ -86,7 +86,6 @@ export interface SignUpInput {
   displayName: string;
   username: string;
   email: string;
-  password: string;
 }
 
 /** What moved over when a guest's history was linked to their new account. */

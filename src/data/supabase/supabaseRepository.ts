@@ -339,17 +339,17 @@ export const supabaseRepository: Repository = {
   },
 
   async signUp(input) {
-    const { data, error } = await getSupabase().auth.signUp({
+    const { error } = await getSupabase().auth.signInWithOtp({
       email: input.email.trim().toLowerCase(),
-      password: input.password,
       options: {
+        shouldCreateUser: true,
         // handle_new_user() reads these; the database validates and reserves the username.
+        // (An existing account just gets a sign-in code — metadata is ignored then.)
         data: { display_name: input.displayName.trim(), username: input.username.trim() },
         emailRedirectTo: Platform.OS === 'web' ? window.location.origin : Linking.createURL('auth-callback'),
       },
     });
     fail(error);
-    return data.session ? 'signed_in' : 'confirm_email';
   },
 
   async signInWithPassword(email, password) {

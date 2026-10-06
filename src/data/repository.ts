@@ -49,8 +49,8 @@ export interface Repository {
   /** E-mail is the only sign-in method: a one-time code (also creates the account), or a password. */
   sendOtp(target: { email: string }): Promise<void>;
   verifyOtp(target: { email: string }, code: string): Promise<void>;
-  /** One-screen sign-up. Returns `confirm_email` when the project requires e-mail confirmation first. */
-  signUp(input: SignUpInput): Promise<'signed_in' | 'confirm_email'>;
+  /** One-screen sign-up without a password: e-mails a code; finish with `verifyOtp` (same e-mail). */
+  signUp(input: SignUpInput): Promise<void>;
   signInWithPassword(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
   deleteAccount(): Promise<void>;
