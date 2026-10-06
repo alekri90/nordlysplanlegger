@@ -71,6 +71,13 @@ await check('OAuth-style signup gets generated username from name', async () => 
   assert.match(p.username_normalized, /^mariusolsen/);
   assert.equal(p.onboarded_at, null);
 });
+await check('code login without a name never exposes the e-mail address', async () => {
+  const id = await newUser('alekri90@example.com', {});
+  const [p] = await q(`select display_name, username_normalized, onboarded_at from profiles where id = $1`, [id]);
+  assert.equal(p.display_name, '');
+  assert.ok(!p.username_normalized.includes('alekri'));
+  assert.equal(p.onboarded_at, null); // → profile setup asks for a real name
+});
 await check('case-insensitive uniqueness enforced in the database', async () => {
   await as(thomas);
   await assert.rejects(q(`update profiles set username = 'ALEXK' where id = $1`, [thomas]), /duplicate key|unique/);
