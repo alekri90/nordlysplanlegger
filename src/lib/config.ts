@@ -22,8 +22,12 @@ export const FEATURES = {
   sponsored: false,
 } as const;
 
-export const APP_STORE_URL = 'https://apps.apple.com/app/id0000000000';
-export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=no.nordlys.planlegger';
+/**
+ * Store links, shown only once the app is published there (a link to a missing app is a dead end).
+ * App Store: set to 'https://apps.apple.com/app/id6819851126' when the app is live.
+ */
+export const APP_STORE_URL: string | null = null;
+export const PLAY_STORE_URL: string | null = null;
 
 export function inviteUrl(token: string) {
   return `${env.webUrl}/i/${token}`;

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { suggestGroupName } from '../groupName.ts';
+import { shortNames } from '../names.ts';
 import { normalizeUsername, sanitizeUsernameInput, usernameFormatProblem, usernameFromName } from '../username.ts';
 
 describe('usernames', () => {
@@ -39,5 +40,24 @@ describe('suggestGroupName', () => {
     assert.equal(suggestGroupName('Badstu med jentene'), 'Jentene');
     assert.equal(suggestGroupName('Pokerkveld'), 'Poker');
     assert.equal(suggestGroupName('Middag'), 'Middag');
+  });
+});
+
+describe('shortNames', () => {
+  it('uses first names, adding the last initial only when first names collide', () => {
+    const names = shortNames([
+      { id: 'a', name: 'Alexander Kristensen' },
+      { id: 'b', name: 'alexander berg' },
+      { id: 'c', name: 'Marius Holm' },
+      { id: 'd', name: 'Alexander' },
+    ]);
+    assert.equal(names.get('a'), 'Alexander K.');
+    assert.equal(names.get('b'), 'alexander B.');
+    assert.equal(names.get('c'), 'Marius');
+    assert.equal(names.get('d'), 'Alexander');
+  });
+  it('counts the same person once', () => {
+    const names = shortNames([{ id: 'a', name: 'Ida Hansen' }, { id: 'a', name: 'Ida Hansen' }]);
+    assert.equal(names.get('a'), 'Ida');
   });
 });

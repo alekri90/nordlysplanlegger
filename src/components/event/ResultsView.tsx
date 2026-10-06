@@ -10,6 +10,7 @@ import type { PlannerEvent, TimeHint } from '@/data/types';
 import { formatDayMonth, formatLong } from '@/lib/dates';
 import { firstName } from '@/lib/eventText';
 import { haptics } from '@/lib/haptics';
+import { shortNames } from '@/lib/names';
 import { hasResponded, rankDateOptions, responseProgress } from '@/lib/ranking';
 import { spacing } from '@/theme';
 import { DateResultRow } from './DateResultRow';
@@ -41,7 +42,8 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
   const best = scores[0];
   const selected = scores.find((s) => s.option.id === selectedId) ?? best;
   const everyoneCan = best?.everyoneCan ?? false;
-  const nameOf = (memberId: string) => firstName(event.members.find((m) => m.id === memberId)?.person.name ?? '');
+  const short = useMemo(() => shortNames(event.members.map((m) => ({ id: m.id, name: m.person.name }))), [event.members]);
+  const nameOf = (memberId: string) => short.get(memberId) ?? '';
 
   const pending = event.members.filter((m) => !hasResponded(m));
   const respondents = event.members.filter(hasResponded);
@@ -112,7 +114,7 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
             <View key={m.id} style={{ alignItems: 'center', width: 56, gap: 4 }}>
               <Avatar name={m.person.name} uri={m.person.avatarUrl} size={48} status="attending" />
               <Text variant="caption" numberOfLines={1}>
-                {firstName(m.person.name)}
+                {nameOf(m.id)}
               </Text>
             </View>
           ))}
@@ -120,7 +122,7 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
             <View key={m.id} style={{ alignItems: 'center', width: 56, gap: 4, opacity: 0.45 }} accessibilityLabel={`${m.person.name} har ikke svart`}>
               <Avatar name={m.person.name} uri={m.person.avatarUrl} size={48} />
               <Text variant="caption" numberOfLines={1}>
-                {firstName(m.person.name)}
+                {nameOf(m.id)}
               </Text>
             </View>
           ))}
@@ -130,7 +132,7 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
           <Animated.View entering={FadeInDown.duration(300)}>
             <Card muted style={{ marginTop: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
               <Text variant="footnote" color="textSecondary" style={{ flex: 1 }}>
-                Venter på {pending.slice(0, 3).map((m) => firstName(m.person.name)).join(', ')}
+                Venter på {pending.slice(0, 3).map((m) => nameOf(m.id)).join(', ')}
                 {pending.length > 3 ? ` og ${pending.length - 3} til` : ''}
               </Text>
               <Button title="Minn på" size="sm" variant="secondary" icon="send" onPress={() => setShareOpen(true)} />

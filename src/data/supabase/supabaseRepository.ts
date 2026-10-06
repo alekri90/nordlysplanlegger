@@ -195,6 +195,13 @@ function toGroup(r: GroupRow, meId: string | null): Group {
 type PersonRow = { id: string; display_name: string; username: string; avatar_url: string | null };
 const fromPersonRow = (p: PersonRow): Person => ({ id: p.id, name: p.display_name, username: p.username, avatarUrl: p.avatar_url });
 
+/**
+ * supabase.channel() hands back the existing channel for a topic, and adding listeners to an
+ * already subscribed channel throws. Two screens listening at once (the profile tab and the friends
+ * list) would crash the second one, so every subscription gets its own topic.
+ */
+const uniqueTopic = (topic: string) => `${topic}:${Math.random().toString(36).slice(2, 10)}`;
+
 function fail(error: { message: string } | null): asserts error is null {
   if (error) throw new Error(friendlyError(error.message));
 }
@@ -495,13 +502,22 @@ export const supabaseRepository: Repository = {
   subscribeToEvent(eventId, onChange) {
     const sb = getSupabase();
     const channel = sb
-      .channel(`event:${eventId}`)
+      .channel(uniqueTopic(`event:${eventId}`))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'event_members', filter: `event_id=eq.${eventId}` }, onChange)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'event_availability' }, onChange)
       .subscribe();
     return () => {
       sb.removeChannel(channel);
     };
+  },
+
+  async addEventPhotos(eventId, uris) {
+    const userId = await requireUserId();
+    for (const uri of uris) {
+      const url = await uploadImage('covers', userId, uri);
+      const { error } = await getSupabase().from('event_images').insert({ event_id: eventId, url, kind: 'memory', uploaded_by: userId });
+      fail(error);
+    }
   },
 
   async getInvite(token) {
@@ -748,10 +764,17 @@ export const supabaseRepository: Repository = {
   subscribeToFriends(onChange) {
     const sb = getSupabase();
     // RLS limits realtime rows to friendships the user is part of.
-    const channel = sb.channel('friendships').on('postgres_changes', { event: '*', schema: 'public', table: 'friendships' }, onChange).subscribe();
+    const channel = sb.channel(uniqueTopic('friendships')).on('postgres_changes', { event: '*', schema: 'public', table: 'friendships' }, onChange).subscribe();
     return () => {
       sb.removeChannel(channel);
     };
+  },
+
+  async getFriendshipStates(userIds) {
+    if (!userIds.length) return [];
+    const { data, error } = await getSupabase().rpc('friendship_states', { p_user_ids: userIds });
+    fail(error);
+    return (data as { id: string; state: FriendshipState; request_id: string | null }[]).map((r) => ({ userId: r.id, state: r.state, requestId: r.request_id }));
   },
 
   async suggestInvitees(category, title) {

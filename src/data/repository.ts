@@ -7,6 +7,7 @@ import type {
   Discoverability,
   EventPatch,
   FriendRequest,
+  FriendshipInfo,
   FriendshipState,
   Group,
   GroupInviteView,
@@ -75,6 +76,8 @@ export interface Repository {
   startPoll(eventId: string, optionDates: string[]): Promise<void>;
   setRsvp(eventId: string, attending: boolean): Promise<void>;
   cancelEvent(eventId: string): Promise<void>;
+  /** Share photos from the event with everyone in it (local image URIs). */
+  addEventPhotos(eventId: string, uris: string[]): Promise<void>;
   /** Realtime updates for one event (new answers etc.). */
   subscribeToEvent(eventId: string, onChange: () => void): () => void;
   /** Who you usually invite — only your own history in the app. */
@@ -96,6 +99,8 @@ export interface Repository {
   sendFriendRequest(userId: string): Promise<FriendshipState>;
   respondFriendRequest(requestId: string, accept: boolean): Promise<void>;
   removeFriend(userId: string): Promise<void>;
+  /** For people you share a group or event with (others are left out). */
+  getFriendshipStates(userIds: string[]): Promise<FriendshipInfo[]>;
   /** Realtime: incoming requests and accepted friendships. */
   subscribeToFriends(onChange: () => void): () => void;
 

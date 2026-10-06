@@ -5,6 +5,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { EventHero } from '@/components/event/EventHero';
 import { groupNextLine } from '@/components/group/GroupCard';
+import { GroupFriendsCard } from '@/components/group/GroupFriendsCard';
 import { GroupInviteCard } from '@/components/group/GroupInviteCard';
 import { PersonRow } from '@/components/people/PersonRow';
 import { confirmDestructive, PersonSheet } from '@/components/people/PersonSheet';
@@ -161,6 +162,8 @@ export default function GroupScreen() {
               </View>
             ))}
           </Card>
+
+          <GroupFriendsCard group={g} style={{ marginTop: spacing.md }} />
 
           {g.pastEvents.length ? (
             <>

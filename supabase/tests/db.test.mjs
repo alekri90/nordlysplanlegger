@@ -374,5 +374,32 @@ console.log('\nGroup invite links');
   });
 }
 
+console.log('\nNames & friendship states');
+await check('changing your name updates it on events and groups', async () => {
+  await as(thomas);
+  await q(`update profiles set display_name = 'Thomas Bergersen' where id = $1`, [thomas]);
+  const ev = await q(`select distinct display_name from event_members where user_id = $1`, [thomas]);
+  const gr = await q(`select distinct display_name from group_members where user_id = $1`, [thomas]);
+  assert.ok(ev.length + gr.length > 0, 'thomas should be on something');
+  for (const r of [...ev, ...gr]) assert.equal(r.display_name, 'Thomas Bergersen');
+  await q(`update profiles set display_name = 'Thomas Berg' where id = $1`, [thomas]);
+});
+await check('friendship_states: known people only, with incoming request id', async () => {
+  const kari = await newUser('kari@example.com', { display_name: 'Kari Nordmann', username: 'kari' });
+  await as(kari);
+  await q(`select send_friend_request($1)`, [thomas]);
+  await as(thomas);
+  const stranger = await newUser('stranger@example.com', { display_name: 'Ukjent Person', username: 'ukjent' });
+  await as(thomas);
+  const rows = await q(`select * from friendship_states($1::uuid[])`, [[thomas, kari, stranger]]);
+  const by = Object.fromEntries(rows.map((r) => [r.id, r]));
+  assert.equal(by[thomas].state, 'self');
+  assert.equal(by[kari].state, 'incoming');
+  assert.ok(by[kari].request_id);
+  assert.equal(by[stranger], undefined, 'strangers are not reported');
+  await as(null);
+  assert.equal((await q(`select * from friendship_states($1::uuid[])`, [[thomas]])).length, 0);
+});
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

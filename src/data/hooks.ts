@@ -132,6 +132,7 @@ function invalidateSocial(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: ['profile'] });
   qc.invalidateQueries({ queryKey: ['search'] });
   qc.invalidateQueries({ queryKey: ['pymk'] });
+  qc.invalidateQueries({ queryKey: ['friendshipStates'] });
 }
 
 export function useSendFriendRequest() {
@@ -150,6 +151,13 @@ export function useRespondFriendRequest() {
 export function useRemoveFriend() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: (userId: string) => repo.removeFriend(userId), onSuccess: () => invalidateSocial(qc) });
+}
+
+/** Friendship with each of these people (e.g. the members of a group). */
+export function useFriendshipStates(userIds: string[]) {
+  const signedIn = useIsSignedIn();
+  const ids = [...new Set(userIds)].sort();
+  return useQuery({ queryKey: ['friendshipStates', ids.join(',')], queryFn: () => repo.getFriendshipStates(ids), enabled: signedIn && ids.length > 0 });
 }
 
 export function useInviteSuggestions(category: string | undefined, title: string | undefined) {
@@ -191,6 +199,11 @@ export function useLockDate(eventId: string) {
 export function useStartPoll(eventId: string) {
   const qc = useQueryClient();
   return useMutation({ mutationFn: (dates: string[]) => repo.startPoll(eventId, dates), onSuccess: () => invalidateAll(qc) });
+}
+
+export function useAddEventPhotos(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (uris: string[]) => repo.addEventPhotos(eventId, uris), onSuccess: () => invalidateAll(qc) });
 }
 
 export function useSetRsvp(eventId: string) {

@@ -20,6 +20,13 @@ export type Discoverability = 'everyone' | 'friends_of_friends' | 'nobody';
 /** Friendship as seen from the current user. */
 export type FriendshipState = 'self' | 'none' | 'outgoing' | 'incoming' | 'friends' | 'anonymous';
 
+/** Your friendship with one person; requestId is set for an incoming request. */
+export interface FriendshipInfo {
+  userId: string;
+  state: FriendshipState;
+  requestId?: string | null;
+}
+
 export interface Person {
   /** User id for people with an account, guest id for guests. */
   id: string;

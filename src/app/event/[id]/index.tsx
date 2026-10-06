@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Platform, ScrollView, View } from 'react-native';
@@ -10,11 +11,11 @@ import { GuestList } from '@/components/event/GuestList';
 import { ResultsView } from '@/components/event/ResultsView';
 import { ShareSheet } from '@/components/event/ShareSheet';
 import { BottomBar, Button, Card, EmptyState, ErrorState, Icon, IconButton, ListRow, PageSkeleton, Screen, Segmented, Sheet, Text, useToast, type IconName } from '@/components/ui';
-import { useCancelEvent, useEvent, useSetRsvp } from '@/data/hooks';
+import { useAddEventPhotos, useCancelEvent, useEvent, useSetRsvp } from '@/data/hooks';
 import type { Person, PlannerEvent } from '@/data/types';
 import { PersonSheet } from '@/components/people/PersonSheet';
 import { CATEGORIES, thumb } from '@/lib/categories';
-import { formatLong, formatTime } from '@/lib/dates';
+import { formatLong, formatTime, today } from '@/lib/dates';
 import { addEventToCalendar } from '@/lib/eventActions';
 import { firstName, timeHintLabel } from '@/lib/eventText';
 import { useCreateDraft } from '@/state/createDraft';
@@ -63,6 +64,7 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
   const [person, setPerson] = useState<Person | null>(null);
   const rsvp = useSetRsvp(e.id);
   const cancel = useCancelEvent(e.id);
+  const addPhotosMutation = useAddEventPhotos(e.id);
   const prefillFromEvent = useCreateDraft((s) => s.prefillFromEvent);
 
   const mine = e.members.find((m) => m.userId === meId);
@@ -100,6 +102,20 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
   };
 
   const isPast = e.status === 'completed';
+  // Photos can be shared from the day it happens.
+  const canAddPhotos = isPast || (!!e.selectedDate && e.selectedDate <= today() && e.status !== 'cancelled');
+
+  const addPhotos = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: 10, quality: 0.7 });
+    if (result.canceled || !result.assets.length) return;
+    try {
+      await addPhotosMutation.mutateAsync(result.assets.map((a) => a.uri));
+      toast({ message: result.assets.length === 1 ? 'Bildet er delt' : `${result.assets.length} bilder er delt`, tone: 'success', icon: 'image' });
+    } catch (err) {
+      toast({ message: err instanceof Error ? err.message : 'Kunne ikke dele bildene', tone: 'error' });
+    }
+  };
+
   const showRsvp = !isOrganizer && !!mine && (e.status === 'confirmed' || e.status === 'date_selected');
 
   return (
@@ -184,6 +200,9 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
                 {isOrganizer ? <Button title="Legg til detaljer" variant="secondary" icon="edit-2" onPress={() => router.push(`/event/${e.id}/edit`)} /> : null}
               </View>
             ) : null}
+            {tab === 'photos' && canAddPhotos ? (
+              <Button title="Del bilder" icon="image" variant="secondary" size="md" loading={addPhotosMutation.isPending} onPress={addPhotos} style={{ marginBottom: spacing.lg }} />
+            ) : null}
             {tab === 'photos' ? (
               e.photos.length ? (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
@@ -192,7 +211,7 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
                   ))}
                 </View>
               ) : (
-                <EmptyState icon="image" title="Bildene kommer her" body={isPast ? 'Ingen har delt bilder fra denne gangen.' : 'Etter arrangementet kan alle dele bilder fra kvelden.'} />
+                <EmptyState icon="image" title="Bildene kommer her" body={canAddPhotos ? 'Ingen har delt bilder ennå. Del de første!' : 'Fra dagen det skjer kan alle dele bilder her.'} />
               )
             ) : null}
           </View>

@@ -541,6 +541,13 @@ export const demoRepository: Repository = {
     refreshGroupRefs();
   },
 
+  async addEventPhotos(eventId, uris) {
+    await wait(500);
+    const e = findEvent(eventId);
+    if (!isMemberOf(e)) throw new Error('Du er ikke med på arrangementet');
+    e.photos.push(...uris);
+  },
+
   subscribeToEvent(eventId, onChange) {
     // Simulate a live answer arriving while the organizer looks at the results.
     if (eventId !== 'ev-poker' || liveDemoPlayed) return () => {};
@@ -845,6 +852,18 @@ export const demoRepository: Repository = {
   subscribeToFriends(onChange) {
     friendListeners.add(onChange);
     return () => friendListeners.delete(onChange);
+  },
+
+  async getFriendshipStates(userIds) {
+    await wait(150);
+    if (!state.signedIn) return [];
+    const me = meId();
+    return [...new Set(userIds)]
+      .filter((id) => id === me || sharesContext(me, id) || friendshipState(id) !== 'none')
+      .map((id) => {
+        const f = findFriendship(me, id);
+        return { userId: id, state: friendshipState(id), requestId: f?.status === 'pending' && f.addresseeId === me ? f.id : null };
+      });
   },
 
   // --- Groups ------------------------------------------------------------------

@@ -88,20 +88,24 @@ export default function Done() {
                 Svaret ditt er lagret uansett.
               </Text>
             </Card>
-            {isWeb ? (
+            {isWeb && (APP_STORE_URL || PLAY_STORE_URL) ? (
               <View style={{ flexDirection: 'row', justifyContent: 'center', gap: spacing.lg, marginTop: spacing.lg }}>
-                <PressableScale onPress={() => Linking.openURL(APP_STORE_URL)} accessibilityLabel="Last ned for iPhone" style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: spacing.sm }}>
+                {APP_STORE_URL ? (
+                  <PressableScale onPress={() => Linking.openURL(APP_STORE_URL!)} accessibilityLabel="Last ned for iPhone" style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: spacing.sm }}>
                   <AppleIcon size={14} />
                   <Text variant="footnote" color="textSecondary">
                     App Store
                   </Text>
                 </PressableScale>
-                <PressableScale onPress={() => Linking.openURL(PLAY_STORE_URL)} accessibilityLabel="Last ned for Android" style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: spacing.sm }}>
+                ) : null}
+                {PLAY_STORE_URL ? (
+                  <PressableScale onPress={() => Linking.openURL(PLAY_STORE_URL!)} accessibilityLabel="Last ned for Android" style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: spacing.sm }}>
                   <Icon name="smartphone" size={14} color="textSecondary" />
                   <Text variant="footnote" color="textSecondary">
                     Google Play
                   </Text>
                 </PressableScale>
+                ) : null}
               </View>
             ) : null}
           </Animated.View>
