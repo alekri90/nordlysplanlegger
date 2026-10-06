@@ -44,3 +44,6 @@ yarn-error.*
 .env
 
 .vercel
+
+# Supabase CLI link state
+supabase/.temp/
