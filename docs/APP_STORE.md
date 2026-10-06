@@ -14,7 +14,7 @@ npx eas-cli@latest login
 npx eas-cli@latest init
 ```
 
-`init` lager et prosjekt-ID som legges i `.env.local` som `EAS_PROJECT_ID` (og i EAS-miljøvariablene, se under).
+Prosjektet er allerede koblet: ID-en `623cc93d-c24b-46f6-aac0-0fa470305919` står som standardverdi i `app.config.ts` (den er offentlig, ikke en hemmelighet). `init` klager på at den ikke kan skrive til `app.config.ts` – det er forventet. Vil du peke på et annet EAS-prosjekt, sett `EXPO_PUBLIC_EAS_PROJECT_ID` i `.env.local`.
 
 Miljøvariabler bygget trenger (EAS → Project → Environment variables, miljø *production*, synlighet *Plain text* – dette er offentlige nøkler):
 
