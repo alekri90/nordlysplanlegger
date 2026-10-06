@@ -254,6 +254,21 @@ export function useLeaveGroup(id: string) {
   return useMutation({ mutationFn: () => repo.leaveGroup(id), onSuccess: () => invalidateAll(qc) });
 }
 
+/** My own invite link token for a group (stable, created on first use). */
+export function useGroupInviteToken(groupId: string | undefined) {
+  return useQuery({ queryKey: ['groupInviteToken', groupId ?? ''], queryFn: () => repo.getGroupInviteToken(groupId!), enabled: !!groupId, staleTime: Infinity });
+}
+
+export function useGroupInvite(token: string | undefined) {
+  const signedIn = useIsSignedIn();
+  return useQuery({ queryKey: ['groupInvite', token ?? '', signedIn], queryFn: () => repo.getGroupInvite(token!), enabled: !!token });
+}
+
+export function useJoinGroup() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (token: string) => repo.joinGroup(token), onSuccess: () => invalidateAll(qc) });
+}
+
 export function useSetNotificationPreferences() {
   const qc = useQueryClient();
   return useMutation({

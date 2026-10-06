@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { Icon, PressableScale, Sheet, Text, useToast } from '@/components/ui';
 import { inviteUrl } from '@/lib/config';
-import { inviteMessage, SHARE_CHANNELS, shareTo, type ShareChannel } from '@/lib/share';
+import { inviteMessage, LINK_ONLY_CHANNELS, SHARE_CHANNELS, shareTo, type ShareChannel } from '@/lib/share';
 import { spacing, useColors } from '@/theme';
 
 const BRAND_ICON: Partial<Record<ShareChannel, React.ComponentProps<typeof FontAwesome>['name']>> = {
@@ -12,6 +12,8 @@ const BRAND_ICON: Partial<Record<ShareChannel, React.ComponentProps<typeof FontA
   snapchat: 'snapchat-ghost',
   instagram: 'instagram',
 };
+
+export const SNAP_YELLOW = '#FFFC00';
 
 type Props = {
   visible: boolean;
@@ -23,31 +25,45 @@ type Props = {
 
 /** Share an invitation to the apps people actually use. */
 export function ShareSheet({ visible, onClose, title, token, organizerName }: Props) {
+  const url = inviteUrl(token);
   return (
     <Sheet visible={visible} onClose={onClose} title="Del invitasjonen" subtitle="Gjestene svarer rett i nettleseren – ingen app eller konto.">
-      <ShareGrid title={title} token={token} organizerName={organizerName} onDone={onClose} />
+      <ShareGrid url={url} title={title} message={inviteMessage(title, url, organizerName)} onDone={onClose} />
     </Sheet>
   );
 }
 
-export function ShareGrid({ title, token, organizerName, onDone }: { title: string; token: string; organizerName?: string; onDone?: () => void }) {
-  const colors = useColors();
-  const toast = useToast();
-  const url = inviteUrl(token);
+export type ShareContent = { url: string; title: string; message: string };
 
-  const handle = async (channel: ShareChannel) => {
+/** Shares through one app, with the right confirmation toast. Returns false if it failed. */
+export function useShareTo() {
+  const toast = useToast();
+  return async (channel: ShareChannel, content: ShareContent) => {
     try {
-      const result = await shareTo(channel, { url, title, message: inviteMessage(title, url, organizerName) });
-      if (result === 'copied') toast({ message: 'Lenken er kopiert', tone: 'success', icon: 'link' });
-      onDone?.();
+      const result = await shareTo(channel, {
+        ...content,
+        onTextCopied: () => toast({ message: 'Teksten er kopiert – lim den inn i chatten', tone: 'success', icon: 'clipboard' }),
+      });
+      if (result === 'copied' && !LINK_ONLY_CHANNELS.includes(channel)) toast({ message: 'Lenken er kopiert', tone: 'success', icon: 'link' });
+      return true;
     } catch {
       toast({ message: 'Kunne ikke dele akkurat nå', tone: 'error' });
+      return false;
     }
+  };
+}
+
+export function ShareGrid({ url, title, message, onDone, exclude = [] }: ShareContent & { onDone?: () => void; exclude?: ShareChannel[] }) {
+  const colors = useColors();
+  const share = useShareTo();
+
+  const handle = async (channel: ShareChannel) => {
+    if (await share(channel, { url, title, message })) onDone?.();
   };
 
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.lg }}>
-      {SHARE_CHANNELS.map((c) => {
+      {SHARE_CHANNELS.filter((c) => !exclude.includes(c.id)).map((c) => {
         const brand = BRAND_ICON[c.id];
         const fg = c.id === 'snapchat' ? '#16120F' : '#FFFFFF';
         return (

@@ -291,6 +291,18 @@ export interface AddMembersInput {
   guestNames?: string[];
 }
 
+/** What someone opening a group invite link may see. First names only, no contact data. */
+export interface GroupInviteView {
+  token: string;
+  group: Pick<Group, 'id' | 'name' | 'emoji' | 'description' | 'coverImageUrl'>;
+  /** The member whose link this is. */
+  inviter: Person;
+  memberCount: number;
+  /** A few members, the inviter first. */
+  members: Person[];
+  isMember: boolean;
+}
+
 /** Personal invite link for a guest without an account. */
 export interface GuestInvite {
   guestId: string;

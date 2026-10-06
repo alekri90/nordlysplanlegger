@@ -44,7 +44,6 @@ function NewGroupForm({ initialName, initialCover, eventPeople, eventTitle }: { 
   const [name, setName] = useState(initialName);
   const [userIds, setUserIds] = useState<string[]>(fromEvent.filter((p) => !p.isGuest).map((p) => p.id));
   const [guestIds, setGuestIds] = useState<string[]>(fromEvent.filter((p) => p.isGuest).map((p) => p.id));
-  const [guestNames, setGuestNames] = useState<string[]>([]);
   const [emoji, setEmoji] = useState<string | null>(null);
   const photos = useMemo(() => {
     const base = coverOptions(suggestCategory(name || eventTitle || ''), 600);
@@ -55,11 +54,11 @@ function NewGroupForm({ initialName, initialCover, eventPeople, eventTitle }: { 
 
   const toggleUser = (p: Person) => setUserIds((ids) => (ids.includes(p.id) ? ids.filter((x) => x !== p.id) : [...ids, p.id]));
   const toggleGuest = (p: Person) => setGuestIds((ids) => (ids.includes(p.id) ? ids.filter((x) => x !== p.id) : [...ids, p.id]));
-  const count = userIds.length + guestIds.length + guestNames.length;
+  const count = userIds.length + guestIds.length;
 
   const save = async () => {
     try {
-      const g = await create.mutateAsync({ name: name.trim(), emoji, coverImageUrl: chosenPhoto, userIds, guestIds, guestNames });
+      const g = await create.mutateAsync({ name: name.trim(), emoji, coverImageUrl: chosenPhoto, userIds, guestIds });
       haptics.success();
       toast({ message: `${g.name} er klar`, tone: 'success' });
       router.replace(`/group/${g.id}`);
@@ -80,14 +79,15 @@ function NewGroupForm({ initialName, initialCover, eventPeople, eventTitle }: { 
             <GroupLookPicker photos={photos} photo={chosenPhoto} onPhoto={setPhoto} emoji={emoji} onEmoji={setEmoji} />
           </View>
 
-          <Text variant="title3" style={{ marginTop: spacing.xxl, marginBottom: spacing.md }}>
+          <Text variant="title3" style={{ marginTop: spacing.xxl }}>
             Hvem er med?
+          </Text>
+          <Text variant="footnote" color="textSecondary" style={{ marginTop: 2, marginBottom: spacing.md }}>
+            Velg dem som allerede er her. Resten inviterer du med Snapchat eller melding når gjengen er laget.
           </Text>
           <PeoplePicker
             selectedIds={[...userIds, ...guestIds]}
             onToggle={(p) => (p.isGuest ? toggleGuest(p) : toggleUser(p))}
-            guestNames={guestNames}
-            onGuestNamesChange={setGuestNames}
             header={
               fromEvent.length ? (
                 <View>

@@ -75,7 +75,11 @@ export default function CreateSent() {
         ) : null}
 
         <Animated.View entering={FadeIn.delay(450)} style={{ marginTop: spacing.xxl }}>
-          <ShareGrid title={e?.title ?? ''} token={token ?? ''} organizerName={e ? firstName(e.organizer.name) : undefined} />
+          <ShareGrid
+            url={inviteUrl(token ?? '')}
+            title={e?.title ?? ''}
+            message={inviteMessage(e?.title ?? '', inviteUrl(token ?? ''), e ? firstName(e.organizer.name) : undefined)}
+          />
         </Animated.View>
 
         {guests.length ? (
@@ -101,7 +105,7 @@ export default function CreateSent() {
                         onPress={() => {
                           const url = inviteUrl(g.token);
                           const organizer = e ? firstName(e.organizer.name) : undefined;
-                          shareTo('more', { url, title: e?.title ?? '', message: `Hei ${firstName(g.name)}! ${inviteMessage(e?.title ?? '', url, organizer)}` });
+                          shareTo('more', { url, title: e?.title ?? '', message: inviteMessage(e?.title ?? '', url, organizer, firstName(g.name)) });
                         }}
                       />
                     }

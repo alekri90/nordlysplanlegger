@@ -41,6 +41,7 @@ const config: ExpoConfig = {
         autoVerify: true,
         data: [
           { scheme: 'https', host: webHost, pathPrefix: '/i/' },
+          { scheme: 'https', host: webHost, pathPrefix: '/g/' },
           { scheme: 'https', host: webHost, pathPrefix: '/@' },
         ],
         category: ['BROWSABLE', 'DEFAULT'],

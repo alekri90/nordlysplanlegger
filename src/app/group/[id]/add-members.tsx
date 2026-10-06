@@ -1,27 +1,27 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
+import { GroupInviteCard } from '@/components/group/GroupInviteCard';
 import { PeoplePicker } from '@/components/people/PeoplePicker';
 import { BottomBar, Button, Header, KeyboardAware, PageSkeleton, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
 import { useAddGroupMembers, useGroup } from '@/data/hooks';
 import { haptics } from '@/lib/haptics';
 import { spacing } from '@/theme';
 
-/** Friends first, recent people, search by @username, or someone without an account. Multi-select. */
+/** Invite with a link (Snapchat first), or pick friends, recent people, search by @username. Multi-select. */
 export default function AddMembers() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const toast = useToast();
   const group = useGroup(id);
   const add = useAddGroupMembers(id);
   const [userIds, setUserIds] = useState<string[]>([]);
-  const [guestNames, setGuestNames] = useState<string[]>([]);
 
   if (!group.data) return <Screen><PageSkeleton /></Screen>;
-  const count = userIds.length + guestNames.length;
+  const count = userIds.length;
 
   const save = async () => {
     try {
-      const added = await add.mutateAsync({ userIds, guestNames });
+      const added = await add.mutateAsync({ userIds });
       haptics.success();
       toast({ message: `${added} ${added === 1 ? 'person' : 'personer'} lagt til i ${group.data!.name}`, tone: 'success' });
       router.back();
@@ -33,7 +33,7 @@ export default function AddMembers() {
   return (
     <Screen>
       <KeyboardAware>
-        <Header back="close" title="Legg til medlemmer" />
+        <Header back="close" title="Inviter eller legg til" />
         <ScreenScroll bottomInset={140}>
           <Text variant="subhead" color="textSecondary" style={{ marginBottom: spacing.lg }}>
             {group.data.name} · {group.data.members.length} medlemmer
@@ -42,8 +42,7 @@ export default function AddMembers() {
             selectedIds={userIds}
             onToggle={(p) => setUserIds((ids) => (ids.includes(p.id) ? ids.filter((x) => x !== p.id) : [...ids, p.id]))}
             existingIds={group.data.members.map((m) => m.id)}
-            guestNames={guestNames}
-            onGuestNamesChange={setGuestNames}
+            header={<GroupInviteCard group={group.data} />}
           />
         </ScreenScroll>
         <BottomBar>

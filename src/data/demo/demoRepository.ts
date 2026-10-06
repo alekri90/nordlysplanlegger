@@ -191,6 +191,17 @@ function findGroup(id: string) {
   return g;
 }
 
+/**
+ * Demo group links are readable (`<groupId>~<memberId>`) so they survive a reload; the real ones
+ * are random. A link works while the member who shared it is still in the group.
+ */
+function resolveGroupInvite(token: string): { g: Group; inviter: GroupMember } | null {
+  const [groupId, createdBy] = token.split('~');
+  const g = state.groups.find((x) => x.id === groupId);
+  const inviter = g?.members.find((m) => m.id === createdBy && !m.isGuest);
+  return g && inviter ? { g, inviter } : null;
+}
+
 /** Resolves a public or personal invite link. */
 function resolveToken(token: string): { event: PlannerEvent; guestId: string | null } | null {
   const personal = personalInvites.find((i) => i.token === token);
@@ -951,6 +962,44 @@ export const demoRepository: Repository = {
       next.role = 'owner';
       g.createdBy = next.id;
     }
+  },
+
+  async getGroupInviteToken(groupId) {
+    await wait(120);
+    const g = findGroup(groupId);
+    if (!userMemberIds(g).includes(meId())) throw new Error('Du er ikke med i gjengen');
+    return `${groupId}~${meId()}`;
+  },
+
+  async getGroupInvite(token) {
+    await wait(200);
+    const resolved = resolveGroupInvite(token);
+    if (!resolved) return null;
+    const { g, inviter } = resolved;
+    const members = [...g.members].sort((a, b) => Number(b.id === inviter.id) - Number(a.id === inviter.id) || Number(!!a.isGuest) - Number(!!b.isGuest));
+    return {
+      token,
+      group: { id: g.id, name: g.name, emoji: g.emoji, description: g.description, coverImageUrl: g.coverImageUrl },
+      inviter: { id: inviter.id, name: inviter.name.split(' ')[0], avatarUrl: inviter.avatarUrl },
+      memberCount: g.members.length,
+      members: members.slice(0, 6).map((m) => ({ id: m.id, name: m.name.split(' ')[0], avatarUrl: m.avatarUrl })),
+      isMember: state.signedIn && userMemberIds(g).includes(meId()),
+    };
+  },
+
+  async joinGroup(token) {
+    await wait(350);
+    if (!state.signedIn) throw new Error('Du må logge inn først');
+    const resolved = resolveGroupInvite(token);
+    if (!resolved) throw new Error('Invitasjonen finnes ikke lenger');
+    const { g, inviter } = resolved;
+    if (!userMemberIds(g).includes(meId())) {
+      const me = state.me;
+      g.members.push({ id: me.id, name: me.name, avatarUrl: me.avatarUrl, username: me.username, memberId: uid('gm'), role: 'member' });
+      g.lastActivityAt = now();
+      notify(inviter.id, { type: 'group_added', title: `${me.name.split(' ')[0] || 'Noen'} ble med i ${g.name}`, url: `/group/${g.id}` });
+    }
+    return g.id;
   },
 
   // --- Notifications -----------------------------------------------------------

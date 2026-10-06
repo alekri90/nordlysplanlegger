@@ -325,5 +325,54 @@ await check('lock date + nudges still run on the updated schema', async () => {
   await q(`select generate_nudges()`);
 });
 
+console.log('\nGroup invite links');
+{
+  await as(nora);
+  const [{ id: band }] = await q(`select create_group('Bandet', '🎸') id`);
+  const [{ t: token }] = await q(`select get_group_invite_link($1) t`, [band]);
+
+  await check('one stable link per member; outsiders cannot get one', async () => {
+    const [{ t: again }] = await q(`select get_group_invite_link($1) t`, [band]);
+    assert.equal(again, token);
+    assert.match(token, /^[0-9a-f]{32}$/);
+    await as(thomas);
+    await assert.rejects(q(`select get_group_invite_link($1)`, [band]), /not_group_member/);
+  });
+  await check('anyone with the link sees name, inviter and first names only', async () => {
+    await as(null);
+    const [{ v }] = await q(`select get_group_invite($1) v`, [token]);
+    assert.equal(v.group.name, 'Bandet');
+    assert.equal(v.inviter.name, 'Nora');
+    assert.equal(v.member_count, 1);
+    assert.equal(v.is_member, false);
+    assert.ok(!JSON.stringify(v).includes('@example.com'));
+    assert.equal((await q(`select get_group_invite('nope') v`))[0].v, null);
+  });
+  await check('joining adds a member once, counts the use and tells the inviter', async () => {
+    await as(thomas);
+    const [{ g }] = await q(`select join_group_via_invite($1) g`, [token]);
+    assert.equal(g, band);
+    await q(`select join_group_via_invite($1)`, [token]);
+    assert.equal((await q(`select count(*)::int c from group_members where group_id = $1 and user_id = $2`, [band, thomas]))[0].c, 1);
+    assert.equal((await q(`select use_count from group_invites where token = $1`, [token]))[0].use_count, 1);
+    const [{ v }] = await q(`select get_group_invite($1) v`, [token]);
+    assert.equal(v.is_member, true);
+    const [n] = await q(`select title from notifications where user_id = $1 and group_id = $2`, [nora, band]);
+    assert.equal(n.title, 'Thomas ble med i Bandet');
+  });
+  await check('joining requires an account', async () => {
+    await as(null);
+    await assert.rejects(q(`select join_group_via_invite($1)`, [token]), /not_authenticated/);
+  });
+  await check('link stops working when the inviter leaves', async () => {
+    await as(nora);
+    await q(`select leave_group($1)`, [band]);
+    await as(null);
+    assert.equal((await q(`select get_group_invite($1) v`, [token]))[0].v, null);
+    await as(marius);
+    await assert.rejects(q(`select join_group_via_invite($1)`, [token]), /invite_not_found/);
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

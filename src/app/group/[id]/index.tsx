@@ -5,6 +5,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { EventHero } from '@/components/event/EventHero';
 import { groupNextLine } from '@/components/group/GroupCard';
+import { GroupInviteCard } from '@/components/group/GroupInviteCard';
 import { PersonRow } from '@/components/people/PersonRow';
 import { confirmDestructive, PersonSheet } from '@/components/people/PersonSheet';
 import { BottomBar, Button, Card, Divider, ErrorState, IconButton, ListRow, PageSkeleton, Screen, SectionHeader, Sheet, Text, useToast } from '@/components/ui';
@@ -143,6 +144,8 @@ export default function GroupScreen() {
             </Card>
           ) : null}
 
+          <GroupInviteCard group={g} style={{ marginTop: spacing.xxl }} />
+
           <SectionHeader title="Medlemmer" action="Legg til" onAction={() => router.push(`/group/${g.id}/add-members`)} style={{ marginTop: spacing.xxl }} />
           <Card style={{ paddingVertical: spacing.xs }}>
             {g.members.map((m, i) => (
@@ -181,7 +184,7 @@ export default function GroupScreen() {
 
       <Sheet visible={moreOpen} onClose={() => setMoreOpen(false)} title={g.name}>
         {isAdmin ? <ListRow icon="edit-2" title="Rediger gjengen" onPress={() => { setMoreOpen(false); router.push(`/group/${g.id}/edit`); }} /> : null}
-        <ListRow icon="user-plus" title="Legg til medlemmer" onPress={() => { setMoreOpen(false); router.push(`/group/${g.id}/add-members`); }} />
+        <ListRow icon="user-plus" title="Inviter eller legg til" onPress={() => { setMoreOpen(false); router.push(`/group/${g.id}/add-members`); }} />
         <ListRow icon="log-out" title="Forlat gjengen" destructive onPress={leaveGroup} />
       </Sheet>
 

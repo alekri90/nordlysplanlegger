@@ -28,3 +28,7 @@ export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=no.
 export function inviteUrl(token: string) {
   return `${env.webUrl}/i/${token}`;
 }
+
+export function groupInviteUrl(token: string) {
+  return `${env.webUrl}/g/${token}`;
+}

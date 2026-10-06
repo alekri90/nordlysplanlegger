@@ -9,6 +9,7 @@ import type {
   FriendRequest,
   FriendshipState,
   Group,
+  GroupInviteView,
   GroupPatch,
   GroupRole,
   GuestInvite,
@@ -107,6 +108,12 @@ export interface Repository {
   removeGroupMember(groupId: string, memberId: string): Promise<void>;
   setGroupMemberRole(groupId: string, memberId: string, role: Exclude<GroupRole, 'owner'>): Promise<void>;
   leaveGroup(groupId: string): Promise<void>;
+  /** The current member's own invite link token for the group. */
+  getGroupInviteToken(groupId: string): Promise<string>;
+  /** Works without an account (to show who's in it). Null when the link is no longer valid. */
+  getGroupInvite(token: string): Promise<GroupInviteView | null>;
+  /** Join through an invite link (needs an account). Returns the group id. */
+  joinGroup(token: string): Promise<string>;
 
   // --- Notifications -------------------------------------------------------
   listNotifications(): Promise<AppNotification[]>;

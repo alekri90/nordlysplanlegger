@@ -17,6 +17,7 @@ import type {
   GroupEventRef,
   GroupMember,
   GroupRole,
+  GroupInviteView,
   InviteView,
   NotificationPreferences,
   Person,
@@ -636,6 +637,41 @@ export const supabaseRepository: Repository = {
   async leaveGroup(groupId) {
     const { error } = await getSupabase().rpc('leave_group', { p_group_id: groupId });
     fail(error);
+  },
+
+  async getGroupInviteToken(groupId) {
+    const { data, error } = await getSupabase().rpc('get_group_invite_link', { p_group_id: groupId });
+    fail(error);
+    return data as string;
+  },
+
+  async getGroupInvite(token) {
+    const { data, error } = await getSupabase().rpc('get_group_invite', { p_token: token });
+    fail(error);
+    if (!data) return null;
+    type Mini = { id: string; name: string; avatar_url: string | null };
+    const g = data.group;
+    const view: GroupInviteView = {
+      token,
+      group: {
+        id: g.id,
+        name: g.name,
+        emoji: g.emoji,
+        description: g.description,
+        coverImageUrl: g.image_url ?? defaultCover((g.default_category as CategoryId) ?? 'hangout'),
+      },
+      inviter: { id: data.inviter?.id ?? '', name: data.inviter?.name ?? 'Noen', avatarUrl: data.inviter?.avatar_url ?? null },
+      memberCount: data.member_count ?? 0,
+      members: ((data.members ?? []) as Mini[]).map((p) => ({ id: p.id, name: p.name, avatarUrl: p.avatar_url })),
+      isMember: !!data.is_member,
+    };
+    return view;
+  },
+
+  async joinGroup(token) {
+    const { data, error } = await getSupabase().rpc('join_group_via_invite', { p_token: token });
+    fail(error);
+    return data as string;
   },
 
   // --- People & friends ------------------------------------------------------

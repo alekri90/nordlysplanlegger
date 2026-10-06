@@ -15,6 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ToastProvider } from '@/components/ui';
 import { queryClient } from '@/data/hooks';
+import { usePendingGroupJoin } from '@/lib/pendingJoin';
 import { useNotificationRouting } from '@/lib/push';
 import { useSession, useSessionBootstrap } from '@/state/session';
 import { lightColors, ThemeProvider, useTheme } from '@/theme';
@@ -54,6 +55,7 @@ function AppStack() {
   const segments = useSegments();
   useSessionBootstrap();
   useNotificationRouting();
+  usePendingGroupJoin();
 
   useEffect(() => {
     if (status !== 'loading') SplashScreen.hideAsync().catch(() => {});
