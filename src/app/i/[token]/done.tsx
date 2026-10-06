@@ -40,7 +40,9 @@ export default function Done() {
       ? `${organizer} vet at du kommer. Vi sees!`
       : attending === '0'
         ? `${organizer} vet at du ikke kan denne gangen.`
-        : `Vi sier fra når ${organizer} har låst datoen.`;
+        : signedIn
+          ? `Du får beskjed i appen når ${organizer} har låst datoen.`
+          : `${organizer} gir beskjed når datoen er satt. Du kan også åpne lenken igjen for å se den.`;
 
   return (
     <Screen>
