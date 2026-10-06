@@ -314,7 +314,7 @@ export const demoRepository: Repository = {
 
   async verifyOtp(target, code) {
     await wait(600);
-    if (code.length < 6) throw new Error('Koden er 6 siffer');
+    if (code.length < 6) throw new Error('Koden har 6–8 sifre');
     // Demo: a known e-mail signs in to that profile; any other e-mail signs in as Emma.
     const account = accounts.find((a) => a.email === target.email.trim().toLowerCase());
     setSignedIn(true, account?.profile ?? { ...ME });

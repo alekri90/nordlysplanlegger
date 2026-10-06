@@ -7,6 +7,10 @@ import { BottomBar, Button, Header, Input, KeyboardAware, PageTitle, PressableSc
 import { repo } from '@/data';
 import { spacing } from '@/theme';
 
+/** Supabase sends 6- or 8-digit codes depending on project settings; accept both. */
+const OTP_MIN = 6;
+const OTP_MAX = 8;
+
 /** Sign in with a one-time code sent by e-mail. Two tiny steps, no password. Also creates the account if it's new. */
 export default function AuthOtp() {
   const toast = useToast();
@@ -35,7 +39,7 @@ export default function AuthOtp() {
   };
 
   const verify = async (c = code) => {
-    if (c.length < 6) return;
+    if (c.length < OTP_MIN) return;
     setBusy(true);
     setError(null);
     try {
@@ -78,21 +82,23 @@ export default function AuthOtp() {
             </Animated.View>
           ) : (
             <Animated.View key="code" entering={FadeInRight.duration(220)}>
-              <PageTitle title="Skriv inn koden" subtitle={`Vi sendte en 6-sifret kode til ${normalized}.`} />
+              <PageTitle title="Skriv inn koden" subtitle={`Vi sendte en kode til ${normalized}. Sjekk søppelpost hvis du ikke finner den.`} />
               <Input
                 ref={codeRef}
                 size="lg"
                 value={code}
                 onChangeText={(t) => {
-                  const digits = t.replace(/\D/g, '').slice(0, 6);
+                  const digits = t.replace(/\D/g, '').slice(0, OTP_MAX);
+                  // Pasted or auto-filled (several digits at once) → submit right away; typed → submit at full length.
+                  const pasted = digits.length - code.length > 1;
                   setCode(digits);
-                  if (digits.length === 6) verify(digits);
+                  if (digits.length === OTP_MAX || (pasted && digits.length >= OTP_MIN)) verify(digits);
                 }}
-                placeholder="123456"
+                placeholder="Kode"
                 keyboardType="number-pad"
                 autoComplete="one-time-code"
                 textContentType="oneTimeCode"
-                maxLength={6}
+                maxLength={OTP_MAX}
                 style={{ letterSpacing: 8, fontSize: 24 }}
                 error={error}
                 accessibilityLabel="Engangskode"
@@ -111,7 +117,7 @@ export default function AuthOtp() {
           {step === 'enter' ? (
             <Button variant="ink" title="Send kode" onPress={send} disabled={!valid} loading={busy} />
           ) : (
-            <Button variant="ink" title="Logg inn" onPress={() => verify()} disabled={code.length < 6} loading={busy} />
+            <Button variant="ink" title="Logg inn" onPress={() => verify()} disabled={code.length < OTP_MIN} loading={busy} />
           )}
         </BottomBar>
       </KeyboardAware>
