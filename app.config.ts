@@ -3,7 +3,8 @@ import type { ExpoConfig } from 'expo/config';
 // Public, non-secret configuration only. Secrets never go in the client.
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://nordlysplanlegger.vercel.app';
 const webHost = new URL(WEB_URL).host;
-const EAS_PROJECT_ID = process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
+// Public identifier from `eas init`, not a secret. The env var can override it.
+const EAS_PROJECT_ID = process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? '623cc93d-c24b-46f6-aac0-0fa470305919';
 
 const config: ExpoConfig = {
   name: 'Nordlys Planlegger',
