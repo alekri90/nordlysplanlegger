@@ -269,11 +269,23 @@ async function claimGuestHistory(inviteToken?: string): Promise<ClaimResult> {
   return total;
 }
 
+/** Detect the real image type from its first bytes (the web picker may return PNG/WebP). */
+function imageType(bytes: ArrayBuffer): { mime: string; ext: string } {
+  const b = new Uint8Array(bytes.slice(0, 12));
+  if (b[0] === 0x89 && b[1] === 0x50) return { mime: 'image/png', ext: 'png' };
+  if (b[0] === 0x52 && b[1] === 0x49 && b[8] === 0x57 && b[9] === 0x45) return { mime: 'image/webp', ext: 'webp' };
+  if (b[0] === 0x47 && b[1] === 0x49) return { mime: 'image/gif', ext: 'gif' };
+  return { mime: 'image/jpeg', ext: 'jpg' };
+}
+
 async function uploadImage(bucket: 'covers' | 'avatars', userId: string, uri: string): Promise<string> {
   const sb = getSupabase();
   const bytes = await readImageBytes(uri);
-  const path = `${userId}/${Date.now()}.jpg`;
-  const { error } = await sb.storage.from(bucket).upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
+  const { mime, ext } = imageType(bytes);
+  // A fresh, unique path per upload: plain insert only needs the INSERT storage policy
+  // (upsert would additionally require SELECT + UPDATE policies).
+  const path = `${userId}/${Date.now()}.${ext}`;
+  const { error } = await sb.storage.from(bucket).upload(path, bytes, { contentType: mime, upsert: false });
   fail(error);
   return sb.storage.from(bucket).getPublicUrl(path).data.publicUrl;
 }
