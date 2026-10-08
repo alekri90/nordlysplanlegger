@@ -6,7 +6,7 @@
         "components": [
           { "/": "/i/*", "comment": "Invitation links open the app when installed" },
           { "/": "/g/*", "comment": "Group invite links" },
-          { "/": "/@*", "comment": "Profile links (planlegger.nkx.no/@username)" }
+          { "/": "/@*", "comment": "Profile links (nordlysplanlegger.vercel.app/@username)" }
         ]
       }
     ]

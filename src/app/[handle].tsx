@@ -15,7 +15,7 @@ import { useSession } from '@/state/session';
 import { gutter, spacing } from '@/theme';
 
 /**
- * Profile link: planlegger.nkx.no/@alexk — in the app and as a mobile web page.
+ * Profile link: nordlysplanlegger.vercel.app/@alexk — in the app and as a mobile web page.
  * Shows only photo, name, @username, and what you have in common. Never e-mail or phone.
  */
 export default function ProfileByHandle() {
