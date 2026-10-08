@@ -5,7 +5,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { EventCard } from '@/components/event/EventCard';
 import { GroupBubble } from '@/components/group/GroupBubble';
-import { Avatar, Button, Card, EmptyState, ErrorState, EventListSkeleton, Icon, IconButton, PressableScale, Screen, SectionHeader, Skeleton, Text } from '@/components/ui';
+import { Button, Card, EmptyState, ErrorState, EventListSkeleton, Icon, IconButton, Screen, SectionHeader, Skeleton, Text } from '@/components/ui';
 import { useEvents, useGroups, useNotifications } from '@/data/hooks';
 import type { Group, PlannerEvent } from '@/data/types';
 import { daysBetween, today } from '@/lib/dates';
@@ -48,17 +48,13 @@ export default function Home() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm, marginBottom: spacing.lg }}>
-          <PressableScale onPress={() => router.push('/(tabs)/profile')} accessibilityLabel="Profil" hitSlop={8}>
-            <Avatar name={me?.name ?? ''} uri={me?.avatarUrl} size={40} />
-          </PressableScale>
-          <IconButton icon="bell" accessibilityLabel="Varsler" badge={unread || false} onPress={() => router.push('/notifications')} />
-        </View>
-
-        <Animated.View entering={FadeInDown.duration(380)}>
-          <Text variant="display" accessibilityRole="header">
-            Hva skal vi{'\n'}finne på?
-          </Text>
+        <Animated.View entering={FadeInDown.duration(380)} style={{ marginTop: spacing.lg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md }}>
+            <Text variant="display" accessibilityRole="header" style={{ flex: 1 }}>
+              Hva skal vi{'\n'}finne på?
+            </Text>
+            <IconButton icon="bell" accessibilityLabel="Varsler" badge={unread || false} onPress={() => router.push('/notifications')} />
+          </View>
           <Button title="Lag noe" icon="plus" onPress={startCreate} style={{ marginTop: spacing.xl }} accessibilityHint="Lag et arrangement og finn en dato" />
         </Animated.View>
 

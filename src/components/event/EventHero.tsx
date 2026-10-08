@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
+import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -24,6 +25,8 @@ export function EventHero({ imageUrl, height, children, right, showBack = true, 
   const insets = useSafeAreaInsets();
   return (
     <View style={{ height, backgroundColor: '#201A17' }}>
+      {/* Light clock and battery over the photo. */}
+      <StatusBar style="light" />
       <Image source={{ uri: imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={250} accessibilityIgnoresInvertColors />
       <LinearGradient
         colors={dim ? ['rgba(0,0,0,0.35)', 'rgba(0,0,0,0.05)', 'rgba(15,10,8,0.55)', 'rgba(15,10,8,0.92)'] : ['rgba(0,0,0,0.35)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0)']}

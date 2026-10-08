@@ -122,7 +122,7 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
 
   return (
     <Screen edges={[]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingBottom: 140 }}>
         <EventHero
           imageUrl={e.coverImageUrl}
           height={300}

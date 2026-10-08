@@ -77,7 +77,7 @@ function GroupInvitationView({ invite }: { invite: GroupInviteView }) {
   return (
     <View style={{ flex: 1, backgroundColor: INK }}>
       <StatusBar style="light" />
-      <ScrollView bounces={false} showsVerticalScrollIndicator={false} contentContainerStyle={{ minHeight: height, paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.lg }}>
+      <ScrollView bounces={false} showsVerticalScrollIndicator={false} contentInsetAdjustmentBehavior="never" contentContainerStyle={{ minHeight: height, paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.lg }}>
         <View style={{ height: Math.max(380, height * 0.56) }}>
           <Image source={{ uri: g.coverImageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
           <LinearGradient colors={['rgba(22,18,15,0.45)', 'rgba(22,18,15,0)', 'rgba(22,18,15,0.6)', INK]} locations={[0, 0.25, 0.7, 1]} style={StyleSheet.absoluteFill} />

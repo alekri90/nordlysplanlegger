@@ -70,7 +70,8 @@ function AppStack() {
   return (
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background }, animation: 'default' }}>
+      {/* No native headers anywhere, so no iOS 26 scroll-edge blur either (it fogged the top of full-bleed photos). */}
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background }, animation: 'default', scrollEdgeEffects: { top: 'hidden', bottom: 'hidden' } }}>
         <Stack.Screen name="index" options={{ animation: 'none' }} />
         <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />

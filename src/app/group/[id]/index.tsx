@@ -92,7 +92,7 @@ export default function GroupScreen() {
 
   return (
     <Screen edges={[]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingBottom: 140 }}>
         <EventHero
           imageUrl={g.coverImageUrl.replace(/w=\d+/, 'w=1200')}
           height={270}
