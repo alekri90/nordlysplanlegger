@@ -46,6 +46,8 @@ let inbox = new Map<string, AppNotification[]>([[ME.id, state.notifications]]);
 let deviceGuestIds: string[] = [];
 /** Personal invite links for guests without an account. */
 let personalInvites: { token: string; eventId: string; guestId: string }[] = [];
+/** People Emma has blocked (demo: only hides them from search and suggestions). */
+const blockedIds = new Set<string>();
 const authListeners = new Set<(p: Profile | null) => void>();
 const friendListeners = new Set<() => void>();
 let liveDemoPlayed = false;
@@ -548,6 +550,7 @@ export const demoRepository: Repository = {
     e.photos.push(...uris);
   },
 
+
   subscribeToEvent(eventId, onChange) {
     // Simulate a live answer arriving while the organizer looks at the results.
     if (eventId !== 'ev-poker' || liveDemoPlayed) return () => {};
@@ -852,6 +855,28 @@ export const demoRepository: Repository = {
   subscribeToFriends(onChange) {
     friendListeners.add(onChange);
     return () => friendListeners.delete(onChange);
+  },
+
+  async blockUser(userId) {
+    await wait(250);
+    blockedIds.add(userId);
+    state.friendships = state.friendships.filter((f) => f !== findFriendship(meId(), userId));
+    friendListeners.forEach((l) => l());
+  },
+
+  async unblockUser(userId) {
+    await wait(200);
+    blockedIds.delete(userId);
+  },
+
+  async listBlocked() {
+    await wait(150);
+    const dir = directory();
+    return [...blockedIds].map((id) => dir.get(id)).filter((p): p is DirectoryEntry => !!p).map((p) => ({ id: p.id, name: p.name, username: p.username, avatarUrl: p.avatarUrl }));
+  },
+
+  async report() {
+    await wait(400);
   },
 
   async getFriendshipStates(userIds) {

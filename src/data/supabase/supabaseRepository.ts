@@ -215,6 +215,7 @@ function friendlyError(message: string) {
   if (message.includes('profile_not_found')) return 'Fant ikke personen';
   if (message.includes('not_group_admin')) return 'Bare admin kan gjøre dette';
   if (message.includes('not_group_member')) return 'Du er ikke med i gjengen';
+  if (message.includes('blocked')) return 'Det går ikke akkurat nå';
   if (message.toLowerCase().includes('already registered')) return 'Det finnes allerede en konto med denne e-posten';
   if (message.toLowerCase().includes('invalid login credentials')) return 'Feil e-post eller passord';
   if (message.toLowerCase().includes('password should be')) return 'Passordet må ha minst 8 tegn';
@@ -768,6 +769,33 @@ export const supabaseRepository: Repository = {
     return () => {
       sb.removeChannel(channel);
     };
+  },
+
+  async blockUser(userId) {
+    const { error } = await getSupabase().rpc('block_user', { p_user: userId });
+    fail(error);
+  },
+
+  async unblockUser(userId) {
+    const { error } = await getSupabase().rpc('unblock_user', { p_user: userId });
+    fail(error);
+  },
+
+  async listBlocked() {
+    const { data, error } = await getSupabase().rpc('list_blocked');
+    fail(error);
+    return (data as PersonRow[]).map(fromPersonRow);
+  },
+
+  async report(input) {
+    const { error } = await getSupabase().rpc('report_content', {
+      p_reason: input.reason,
+      p_details: input.details ?? null,
+      p_user: input.userId ?? null,
+      p_event: input.eventId ?? null,
+      p_group: input.groupId ?? null,
+    });
+    fail(error);
   },
 
   async getFriendshipStates(userIds) {

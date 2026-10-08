@@ -9,6 +9,7 @@ import { GroupFriendsCard } from '@/components/group/GroupFriendsCard';
 import { GroupInviteCard } from '@/components/group/GroupInviteCard';
 import { PersonRow } from '@/components/people/PersonRow';
 import { confirmDestructive, PersonSheet } from '@/components/people/PersonSheet';
+import { ReportForm } from '@/components/people/ReportSheet';
 import { BottomBar, Button, Card, Divider, ErrorState, IconButton, ListRow, PageSkeleton, Screen, SectionHeader, Sheet, Text, useToast } from '@/components/ui';
 import { useGroup, useLeaveGroup, useRemoveGroupMember, useSetGroupMemberRole } from '@/data/hooks';
 import type { GroupMember } from '@/data/types';
@@ -32,6 +33,7 @@ export default function GroupScreen() {
   const removeMember = useRemoveGroupMember(id);
   const setRole = useSetGroupMemberRole(id);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const [selected, setSelected] = useState<GroupMember | null>(null);
 
   if (group.isLoading) return <Screen><PageSkeleton /></Screen>;
@@ -185,10 +187,17 @@ export default function GroupScreen() {
         <Button title="Planlegg noe" icon="plus" onPress={plan} accessibilityHint={`Nytt arrangement med alle i ${g.name} valgt`} />
       </BottomBar>
 
-      <Sheet visible={moreOpen} onClose={() => setMoreOpen(false)} title={g.name}>
-        {isAdmin ? <ListRow icon="edit-2" title="Rediger gjengen" onPress={() => { setMoreOpen(false); router.push(`/group/${g.id}/edit`); }} /> : null}
-        <ListRow icon="user-plus" title="Inviter eller legg til" onPress={() => { setMoreOpen(false); router.push(`/group/${g.id}/add-members`); }} />
-        <ListRow icon="log-out" title="Forlat gjengen" destructive onPress={leaveGroup} />
+      <Sheet visible={moreOpen} onClose={() => { setMoreOpen(false); setReporting(false); }} title={reporting ? 'Rapporter gjengen' : g.name}>
+        {reporting ? (
+          <ReportForm target={{ groupId: g.id }} onDone={() => { setMoreOpen(false); setReporting(false); }} />
+        ) : (
+          <>
+            {isAdmin ? <ListRow icon="edit-2" title="Rediger gjengen" onPress={() => { setMoreOpen(false); router.push(`/group/${g.id}/edit`); }} /> : null}
+            <ListRow icon="user-plus" title="Inviter eller legg til" onPress={() => { setMoreOpen(false); router.push(`/group/${g.id}/add-members`); }} />
+            {g.myRole !== 'owner' ? <ListRow icon="flag" title="Rapporter gjengen" onPress={() => setReporting(true)} /> : null}
+            <ListRow icon="log-out" title="Forlat gjengen" destructive onPress={leaveGroup} />
+          </>
+        )}
       </Sheet>
 
       <PersonSheet person={selected} onClose={() => setSelected(null)} extra={memberActions} />

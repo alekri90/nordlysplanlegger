@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useIsSignedIn } from '@/state/session';
 import { repo } from './index';
 import type { GuestResponseInput, ProfilePatch } from './repository';
-import type { AddMembersInput, CreateEventInput, CreateGroupInput, EventPatch, GroupPatch, GroupRole, NotificationPreferences } from './types';
+import type { AddMembersInput, CreateEventInput, CreateGroupInput, EventPatch, GroupPatch, GroupRole, NotificationPreferences, ReportInput } from './types';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -151,6 +151,26 @@ export function useRespondFriendRequest() {
 export function useRemoveFriend() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: (userId: string) => repo.removeFriend(userId), onSuccess: () => invalidateSocial(qc) });
+}
+
+export function useBlocked() {
+  const signedIn = useIsSignedIn();
+  return useQuery({ queryKey: ['blocked'], queryFn: () => repo.listBlocked(), enabled: signedIn });
+}
+
+/** Blocking changes what you see almost everywhere, so everything is refreshed. */
+export function useBlockUser() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (userId: string) => repo.blockUser(userId), onSuccess: () => invalidateAll(qc) });
+}
+
+export function useUnblockUser() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (userId: string) => repo.unblockUser(userId), onSuccess: () => invalidateAll(qc) });
+}
+
+export function useReport() {
+  return useMutation({ mutationFn: (input: ReportInput) => repo.report(input) });
 }
 
 /** Friendship with each of these people (e.g. the members of a group). */

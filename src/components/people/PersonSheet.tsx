@@ -4,7 +4,7 @@ import { Alert, Platform, View } from 'react-native';
 
 import { Avatar, Divider, ListRow, Sheet, Text, useToast } from '@/components/ui';
 import { repo } from '@/data';
-import { queryClient, useGroups, usePublicProfile, useRemoveFriend } from '@/data/hooks';
+import { queryClient, useBlockUser, useGroups, usePublicProfile, useRemoveFriend } from '@/data/hooks';
 import type { Person } from '@/data/types';
 import { firstName } from '@/lib/eventText';
 import { profilePath } from '@/lib/username';
@@ -12,6 +12,7 @@ import { useCreateDraft } from '@/state/createDraft';
 import { useMe } from '@/state/session';
 import { spacing } from '@/theme';
 import { FriendButton } from './FriendButton';
+import { ReportForm } from './ReportSheet';
 
 type Props = {
   person: Person | null;
@@ -36,6 +37,8 @@ export function PersonSheet({ person, onClose, extra }: Props) {
   const toast = useToast();
   const me = useMe();
   const [groupPicker, setGroupPicker] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const block = useBlockUser();
   const isUser = !!person && !person.isGuest && person.id !== me?.id;
   const profile = usePublicProfile(isUser ? { userId: person!.id } : null);
   const groups = useGroups();
@@ -45,6 +48,7 @@ export function PersonSheet({ person, onClose, extra }: Props) {
 
   const close = () => {
     setGroupPicker(false);
+    setReporting(false);
     onClose();
   };
   if (!person) return <Sheet visible={false} onClose={close}>{null}</Sheet>;
@@ -73,7 +77,15 @@ export function PersonSheet({ person, onClose, extra }: Props) {
 
   return (
     <Sheet visible={!!person} onClose={close}>
-      {groupPicker ? (
+      {reporting ? (
+        <View>
+          <Text variant="title3" style={{ marginBottom: spacing.sm }}>
+            Rapporter {name}
+          </Text>
+          <ReportForm target={{ userId: person.id }} onDone={close} />
+          <ListRow icon="arrow-left" title="Tilbake" onPress={() => setReporting(false)} />
+        </View>
+      ) : groupPicker ? (
         <View>
           <Text variant="title3" style={{ marginBottom: spacing.md }}>
             Legg {name} til i …
@@ -133,6 +145,30 @@ export function PersonSheet({ person, onClose, extra }: Props) {
                   toast(`${name} er fjernet som venn`);
                   close();
                 })
+              }
+            />
+          ) : null}
+          {isUser ? <ListRow icon="flag" title={`Rapporter ${name}`} onPress={() => setReporting(true)} /> : null}
+          {isUser ? (
+            <ListRow
+              icon="slash"
+              title={`Blokker ${name}`}
+              destructive
+              onPress={() =>
+                confirm(
+                  `Blokkere ${name}?`,
+                  `Dere ser ikke hverandres profil lenger, vennskapet avsluttes, og ${name} kan ikke legge deg til i noe. ${name} får ikke beskjed. Du kan oppheve det under Profil → Personvern.`,
+                  'Blokker',
+                  async () => {
+                    try {
+                      await block.mutateAsync(person.id);
+                      toast(`${name} er blokkert`);
+                      close();
+                    } catch (e) {
+                      toast({ message: e instanceof Error ? e.message : 'Kunne ikke blokkere', tone: 'error' });
+                    }
+                  },
+                )
               }
             />
           ) : null}

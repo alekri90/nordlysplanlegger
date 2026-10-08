@@ -2,9 +2,10 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Platform, Share, View } from 'react-native';
 
-import { Card, Divider, Header, ListRow, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
+import { PersonRow } from '@/components/people/PersonRow';
+import { Button, Card, Divider, Header, ListRow, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
 import { repo } from '@/data';
-import { queryClient, useUpdateProfile } from '@/data/hooks';
+import { queryClient, useBlocked, useUnblockUser, useUpdateProfile } from '@/data/hooks';
 import type { Discoverability } from '@/data/types';
 import { useMe, useSession } from '@/state/session';
 import { spacing } from '@/theme';
@@ -21,6 +22,8 @@ export default function Privacy() {
   const setProfile = useSession((s) => s.setProfile);
   const update = useUpdateProfile();
   const [busy, setBusy] = useState(false);
+  const blocked = useBlocked();
+  const unblock = useUnblockUser();
 
   const exportData = async () => {
     try {
@@ -89,7 +92,49 @@ export default function Privacy() {
             Profilbilde, visningsnavn og @brukernavn – og hva dere har felles. Aldri e-post, telefonnummer, arrangementer eller gjenger dere ikke deler. Vi leser aldri kalenderen din.
           </Text>
         </Card>
-        <Card style={{ marginTop: spacing.lg, paddingVertical: spacing.xs }}>
+        <Text variant="title3" style={{ marginTop: spacing.xxl, marginBottom: spacing.xs }}>
+          Blokkerte
+        </Text>
+        <Text variant="subhead" color="textSecondary" style={{ marginBottom: spacing.md }}>
+          Blokker noen fra profilen deres eller ved å trykke på dem i en gjeng. De får ikke beskjed.
+        </Text>
+        {blocked.data?.length ? (
+          <Card style={{ paddingVertical: spacing.xs }}>
+            {blocked.data.map((p, i) => (
+              <View key={p.id}>
+                {i ? <Divider /> : null}
+                <PersonRow
+                  person={p}
+                  size={40}
+                  trailing={
+                    <Button
+                      title="Opphev"
+                      size="sm"
+                      variant="secondary"
+                      accessibilityLabel={`Opphev blokkering av ${p.name}`}
+                      onPress={async () => {
+                        try {
+                          await unblock.mutateAsync(p.id);
+                          toast(`${p.name.split(' ')[0]} er ikke lenger blokkert`);
+                        } catch {
+                          toast({ message: 'Kunne ikke oppheve', tone: 'error' });
+                        }
+                      }}
+                    />
+                  }
+                />
+              </View>
+            ))}
+          </Card>
+        ) : (
+          <Card muted>
+            <Text variant="subhead" color="textSecondary">
+              Du har ikke blokkert noen.
+            </Text>
+          </Card>
+        )}
+
+        <Card style={{ marginTop: spacing.xxl, paddingVertical: spacing.xs }}>
           <ListRow icon="download" title="Eksporter dataene mine" subtitle="Få en kopi av alt vi har lagret om deg" onPress={exportData} chevron />
           <Divider />
           <ListRow icon="trash-2" title={busy ? 'Sletter …' : 'Slett kontoen'} subtitle="Permanent" destructive onPress={deleteAccount} />

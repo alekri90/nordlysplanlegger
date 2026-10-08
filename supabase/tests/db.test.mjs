@@ -401,5 +401,47 @@ await check('friendship_states: known people only, with incoming request id', as
   assert.equal((await q(`select * from friendship_states($1::uuid[])`, [[thomas]])).length, 0);
 });
 
+console.log('\nBlocking & reporting');
+{
+  const ola = await newUser('ola@example.com', { display_name: 'Ola Blokk', username: 'olablokk' });
+  const per = await newUser('per@example.com', { display_name: 'Per Plager', username: 'perplager' });
+  await as(per);
+  await q(`select send_friend_request($1)`, [ola]);
+
+  await check('blocking ends the friendship request and hides the profile both ways', async () => {
+    await as(ola);
+    await q(`select block_user($1)`, [per]);
+    assert.equal((await q(`select count(*)::int c from friendships where requester_id = $1 and addressee_id = $2`, [per, ola]))[0].c, 0);
+    assert.equal((await q(`select can_view_profile($1) v`, [per]))[0].v, false);
+    assert.equal((await q(`select * from search_people('perplager')`)).length, 0);
+    await as(per);
+    assert.equal((await q(`select can_view_profile($1) v`, [ola]))[0].v, false);
+    assert.equal((await q(`select get_public_profile('olablokk') v`))[0].v, null);
+  });
+  await check('blocked people cannot send friend requests or add each other', async () => {
+    await as(per);
+    await assert.rejects(q(`select send_friend_request($1)`, [ola]), /profile_not_found|blocked/);
+    assert.equal((await q(`select can_add_person($1) v`, [ola]))[0].v, false);
+  });
+  await check('list and unblock', async () => {
+    await as(ola);
+    const list = await q(`select * from list_blocked()`);
+    assert.deepEqual(list.map((r) => r.id), [per]);
+    await q(`select unblock_user($1)`, [per]);
+    assert.equal((await q(`select * from list_blocked()`)).length, 0);
+  });
+  await check('reports are stored, need a target and an account', async () => {
+    await as(ola);
+    const [{ id }] = await q(`select report_content('harassment', 'Sender ekle meldinger', $1) id`, [per]);
+    const [r] = await q(`select reporter_id, target_user_id, reason, status from content_reports where id = $1`, [id]);
+    assert.equal(r.reporter_id, ola);
+    assert.equal(r.reason, 'harassment');
+    assert.equal(r.status, 'open');
+    await assert.rejects(q(`select report_content('spam')`), /check/i);
+    await as(null);
+    await assert.rejects(q(`select report_content('spam', null, $1)`, [per]), /not_authenticated/);
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

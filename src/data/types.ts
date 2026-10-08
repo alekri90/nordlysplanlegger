@@ -20,6 +20,17 @@ export type Discoverability = 'everyone' | 'friends_of_friends' | 'nobody';
 /** Friendship as seen from the current user. */
 export type FriendshipState = 'self' | 'none' | 'outgoing' | 'incoming' | 'friends' | 'anonymous';
 
+export type ReportReason = 'spam' | 'harassment' | 'inappropriate' | 'other';
+
+/** What is being reported: a person, an event or a group (at least one). */
+export interface ReportInput {
+  reason: ReportReason;
+  details?: string;
+  userId?: string;
+  eventId?: string;
+  groupId?: string;
+}
+
 /** Your friendship with one person; requestId is set for an incoming request. */
 export interface FriendshipInfo {
   userId: string;

@@ -22,6 +22,7 @@ import type {
   PlannerEvent,
   Profile,
   PublicProfile,
+  ReportInput,
   SignUpInput,
   SponsoredSuggestion,
   UsernameCheck,
@@ -99,6 +100,12 @@ export interface Repository {
   sendFriendRequest(userId: string): Promise<FriendshipState>;
   respondFriendRequest(requestId: string, accept: boolean): Promise<void>;
   removeFriend(userId: string): Promise<void>;
+  /** Blocked people disappear for each other and can't send requests or add each other. */
+  blockUser(userId: string): Promise<void>;
+  unblockUser(userId: string): Promise<void>;
+  listBlocked(): Promise<Person[]>;
+  /** Report a person, event or group to the owner of the app. */
+  report(input: ReportInput): Promise<void>;
   /** For people you share a group or event with (others are left out). */
   getFriendshipStates(userIds: string[]): Promise<FriendshipInfo[]>;
   /** Realtime: incoming requests and accepted friendships. */

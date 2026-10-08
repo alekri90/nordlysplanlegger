@@ -64,7 +64,7 @@ function AppStack() {
   // Signed up with an e-mail code (generated @username) and never confirmed name/@username → one short setup step.
   const segment = segments[0] as string | undefined;
   useEffect(() => {
-    if (needsOnboarding && segment !== 'profile-setup' && segment !== 'signup' && segment !== 'i' && segment !== 'personvern' && segment !== 'vilkar') router.push('/profile-setup');
+    if (needsOnboarding && segment !== 'profile-setup' && segment !== 'signup' && segment !== 'i' && segment !== 'personvern' && segment !== 'vilkar' && segment !== 'support') router.push('/profile-setup');
   }, [needsOnboarding, segment]);
 
   return (

@@ -14,6 +14,7 @@ import { BottomBar, Button, Card, EmptyState, ErrorState, Icon, IconButton, List
 import { useAddEventPhotos, useCancelEvent, useEvent, useSetRsvp } from '@/data/hooks';
 import type { Person, PlannerEvent } from '@/data/types';
 import { PersonSheet } from '@/components/people/PersonSheet';
+import { ReportForm } from '@/components/people/ReportSheet';
 import { CATEGORIES, thumb } from '@/lib/categories';
 import { formatLong, formatTime, today } from '@/lib/dates';
 import { addEventToCalendar } from '@/lib/eventActions';
@@ -61,6 +62,7 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
   const [tab, setTab] = useState<Tab>('guests');
   const [shareOpen, setShareOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const [person, setPerson] = useState<Person | null>(null);
   const rsvp = useSetRsvp(e.id);
   const cancel = useCancelEvent(e.id);
@@ -247,11 +249,18 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
 
       <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} title={e.title} token={e.inviteToken} organizerName={firstName(e.organizer.name)} />
       <PersonSheet person={person} onClose={() => setPerson(null)} />
-      <Sheet visible={moreOpen} onClose={() => setMoreOpen(false)} title={e.title}>
-        {e.selectedDate && !isPast ? <ListRow icon="calendar" title="Legg i kalender" onPress={() => { setMoreOpen(false); calendar(); }} /> : null}
-        <ListRow icon="share-2" title="Del invitasjonen" onPress={() => { setMoreOpen(false); setShareOpen(true); }} />
-        {isOrganizer && e.groupId ? <ListRow icon="users" title="Gå til gjengen" onPress={() => { setMoreOpen(false); router.push(`/group/${e.groupId}`); }} /> : null}
-        {isOrganizer && !isPast ? <ListRow icon="x-circle" title="Avlys arrangementet" destructive onPress={confirmCancel} /> : null}
+      <Sheet visible={moreOpen} onClose={() => { setMoreOpen(false); setReporting(false); }} title={reporting ? 'Rapporter arrangementet' : e.title}>
+        {reporting ? (
+          <ReportForm target={{ eventId: e.id }} onDone={() => { setMoreOpen(false); setReporting(false); }} />
+        ) : (
+          <>
+            {e.selectedDate && !isPast ? <ListRow icon="calendar" title="Legg i kalender" onPress={() => { setMoreOpen(false); calendar(); }} /> : null}
+            <ListRow icon="share-2" title="Del invitasjonen" onPress={() => { setMoreOpen(false); setShareOpen(true); }} />
+            {isOrganizer && e.groupId ? <ListRow icon="users" title="Gå til gjengen" onPress={() => { setMoreOpen(false); router.push(`/group/${e.groupId}`); }} /> : null}
+            {!isOrganizer ? <ListRow icon="flag" title="Rapporter arrangementet" subtitle="Også bilder som er delt her" onPress={() => setReporting(true)} /> : null}
+            {isOrganizer && !isPast ? <ListRow icon="x-circle" title="Avlys arrangementet" destructive onPress={confirmCancel} /> : null}
+          </>
+        )}
       </Sheet>
     </Screen>
   );

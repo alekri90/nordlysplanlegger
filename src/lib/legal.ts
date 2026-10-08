@@ -1,12 +1,12 @@
 /**
- * Privacy policy and terms (Norwegian). Served at /personvern and /vilkar — the App Store listing
+ * Privacy policy, terms and support (Norwegian). Served at /personvern, /vilkar and /support — the App Store listing
  * and the sign-in screen link here. Keep in sync with what the app actually stores.
  */
 export const LEGAL = {
   /** Shown as the contact address on both pages. Empty → the line is hidden. */
-  contactEmail: '',
+  contactEmail: 'alekri90@gmail.com',
   owner: 'Alexander Kristensen',
-  updated: '6. oktober 2026',
+  updated: '8. oktober 2026',
 };
 
 export type LegalSection = { title: string; paragraphs: string[] };
@@ -26,17 +26,18 @@ export const PRIVACY: LegalSection[] = [
     title: 'Hva vi lagrer',
     paragraphs: [
       'Profil: e-postadresse (privat – brukes bare til innlogging og vises aldri for andre), visningsnavn, brukernavn, og eventuelt profilbilde og kort beskrivelse.',
-      'Arrangementer: tittel, datoforslag, sted, beskrivelse, bilde, hvem som er invitert og hvilke dager hver enkelt ikke kan.',
+      'Arrangementer: tittel, datoforslag, sted, beskrivelse, bilde, hvem som er invitert og hvilke dager hver enkelt ikke kan, og bilder som deles fra arrangementet.',
       'Gjester uten profil: navnet du skriver inn og svarene dine. Telefonen din husker en tilfeldig nøkkel slik at du kan endre svaret senere – vi kobler aldri svar til en profil basert på navn.',
       'Venner og gjenger: hvem du er venn med, venneforespørsler og hvilke gjenger du er med i.',
       'Varsler: en anonym push-nøkkel for telefonen din og hvilke varsler du vil ha.',
+      'Blokkeringer og rapporter: hvem du har blokkert, og rapporter du sender om personer, arrangementer eller gjenger. Den som blir rapportert eller blokkert får ikke vite hvem det var.',
     ],
   },
   {
     title: 'Hvem som ser hva',
     paragraphs: [
       'Visningsnavn, brukernavn og profilbilde kan sees av andre etter innstillingen du velger under Personvern: alle, venners venner eller ingen. E-postadressen din vises aldri.',
-      'Svarene dine på et arrangement kan sees av arrangøren og de andre som er invitert til det samme arrangementet.',
+      'Svarene dine på et arrangement, og bilder som deles der, kan sees av arrangøren og de andre som er invitert til det samme arrangementet.',
     ],
   },
   {
@@ -75,6 +76,13 @@ export const TERMS: LegalSection[] = [
     ],
   },
   {
+    title: 'Null toleranse for støtende innhold',
+    paragraphs: [
+      'Det er ikke lov å dele støtende, seksuelt, voldelig, hatefullt eller trakasserende innhold eller bilder, eller å plage andre. Vi har null toleranse for dette.',
+      'Du kan rapportere en person, et arrangement eller en gjeng fra menyen «Mer» eller ved å trykke på personen, og du kan blokkere personer du ikke vil ha kontakt med. Vi går gjennom rapporter innen 24 timer, fjerner innhold som bryter vilkårene og stenger profilen til den som la det ut.',
+    ],
+  },
+  {
     title: 'Profil',
     paragraphs: [
       'Du må være minst 13 år for å opprette profil. Du kan slette profilen din når som helst i appen.',
@@ -89,5 +97,32 @@ export const TERMS: LegalSection[] = [
   {
     title: 'Personvern',
     paragraphs: ['Hvordan vi behandler opplysninger om deg står i personvernerklæringen.'],
+  },
+];
+
+export const SUPPORT: LegalSection[] = [
+  {
+    title: 'Hvordan svarer gjestene?',
+    paragraphs: [
+      'Del lenken til arrangementet i gruppechatten. Gjestene åpner den i nettleseren og trykker på dagene de ikke kan – de trenger verken app eller konto.',
+    ],
+  },
+  {
+    title: 'Hvordan inviterer jeg folk til en gjeng?',
+    paragraphs: ['Åpne gjengen og trykk «Inviter på Snapchat» eller «Send på andre måter». Den som åpner lenken lager en konto med e-post og er med.'],
+  },
+  {
+    title: 'Rapportere eller blokkere',
+    paragraphs: [
+      'Trykk på en person og velg «Rapporter» eller «Blokker». Arrangementer og gjenger rapporterer du fra menyen «Mer». Vi går gjennom alle rapporter innen 24 timer. Blokkerte personer fjerner du under Profil → Personvern.',
+    ],
+  },
+  {
+    title: 'Logge inn',
+    paragraphs: ['Skriv e-postadressen din, så sender vi en engangskode. Får du ikke koden, sjekk søppelpost-mappen eller be om en ny.'],
+  },
+  {
+    title: 'Slette profilen',
+    paragraphs: ['Gå til Profil → Personvern → Slett kontoen. Profilen, arrangementene og gjengene du har laget slettes med en gang. Du kan også eksportere dataene dine samme sted.'],
   },
 ];

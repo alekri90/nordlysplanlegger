@@ -108,7 +108,9 @@ export default function Profile() {
           <Divider />
           <ListRow icon="bell" title="Varsler" subtitle="Velg hva du vil få beskjed om" chevron onPress={() => router.push('/settings/notifications')} />
           <Divider />
-          <ListRow icon="shield" title="Personvern" subtitle="Hvem kan finne meg, eksport og sletting" chevron onPress={() => router.push('/settings/privacy')} />
+          <ListRow icon="shield" title="Personvern" subtitle="Hvem kan finne meg, blokkerte, eksport og sletting" chevron onPress={() => router.push('/settings/privacy')} />
+          <Divider />
+          <ListRow icon="help-circle" title="Hjelp og kontakt" subtitle="Spørsmål, vilkår og personvernerklæring" chevron onPress={() => router.push('/support')} />
         </Card>
 
         <Card style={{ marginTop: spacing.md, paddingVertical: spacing.xs }}>

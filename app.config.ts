@@ -21,9 +21,20 @@ const config: ExpoConfig = {
     supportsTablet: false,
     associatedDomains: [`applinks:${webHost}`],
     infoPlist: {
+      // Under the icon on the home screen; the App Store name stays "Nordlys Planlegger".
+      CFBundleDisplayName: 'Planlegger',
       // Lets us check if share targets are installed before deep linking into them.
       LSApplicationQueriesSchemes: ['whatsapp', 'fb-messenger', 'snapchat', 'instagram'],
       ITSAppUsesNonExemptEncryption: false,
+    },
+    // Required-reason APIs used by React Native, Expo modules and AsyncStorage.
+    privacyManifests: {
+      NSPrivacyAccessedAPITypes: [
+        { NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryUserDefaults', NSPrivacyAccessedAPITypeReasons: ['CA92.1'] },
+        { NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryFileTimestamp', NSPrivacyAccessedAPITypeReasons: ['C617.1'] },
+        { NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategorySystemBootTime', NSPrivacyAccessedAPITypeReasons: ['35F9.1'] },
+        { NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryDiskSpace', NSPrivacyAccessedAPITypeReasons: ['E174.1'] },
+      ],
     },
   },
   android: {
