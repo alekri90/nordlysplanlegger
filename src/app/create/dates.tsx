@@ -79,7 +79,7 @@ export default function CreateDates() {
 
   return (
     <Screen>
-      <StepHeader step={draft.source === 'new' ? 2 : 0} total={draft.source === 'new' ? 4 : 2} />
+      <StepHeader step={draft.source === 'event' ? 0 : 2} total={draft.source === 'event' ? 2 : 4} />
       <ScreenScroll bottomInset={140}>
         <PageTitle
           title="Hvilke dager passer?"

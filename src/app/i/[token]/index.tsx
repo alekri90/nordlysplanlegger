@@ -8,6 +8,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppLogo } from '@/components/brand/AppLogo';
+import { EventMessages } from '@/components/event/EventMessages';
 import { Avatar, AvatarStack, Button, EmptyState, Icon, IconButton, Input, PressableScale, Sheet, Skeleton, Tag, Text, useToast, type IconName } from '@/components/ui';
 import { useInvite, useSubmitRsvp } from '@/data/hooks';
 import type { InviteView } from '@/data/types';
@@ -187,6 +188,8 @@ function InvitationView({ invite }: { invite: InviteView }) {
               <Icon name="chevron-right" size={16} tint="rgba(255,255,255,0.6)" />
             </PressableScale>
           </View>
+          {/* Signed-in members also see the organizer's updates here while the date is being found. */}
+          {me && !isOrganizer ? <EventMessages eventId={e.id} isOrganizer={false} style={{ marginTop: spacing.lg }} /> : null}
         </Animated.View>
       </ScrollView>
 

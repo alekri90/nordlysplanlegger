@@ -11,6 +11,9 @@ import { suggestDatesForWeekdays, suggestedMonth, type Period } from '@/lib/peri
  */
 export type CreateDraft = {
   title: string;
+  /** Optional at creation: where, and a few words for everyone. */
+  placeName: string;
+  details: string;
   category: CategoryId;
   /** True once the user picked a category/photo themselves — stop auto-suggesting. */
   coverTouched: boolean;
@@ -47,6 +50,8 @@ type Actions = {
 
 const initial = (): CreateDraft => ({
   title: '',
+  placeName: '',
+  details: '',
   category: 'hangout',
   coverTouched: false,
   coverImageUrl: defaultCover('hangout'),
@@ -86,7 +91,7 @@ export const useCreateDraft = create<CreateDraft & Actions>((set, get) => ({
     const category = group.defaults.category ?? suggestCategory(group.defaults.title ?? group.name);
     set({
       ...initial(),
-      title: group.defaults.title ?? group.name,
+      title: group.defaults.title ?? '',
       category,
       coverTouched: true,
       coverImageUrl: group.coverImageUrl ? bigCover(group.coverImageUrl) : defaultCover(category),

@@ -222,7 +222,8 @@ export type NotificationType =
   | 'event_cancelled'
   | 'friend_request'
   | 'friend_accepted'
-  | 'group_added';
+  | 'group_added'
+  | 'event_message';
 
 export interface AppNotification {
   id: string;
@@ -286,6 +287,20 @@ export interface CreateEventInput {
   guestNames?: string[];
   /** Save the selected people as a new group for next time. */
   saveAsGroupName?: string | null;
+  /** Optional, can also be added later. */
+  location?: EventLocation | null;
+  description?: string | null;
+}
+
+/** An update from the organizer on an event ("Vi møtes ved inngangen"). */
+export interface EventMessage {
+  id: string;
+  body: string;
+  createdAt: string;
+  author: Person;
+  /** Only for the author: how many of the others have seen it. */
+  seenCount?: number | null;
+  recipientCount?: number | null;
 }
 
 export interface CreateGroupInput {

@@ -9,9 +9,9 @@ import { radius, spacing } from '@/theme';
 
 const ROWS: { key: keyof NotificationPreferences; title: string; subtitle: string }[] = [
   { key: 'invites', title: 'Invitasjoner', subtitle: 'Når noen inviterer deg' },
-  { key: 'responses', title: 'Svar', subtitle: 'Når gjengen svarer, og når alle kan samme dag' },
-  { key: 'dateLocked', title: 'Låste datoer', subtitle: 'Når en dato er bestemt eller endret' },
-  { key: 'reminders', title: 'Påminnelser', subtitle: 'Maks én om gangen – aldri masete' },
+  { key: 'responses', title: 'Svar', subtitle: 'Når gjengen svarer, når alle kan samme dag, og når noen melder seg av' },
+  { key: 'dateLocked', title: 'Datoer og beskjeder', subtitle: 'Når en dato er bestemt eller endret, og nye beskjeder fra arrangøren' },
+  { key: 'reminders', title: 'Påminnelser', subtitle: 'Mandag: denne uken · dagen før · 2 timer før · hvis du ikke har svart' },
   { key: 'groupNudges', title: 'Forslag', subtitle: '«Skal vi finne neste dato?»' },
 ];
 

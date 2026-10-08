@@ -14,6 +14,7 @@ import { shortNames } from '@/lib/names';
 import { hasResponded, rankDateOptions, responseProgress } from '@/lib/ranking';
 import { spacing } from '@/theme';
 import { DateResultRow } from './DateResultRow';
+import { EventMessages } from './EventMessages';
 import { ShareSheet } from './ShareSheet';
 
 const VISIBLE = 5;
@@ -139,6 +140,8 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
             </Card>
           </Animated.View>
         ) : null}
+
+        <EventMessages eventId={event.id} isOrganizer style={{ marginTop: spacing.xl }} />
       </ScreenScroll>
 
       <BottomBar>

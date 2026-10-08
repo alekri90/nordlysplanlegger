@@ -443,5 +443,86 @@ console.log('\nBlocking & reporting');
   });
 }
 
+console.log('\nMessages, declines & reminders');
+{
+  const host = await newUser('host@example.com', { display_name: 'Hilde Vert', username: 'hildevert' });
+  const g1 = await newUser('g1@example.com', { display_name: 'Geir En', username: 'geiren' });
+  const g2 = await newUser('g2@example.com', { display_name: 'Gro To', username: 'groto' });
+  await as(host);
+  await q(`select send_friend_request($1)`, [g1]);
+  await q(`select send_friend_request($1)`, [g2]);
+  for (const u of [g1, g2]) { await as(u); await q(`select send_friend_request($1)`, [host]); }
+  await as(host);
+  // Saturday 17 Oct 2026 at 18:00, fixed date.
+  const [{ r }] = await q(`select create_event($1) r`, [{ title: 'Badstu', category: 'sauna', date_mode: 'fixed', fixed_date: '2026-10-17', time_hint: 'exact', start_time: '18:00', member_user_ids: [g1, g2] }]);
+  const ev = r.event_id;
+  await q(`update events set start_time = '18:00' where id = $1`, [ev]);
+  const notes = async (u, kind) => q(`select title, body from notifications where user_id = $1 and event_id is not distinct from $2 and ($3::text is null or data ->> 'kind' = $3) order by created_at`, [u, ev, kind]);
+
+  await check('only the organizer posts; everyone else is notified', async () => {
+    await as(g1);
+    await assert.rejects(q(`select post_event_message($1, 'hei')`, [ev]), /not_event_organizer/);
+    await as(host);
+    await q(`select post_event_message($1, 'Vi møtes ved inngangen')`, [ev]);
+    for (const u of [g1, g2]) {
+      const n = await q(`select title, body from notifications where user_id = $1 and type = 'event_message'`, [u]);
+      assert.equal(n.length, 1);
+      assert.equal(n[0].body, 'Vi møtes ved inngangen');
+    }
+    await assert.rejects(q(`select post_event_message($1, '   ')`, [ev]), /message_empty/);
+  });
+  await check('organizer sees how many have seen a message; others don\'t', async () => {
+    await as(g1);
+    await q(`select mark_event_messages_seen($1)`, [ev]);
+    const [mine] = await q(`select * from list_event_messages($1)`, [ev]);
+    assert.equal(mine.seen_count, null);
+    await as(host);
+    const [m] = await q(`select * from list_event_messages($1)`, [ev]);
+    assert.equal(m.body, 'Vi møtes ved inngangen');
+    assert.equal(m.seen_count, 1);
+    assert.equal(m.recipient_count, 2);
+    const stranger = await newUser('nosy@example.com', { display_name: 'Nysgjerrig', username: 'nosy' });
+    await as(stranger);
+    assert.equal((await q(`select * from list_event_messages($1)`, [ev])).length, 0);
+  });
+  await check('"kan ikke likevel" tells the organizer', async () => {
+    await as(g2);
+    await q(`update event_members set status = 'attending' where event_id = $1 and user_id = $2`, [ev, g2]);
+    await q(`update event_members set status = 'declined' where event_id = $1 and user_id = $2`, [ev, g2]);
+    const n = await q(`select title from notifications where user_id = $1 and event_id = $2 and type = 'response_received'`, [host, ev]);
+    assert.deepEqual(n.map((x) => x.title), ['Gro kan ikke likevel']);
+  });
+  await check('Monday overview at 08:00 Oslo, once, without people who declined', async () => {
+    await as(null);
+    await q(`select send_event_reminders('2026-10-12 06:05+00')`); // Mon 08:05 in Oslo (CEST)
+    await q(`select send_event_reminders('2026-10-12 06:10+00')`);
+    const w = await q(`select body from notifications where user_id = $1 and data ->> 'kind' = 'weekly'`, [g1]);
+    assert.equal(w.length, 1);
+    assert.equal(w[0].body, 'Badstu · lør kl. 18:00');
+    assert.equal((await q(`select 1 from notifications where user_id = $1 and data ->> 'kind' = 'weekly'`, [g2])).length, 0);
+  });
+  await check('day before at 10:00, two hours before, each once', async () => {
+    await q(`select send_event_reminders('2026-10-16 08:05+00')`); // Fri 10:05 Oslo
+    await q(`select send_event_reminders('2026-10-16 08:10+00')`);
+    assert.deepEqual((await notes(g1, 'day_before')).map((x) => x.title), ['I morgen: Badstu']);
+    await q(`select send_event_reminders('2026-10-17 14:00+00')`); // Sat 16:00 Oslo, start 18:00
+    await q(`select send_event_reminders('2026-10-17 14:05+00')`);
+    const soon = await notes(g1, 'soon');
+    assert.equal(soon.length, 1);
+    assert.equal(soon[0].body, 'Kl. 18:00');
+    assert.equal((await notes(g2, 'soon')).length, 0, 'declined');
+  });
+  await check('"venter på svaret ditt" after two days, once', async () => {
+    await as(host);
+    const [{ r: poll }] = await q(`select create_event($1) r`, [{ title: 'Quiz', category: 'quiz', date_mode: 'poll', option_dates: ['2026-11-06', '2026-11-07'], time_hint: 'evening', member_user_ids: [g1] }]);
+    await q(`update events set created_at = '2026-10-01' where id = $1`, [poll.event_id]);
+    await as(null);
+    await q(`select send_event_reminders('2026-10-05 10:00+00')`);
+    await q(`select send_event_reminders('2026-10-05 12:00+00')`);
+    const n = await q(`select title from notifications where user_id = $1 and event_id = $2 and type = 'reminder_respond'`, [g1, poll.event_id]);
+    assert.deepEqual(n.map((x) => x.title), ['Hilde venter på svaret ditt']);
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

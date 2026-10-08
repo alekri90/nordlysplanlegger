@@ -60,9 +60,9 @@ function EditForm({ event: e }: { event: PlannerEvent }) {
             {e.selectedDate ? <TimePicker hint={time.hint} time={time.time} allowHints={false} onChange={(hint, t) => setTime({ hint, time: t })} /> : null}
             <View>
               <Text variant="title3" style={{ marginBottom: spacing.md }}>
-                Beskjed til gjengen
+                Detaljer
               </Text>
-              <Input placeholder="Ta med håndkle …" value={description} onChangeText={setDescription} multiline style={{ minHeight: 96, paddingTop: spacing.md, textAlignVertical: 'top' }} maxLength={2000} />
+              <Input placeholder="Det alle bør vite, f.eks. «Ta med håndkle». Nye beskjeder sender du fra arrangementet." value={description} onChangeText={setDescription} multiline style={{ minHeight: 96, paddingTop: spacing.md, textAlignVertical: 'top' }} maxLength={2000} />
             </View>
           </View>
         </ScreenScroll>

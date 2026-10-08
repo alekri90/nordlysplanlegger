@@ -5,6 +5,7 @@ import type {
   CreateEventInput,
   CreateGroupInput,
   Discoverability,
+  EventMessage,
   EventPatch,
   FriendRequest,
   FriendshipInfo,
@@ -77,6 +78,11 @@ export interface Repository {
   startPoll(eventId: string, optionDates: string[]): Promise<void>;
   setRsvp(eventId: string, attending: boolean): Promise<void>;
   cancelEvent(eventId: string): Promise<void>;
+  /** Newest first. */
+  listEventMessages(eventId: string): Promise<EventMessage[]>;
+  /** Organizer only; everyone else with an account is notified. */
+  postEventMessage(eventId: string, body: string): Promise<void>;
+  markEventMessagesSeen(eventId: string): Promise<void>;
   /** Share photos from the event with everyone in it (local image URIs). */
   addEventPhotos(eventId: string, uris: string[]): Promise<void>;
   /** Realtime updates for one event (new answers etc.). */

@@ -7,13 +7,14 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { ActionButton } from '@/components/event/ActionButton';
 import { EventHero } from '@/components/event/EventHero';
+import { EventMessages } from '@/components/event/EventMessages';
 import { GuestList } from '@/components/event/GuestList';
 import { ResultsView } from '@/components/event/ResultsView';
 import { ShareSheet } from '@/components/event/ShareSheet';
 import { BottomBar, Button, Card, EmptyState, ErrorState, Icon, IconButton, ListRow, PageSkeleton, Screen, Segmented, Sheet, Text, useToast, type IconName } from '@/components/ui';
 import { useAddEventPhotos, useCancelEvent, useEvent, useSetRsvp } from '@/data/hooks';
 import type { Person, PlannerEvent } from '@/data/types';
-import { PersonSheet } from '@/components/people/PersonSheet';
+import { confirmDestructive, PersonSheet } from '@/components/people/PersonSheet';
 import { ReportForm } from '@/components/people/ReportSheet';
 import { CATEGORIES, thumb } from '@/lib/categories';
 import { formatLong, formatTime, today } from '@/lib/dates';
@@ -177,6 +178,8 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
             <ActionButton icon="more-horizontal" label="Mer" onPress={() => setMoreOpen(true)} />
           </View>
 
+          {e.status !== 'cancelled' ? <EventMessages eventId={e.id} isOrganizer={isOrganizer} style={{ marginTop: spacing.xl }} /> : null}
+
           <View style={{ marginTop: spacing.xl }}>
             <Segmented<Tab>
               value={tab}
@@ -224,10 +227,33 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
         <BottomBar>
           <Button title="Finn dato" icon="calendar" onPress={findDate} accessibilityHint="Velg mulige dager og la gjengen svare" />
         </BottomBar>
+      ) : showRsvp && mine!.status === 'attending' ? (
+        // Answered yes: a quiet confirmation, and a way out that tells the organizer.
+        <BottomBar>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <Icon name="check-circle" size={22} color="success" />
+            <Text variant="headline" style={{ flex: 1 }}>
+              Du kommer
+            </Text>
+            <Button
+              title="Kan ikke likevel"
+              variant="secondary"
+              size="sm"
+              onPress={() =>
+                confirmDestructive(
+                  'Kan du ikke likevel?',
+                  `${firstName(e.organizer.name)} får beskjed om at du ikke kommer.`,
+                  'Meld meg av',
+                  () => rsvp.mutate(false, { onSuccess: () => toast(`${firstName(e.organizer.name)} har fått beskjed`) }),
+                )
+              }
+            />
+          </View>
+        </BottomBar>
       ) : showRsvp ? (
         <BottomBar>
           <Text variant="callout" align="center" color="textSecondary">
-            {mine!.status === 'attending' ? 'Du har sagt at du kommer' : mine!.status === 'declined' ? 'Du har sagt at du ikke kan' : 'Kommer du?'}
+            {mine!.status === 'declined' ? 'Du har sagt at du ikke kan' : 'Kommer du?'}
           </Text>
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             <Button

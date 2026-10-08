@@ -221,6 +221,26 @@ export function useStartPoll(eventId: string) {
   return useMutation({ mutationFn: (dates: string[]) => repo.startPoll(eventId, dates), onSuccess: () => invalidateAll(qc) });
 }
 
+export function useEventMessages(eventId: string | undefined) {
+  const signedIn = useIsSignedIn();
+  return useQuery({ queryKey: ['eventMessages', eventId ?? ''], queryFn: () => repo.listEventMessages(eventId!), enabled: signedIn && !!eventId });
+}
+
+export function usePostEventMessage(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) => repo.postEventMessage(eventId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['eventMessages', eventId] }),
+  });
+}
+
+/** Marks messages as seen when they've been shown (for the organizer's "sett av"). */
+export function useMarkMessagesSeen(eventId: string | undefined, newestAt: string | undefined) {
+  useEffect(() => {
+    if (eventId && newestAt) repo.markEventMessagesSeen(eventId).catch(() => {});
+  }, [eventId, newestAt]);
+}
+
 export function useAddEventPhotos(eventId: string) {
   const qc = useQueryClient();
   return useMutation({ mutationFn: (uris: string[]) => repo.addEventPhotos(eventId, uris), onSuccess: () => invalidateAll(qc) });

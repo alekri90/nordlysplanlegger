@@ -86,6 +86,8 @@ export default function CreateWho() {
         guestIds: draft.guestIds,
         guestNames: draft.guestNames,
         saveAsGroupName: !draft.groupId && draft.saveAsGroup && draft.groupName.trim() ? draft.groupName.trim() : null,
+        location: draft.placeName.trim() ? { name: draft.placeName.trim() } : null,
+        description: draft.details.trim() || null,
       });
       haptics.success();
       router.replace({
@@ -114,7 +116,7 @@ export default function CreateWho() {
   return (
     <Screen>
       <KeyboardAware>
-        <StepHeader step={draft.source === 'new' ? 3 : 1} total={draft.source === 'new' ? 4 : 2} />
+        <StepHeader step={draft.source === 'event' ? 1 : 3} total={draft.source === 'event' ? 2 : 4} />
         <ScreenScroll bottomInset={170}>
           <PageTitle title="Hvem skal være med?" />
 

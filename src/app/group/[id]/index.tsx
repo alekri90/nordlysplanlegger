@@ -47,7 +47,7 @@ export default function GroupScreen() {
 
   const plan = () => {
     prefillFromGroup(g, me?.id);
-    router.push('/create/dates');
+    router.push('/create');
   };
 
   const leaveGroup = () => {

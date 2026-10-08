@@ -22,6 +22,7 @@ const ICONS: Record<AppNotification['type'], IconName> = {
   friend_request: 'user-plus',
   friend_accepted: 'user-check',
   group_added: 'users',
+  event_message: 'message-square',
 };
 
 export default function Notifications() {

@@ -33,6 +33,7 @@ const PREFERENCE_FOR_TYPE: Record<string, string> = {
   date_locked: 'date_locked',
   event_updated: 'date_locked',
   event_cancelled: 'date_locked',
+  event_message: 'date_locked',
   group_nudge: 'group_nudges',
 };
 

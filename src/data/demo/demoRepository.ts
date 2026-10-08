@@ -7,6 +7,7 @@ import type {
   AppNotification,
   Discoverability,
   EventMember,
+  EventMessage,
   FriendshipState,
   Group,
   GroupMember,
@@ -46,6 +47,17 @@ let inbox = new Map<string, AppNotification[]>([[ME.id, state.notifications]]);
 let deviceGuestIds: string[] = [];
 /** Personal invite links for guests without an account. */
 let personalInvites: { token: string; eventId: string; guestId: string }[] = [];
+/** Organizer updates on events (mirrors event_messages); seenBy mirrors messages_seen_at. */
+const messages: (Omit<EventMessage, 'seenCount' | 'recipientCount'> & { eventId: string; seenBy: string[] })[] = [
+  {
+    id: 'msg-badstu-1',
+    eventId: 'ev-badstu',
+    body: 'Husk håndkle og badetøy! Vi møtes ved inngangen kl. 17:50 🧖‍♀️',
+    createdAt: new Date(Date.now() - 3 * 3600_000).toISOString(),
+    author: { id: ME.id, name: ME.name, avatarUrl: ME.avatarUrl },
+    seenBy: ['u-maja', 'u-sofie', 'u-ida', 'u-nora'],
+  },
+];
 /** People Emma has blocked (demo: only hides them from search and suggestions). */
 const blockedIds = new Set<string>();
 const authListeners = new Set<(p: Profile | null) => void>();
@@ -461,8 +473,8 @@ export const demoRepository: Repository = {
       timeHint: input.timeHint,
       startTime: input.startTime ?? null,
       selectedDate: fixed ? input.fixedDate ?? null : null,
-      location: null,
-      description: null,
+      location: input.location ?? null,
+      description: input.description ?? null,
       options,
       members: [
         { id: uid('m'), person: { id: me.id, name: me.name, avatarUrl: me.avatarUrl, username: me.username }, userId: me.id, role: 'organizer', status: fixed ? 'attending' : 'responded', unavailableOptionIds: [], respondedAt: now() },
@@ -541,6 +553,34 @@ export const demoRepository: Repository = {
     await wait();
     findEvent(eventId).status = 'cancelled';
     refreshGroupRefs();
+  },
+
+  async listEventMessages(eventId) {
+    await wait(150);
+    const e = findEvent(eventId);
+    if (!isMemberOf(e)) return [];
+    const others = e.members.filter((m) => m.userId && m.userId !== e.organizer.id && m.status !== 'declined');
+    return clone(messages.filter((m) => m.eventId === eventId))
+      .reverse()
+      .map(({ eventId: _e, seenBy, ...m }) => ({
+        ...m,
+        author: freshPerson(m.author),
+        seenCount: m.author.id === meId() ? others.filter((o) => seenBy.includes(o.userId!)).length : null,
+        recipientCount: m.author.id === meId() ? others.length : null,
+      }));
+  },
+
+  async postEventMessage(eventId, body) {
+    await wait(300);
+    const e = findEvent(eventId);
+    if (e.organizer.id !== meId()) throw new Error('Bare arrangøren kan sende beskjeder');
+    if (!body.trim()) throw new Error('Skriv en beskjed først');
+    const me = state.me;
+    messages.push({ id: uid('msg'), eventId, body: body.trim().slice(0, 1000), createdAt: now(), author: { id: me.id, name: me.name, avatarUrl: me.avatarUrl }, seenBy: [] });
+  },
+
+  async markEventMessagesSeen(eventId) {
+    for (const m of messages) if (m.eventId === eventId && !m.seenBy.includes(meId())) m.seenBy.push(meId());
   },
 
   async addEventPhotos(eventId, uris) {

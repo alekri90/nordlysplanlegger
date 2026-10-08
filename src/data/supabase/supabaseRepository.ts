@@ -12,6 +12,7 @@ import type {
   ClaimResult,
   Discoverability,
   EventMember,
+  EventMessage,
   FriendshipState,
   Group,
   GroupEventRef,
@@ -216,6 +217,8 @@ function friendlyError(message: string) {
   if (message.includes('not_group_admin')) return 'Bare admin kan gjøre dette';
   if (message.includes('not_group_member')) return 'Du er ikke med i gjengen';
   if (message.includes('blocked')) return 'Det går ikke akkurat nå';
+  if (message.includes('not_event_organizer')) return 'Bare arrangøren kan sende beskjeder';
+  if (message.includes('message_empty')) return 'Skriv en beskjed først';
   if (message.toLowerCase().includes('already registered')) return 'Det finnes allerede en konto med denne e-posten';
   if (message.toLowerCase().includes('invalid login credentials')) return 'Feil e-post eller passord';
   if (message.toLowerCase().includes('password should be')) return 'Passordet må ha minst 8 tegn';
@@ -438,6 +441,7 @@ export const supabaseRepository: Repository = {
     });
     fail(error);
     const r = data as { event_id: string; invite_token: string; group_id: string | null; guests: { guest_id: string; name: string; token: string }[] };
+    if (input.location || input.description) await this.updateEvent(r.event_id, { location: input.location ?? null, description: input.description ?? null });
     return {
       eventId: r.event_id,
       inviteToken: r.invite_token,
@@ -510,6 +514,29 @@ export const supabaseRepository: Repository = {
     return () => {
       sb.removeChannel(channel);
     };
+  },
+
+  async listEventMessages(eventId) {
+    const { data, error } = await getSupabase().rpc('list_event_messages', { p_event_id: eventId });
+    fail(error);
+    type Row = { id: string; body: string; created_at: string; author_id: string | null; author_name: string | null; author_avatar: string | null; seen_count: number | null; recipient_count: number | null };
+    return (data as Row[]).map<EventMessage>((m) => ({
+      id: m.id,
+      body: m.body,
+      createdAt: m.created_at,
+      author: { id: m.author_id ?? '', name: m.author_name || 'Arrangøren', avatarUrl: m.author_avatar },
+      seenCount: m.seen_count,
+      recipientCount: m.recipient_count,
+    }));
+  },
+
+  async postEventMessage(eventId, body) {
+    const { error } = await getSupabase().rpc('post_event_message', { p_event_id: eventId, p_body: body });
+    fail(error);
+  },
+
+  async markEventMessagesSeen(eventId) {
+    await getSupabase().rpc('mark_event_messages_seen', { p_event_id: eventId });
   },
 
   async addEventPhotos(eventId, uris) {
