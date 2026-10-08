@@ -7,7 +7,7 @@ import { spacing, useColors } from '@/theme';
 
 type Props = {
   person: Person;
-  /** Secondary line under @username, e.g. "3 felles venner" or "Dere var sammen på Poker". */
+  /** Secondary line under @username, e.g. "3 felles venner" or "Dere var sammen på Kortkveld". */
   detail?: string | null;
   onPress?: () => void;
   trailing?: ReactNode;

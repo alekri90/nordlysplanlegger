@@ -16,7 +16,7 @@ import { spacing } from '@/theme';
 
 /**
  * Name it, pick people, pick a look. `?fromEvent=` pre-selects everyone from that event
- * and suggests a name ("Poker hos Alexander" → "Poker").
+ * and suggests a name ("Kortkveld hos Alexander" → "Kort").
  */
 export default function NewGroup() {
   const { fromEvent } = useLocalSearchParams<{ fromEvent?: string }>();
@@ -73,7 +73,7 @@ function NewGroupForm({ initialName, initialCover, eventPeople, eventTitle }: { 
         <Header back="close" />
         <ScreenScroll bottomInset={140}>
           <PageTitle title={eventTitle ? 'Lag gruppe av gjengen' : 'Ny gjeng'} subtitle={eventTitle ? `Alle fra ${eventTitle} er valgt. Neste gang er det ett trykk.` : 'Folk du gjør ting med igjen og igjen.'} />
-          <Input size="lg" autoFocus={!initialName} placeholder="F.eks. Poker" value={name} onChangeText={setName} maxLength={60} accessibilityLabel="Navn på gjengen" />
+          <Input size="lg" autoFocus={!initialName} placeholder="F.eks. Kortklubben" value={name} onChangeText={setName} maxLength={60} accessibilityLabel="Navn på gjengen" />
 
           <View style={{ marginTop: spacing.xl }}>
             <GroupLookPicker photos={photos} photo={chosenPhoto} onPhoto={setPhoto} emoji={emoji} onEmoji={setEmoji} />

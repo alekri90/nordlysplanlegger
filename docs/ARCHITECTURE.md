@@ -183,7 +183,7 @@ Ikke bygget med vilje: feed, likes, følgere, stories, status, chat.
 `notifications`-rader lages i databasen (låst dato, ny invitasjon, alle kan, påminnelser).
 En Database Webhook på `insert` kaller Edge Function `push-dispatch`, som slår opp
 `push_tokens` + preferanser og sender via Expo Push API. `pg_cron` kjører
-`generate_nudges()` daglig for «3 personer mangler å svare» og «Pokerklubben har ikke møttes
+`generate_nudges()` daglig for «3 personer mangler å svare» og «Kortklubben har ikke møttes
 på 7 uker». Maks én påminnelse per arrangement per 48 timer — nyttig, ikke masete.
 
 Appen ber om push-tillatelse først når det gir mening: rett etter at første invitasjon er sendt.

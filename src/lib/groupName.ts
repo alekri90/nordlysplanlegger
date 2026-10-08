@@ -1,6 +1,6 @@
 /**
  * Suggest a group name from an event title.
- * "Poker hos Alexander" → "Poker", "Badstu med jentene" → "Jentene", "Pokerkveld" → "Poker".
+ * "Quiz hos Alexander" → "Quiz", "Badstu med jentene" → "Jentene", "Spillkveld" → "Spill".
  */
 export function suggestGroupName(title: string): string {
   let t = title.trim();

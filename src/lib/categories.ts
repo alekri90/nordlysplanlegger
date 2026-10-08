@@ -15,7 +15,21 @@ export interface Category {
   photos: string[];
 }
 
+// Order matters: when two keywords match at the same position, the earlier category wins
+// ("badetur" → beach before sauna's "bad", "julebord" → christmas before family's "jul").
 export const CATEGORIES: Record<CategoryId, Category> = {
+  beach: {
+    id: 'beach',
+    label: 'Strand og sommer',
+    icon: 'sun',
+    keywords: ['strand', 'badetur', 'bading', 'svømm', 'sommerfest', 'sommer'],
+    photos: [
+      '1536869338989-e7ffd2297454', // friends on the beach
+      '1530541930197-ff16ac917b0e', // campfire on the beach
+      '1496275068113-fff8c90750d1', // walking the shore at sunset
+      '1675826025405-682ebe9021e8', // sitting on the sand at sunset
+    ],
+  },
   sauna: {
     id: 'sauna',
     label: 'Badstu',
@@ -30,24 +44,74 @@ export const CATEGORIES: Record<CategoryId, Category> = {
       '1728404259075-209cfb5bb89c', // wood stove in cabin
     ],
   },
-  poker: {
-    id: 'poker',
+  games: {
+    id: 'games',
     label: 'Spillkveld',
     icon: 'layers',
-    keywords: ['poker', 'kort', 'spill', 'brettspill', 'quiz', 'blackjack'],
+    keywords: ['spillkveld', 'kortspill', 'kortkveld', 'kort', 'brettspill', 'spill', 'yatzy', 'bridge', 'sjakk', 'backgammon', 'monopol'],
     photos: [
       '1746635732312-0083b7f9423f', // friends playing cards
-      '1780091891244-8e6d48ce53a4', // chips and cards on dark table
-      '1774660980275-3a2e7100a1fa', // chips on felt
-      '1609818698346-8cb3be6e0bc0', // cards on wood
-      '1780092430602-75499580866a', // chip case
+      '1677188010559-0667a1ed33a0', // board game at the table
+      '1660327401446-749a3c2e6b8e', // hand of cards
+      '1607438802263-ada36dae55c5', // playing cards on the table
+      '1768768772898-dc809c01dc2a', // cards on a wooden table outdoors
+      '1781917389734-282472b03a2a', // backgammon with drinks and snacks
+    ],
+  },
+  quiz: {
+    id: 'quiz',
+    label: 'Quiz',
+    icon: 'help-circle',
+    keywords: ['quiz', 'pubquiz', 'trivia'],
+    photos: [
+      '1558210598-89ba75b1724e', // friends at a bar
+      '1557318041-1ce374d55ebf', // question mark sign with light bulbs
+      '1681641090195-5adb0c54eeb0', // friends around a table with drinks
+      '1560090143-aa4d95362170', // people at tables
+    ],
+  },
+  movie: {
+    id: 'movie',
+    label: 'Filmkveld',
+    icon: 'film',
+    keywords: ['filmkveld', 'film', 'kino', 'serie', 'netflix'],
+    photos: [
+      '1758525862263-af89b090fb56', // friends watching tv with popcorn
+      '1721733258290-cac1a9204564', // outdoor movie on a blanket
+      '1572177191856-3cde618dee1f', // popcorn
+      '1791275605302-bae384ff80e8', // outdoor screening at night
+      '1771574203200-0ec88f162fe0', // cinema hall
+    ],
+  },
+  gaming: {
+    id: 'gaming',
+    label: 'Gaming',
+    icon: 'monitor',
+    keywords: ['gaming', 'playstation', 'xbox', 'nintendo', 'fifa', 'e-sport', 'dataspill'],
+    photos: [
+      '1493711662062-fa541adb3fc8', // two controllers in front of the tv
+      '1659535907680-0e219b46c01d', // friends on the couch with controllers
+      '1714646184215-f7af62f72f80', // two friends playing video games
+      '1548003693-b55d51032288', // playing in front of monitors
+    ],
+  },
+  brunch: {
+    id: 'brunch',
+    label: 'Brunsj og kaffe',
+    icon: 'sunrise',
+    keywords: ['brunsj', 'kaffe', 'frokost', 'lunsj', 'kafé', 'kafe'],
+    photos: [
+      '1789758385692-38432c7bc6f8', // friends laughing over breakfast
+      '1773504356091-222ee58cfd23', // friends at an outdoor cafe
+      '1695141482205-08e4e76c2a79', // friends around a brunch table
+      '1675159206783-b2f129e46ef0', // brunch at a wooden table
     ],
   },
   dinner: {
     id: 'dinner',
     label: 'Middag',
     icon: 'coffee',
-    keywords: ['middag', 'mat', 'lunsj', 'brunsj', 'frokost', 'restaurant', 'dinner', 'taco', 'pizza', 'grill'],
+    keywords: ['middag', 'mat', 'restaurant', 'dinner', 'taco', 'pizza', 'grill'],
     photos: [
       '1528605248644-14dd04022da1', // friends eating together
       '1659690402718-ea07d943fd42', // friends enjoying a meal
@@ -70,11 +134,36 @@ export const CATEGORIES: Record<CategoryId, Category> = {
       '1646649853703-7645147474ba', // rackets on court
     ],
   },
+  ski: {
+    id: 'ski',
+    label: 'Ski og vinter',
+    icon: 'cloud-snow',
+    keywords: ['skitur', 'ski', 'alpin', 'slalom', 'langrenn', 'snowboard', 'vinter', 'afterski'],
+    photos: [
+      '1459196198227-6655e22114d8', // skiing down the slope
+      '1734366965512-1ef84f81c513', // friends in the snow
+      '1453694595360-51e193e121fc', // walking up with skis
+      '1582048551464-8b1d42010271', // cheering on the mountain
+    ],
+  },
+  travel: {
+    id: 'travel',
+    label: 'Reise',
+    icon: 'globe',
+    keywords: ['reise', 'tur til', 'ferie', 'byferie', 'storby', 'roadtrip', 'interrail', 'utlandet'],
+    photos: [
+      '1511632765486-a01980e01a18', // friends at sunset, arms around each other
+      '1529156069898-49953e39b3ac', // friends sitting on a wall with a view
+      '1528916451049-e5d097b61db2', // friends above a big city
+      '1529424601215-d2a3daf193ff', // roadtrip, sitting in the car boot
+      '1548957175-84f0f9af659e', // overlooking mountains
+    ],
+  },
   outdoor: {
     id: 'outdoor',
     label: 'Tur',
     icon: 'map',
-    keywords: ['tur', 'fjell', 'topptur', 'hike', 'hiking', 'ski', 'skitur', 'telt', 'padling', 'kajakk'],
+    keywords: ['tur', 'fjell', 'topptur', 'hike', 'hiking', 'telt', 'padling', 'kajakk'],
     photos: [
       '1629185752152-fe65698ddee4', // hiking towards peaks
       '1520880867055-1e30d1cb001c', // friends on mountain edge
@@ -94,11 +183,35 @@ export const CATEGORIES: Record<CategoryId, Category> = {
       '1534067058742-a4585f7d4ff4',
     ],
   },
+  birthday: {
+    id: 'birthday',
+    label: 'Bursdag',
+    icon: 'gift',
+    keywords: ['bursdag', 'bursdagsfeiring', 'jubileum', 'årsdag'],
+    photos: [
+      '1699730185428-d11054059c7f', // confetti and balloons
+      '1714978444614-7a197c2309ee', // cake with candles
+      '1741887845577-bbe0dd3ebfe2', // celebrating with a cake
+      '1544155892-b2b6c64204fc', // glitter
+    ],
+  },
+  christmas: {
+    id: 'christmas',
+    label: 'Julebord',
+    icon: 'star',
+    keywords: ['julebord', 'julefest', 'juleavslutning', 'gløgg', 'pepperkake'],
+    photos: [
+      '1601118964938-228a89955311', // toast over a festive dinner
+      '1735324475776-177baaa34d5b', // glasses by the christmas tree
+      '1581954548122-4dff8989c0f7', // long festive table
+      '1699730148132-1409a3728479', // friends around a table with food and drinks
+    ],
+  },
   party: {
     id: 'party',
     label: 'Fest',
     icon: 'music',
-    keywords: ['fest', 'bursdag', 'vors', 'øl', 'vin', 'drinks', 'bar', 'utepils', 'party', 'feiring', 'jubileum', 'konsert'],
+    keywords: ['fest', 'vors', 'øl', 'vin', 'drinks', 'bar', 'utepils', 'party', 'feiring'],
     photos: [
       '1699730164892-d7c433524ff3', // glasses up
       '1640766322140-ab90a7bc71e5', // drinks
@@ -108,11 +221,24 @@ export const CATEGORIES: Record<CategoryId, Category> = {
       '1758599670006-d7fe945b5966', // dancing at sunset
     ],
   },
+  concert: {
+    id: 'concert',
+    label: 'Konsert og kultur',
+    icon: 'mic',
+    keywords: ['konsert', 'festival', 'teater', 'show', 'opera', 'standup', 'stand-up', 'museum', 'kultur'],
+    photos: [
+      '1459749411175-04bf5292ceea', // concert crowd
+      '1470229722913-7c0e2dbbafd3', // stage lights over the audience
+      '1501386761578-eac5c94b800a', // cheering crowd
+      '1540039155733-5bb30b53aa14', // crowd facing a lit stage
+      '1533174072545-7a4b6ad7a6c3', // festival field
+    ],
+  },
   family: {
     id: 'family',
     label: 'Familie',
     icon: 'heart',
-    keywords: ['familie', 'familien', 'søndagsmiddag', 'mamma', 'pappa', 'besteforeldre', 'jul', 'påske', 'bursdag til'],
+    keywords: ['familie', 'familien', 'søndagsmiddag', 'mamma', 'pappa', 'besteforeldre', 'jul', 'påske'],
     photos: [
       '1533777419517-3e4017e2e15a', // toast at table
       '1578496780896-7081cc23c111', // eating indoors
@@ -145,7 +271,7 @@ export function suggestCategory(title: string): CategoryId {
   for (const c of CATEGORY_LIST) {
     for (const k of c.keywords) {
       const i = t.indexOf(k);
-      // Earliest keyword wins: "Middag og poker" → dinner.
+      // Earliest keyword wins: "Middag og kortspill" → dinner; on a tie the earlier category wins.
       if (i >= 0 && i < bestIndex) {
         best = c.id;
         bestIndex = i;
@@ -155,12 +281,15 @@ export function suggestCategory(title: string): CategoryId {
   return best;
 }
 
+/** Themes that no longer exist (e.g. the old "poker") fall back to the catch-all. */
+const themeOf = (category: CategoryId) => CATEGORIES[category] ?? CATEGORIES.hangout;
+
 export function coverOptions(category: CategoryId, width = 1200): string[] {
-  return CATEGORIES[category].photos.map((id) => unsplash(id, width));
+  return themeOf(category).photos.map((id) => unsplash(id, width));
 }
 
 export function defaultCover(category: CategoryId): string {
-  return unsplash(CATEGORIES[category].photos[0]);
+  return unsplash(themeOf(category).photos[0]);
 }
 
 /** Smaller variant of a cover URL for thumbnails. Leaves non-Unsplash URLs untouched. */

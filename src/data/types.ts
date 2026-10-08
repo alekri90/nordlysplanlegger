@@ -9,7 +9,9 @@ export type DateMode = 'fixed' | 'poll' | 'undecided';
 /** `evening` = "Etter kl. 18". `exact` uses `startTime`. */
 export type TimeHint = 'any' | 'daytime' | 'evening' | 'exact';
 export type Tier = 'free' | 'plus';
-export type CategoryId = 'sauna' | 'poker' | 'dinner' | 'sport' | 'outdoor' | 'cabin' | 'party' | 'family' | 'hangout';
+export type CategoryId =
+  | 'beach' | 'sauna' | 'games' | 'quiz' | 'movie' | 'gaming' | 'brunch' | 'dinner' | 'sport' | 'ski'
+  | 'travel' | 'outdoor' | 'cabin' | 'birthday' | 'christmas' | 'party' | 'concert' | 'family' | 'hangout';
 
 /** ISO calendar date, `YYYY-MM-DD`. Dates are kept timezone-free on purpose. */
 export type ISODate = string;
@@ -65,7 +67,7 @@ export interface PersonResult extends Person {
   friendship: FriendshipState;
   mutualFriends: number;
   mutualGroups: number;
-  /** "Dere var sammen på Poker hos Thomas" */
+  /** "Dere var sammen på Kortkveld hos Thomas" */
   context?: string | null;
 }
 

@@ -88,16 +88,16 @@ await check('reserved, prefixed-reserved, blocked, invalid rejected', async () =
   }
 });
 await check('allowed formats', async () => {
-  for (const ok of ['alex.k2', 'poker_petter', '@Thomas90']) {
+  for (const ok of ['alex.k2', 'kort_petter', '@Thomas90']) {
     await q(`update profiles set username = $2 where id = $1`, [thomas, ok]);
   }
   await q(`update profiles set username = 'thomas' where id = $1`, [thomas]);
 });
 await check('check_username: available / taken with suggestions (anon)', async () => {
   await as(null);
-  const [{ r: free }] = await q(`select check_username('@Pokerpetter') r`);
+  const [{ r: free }] = await q(`select check_username('@Kortpetter') r`);
   assert.equal(free.available, true);
-  assert.equal(free.normalized, 'pokerpetter');
+  assert.equal(free.normalized, 'kortpetter');
   const [{ r: taken }] = await q(`select check_username('AlexK', 'Alexander Kristensen') r`);
   assert.equal(taken.available, false);
   assert.equal(taken.reason, 'taken');
@@ -212,7 +212,7 @@ await check('create group with friends + a guest by name; strangers ignored', as
   await as(alex);
   const stranger = await newUser('x@example.com', { display_name: 'Stranger Danger', username: 'stranger' });
   await as(alex);
-  const [{ id }] = await q(`select create_group('Poker', '🃏', null, 'Torsdagspoker', $1, '{}', array['Petter']) id`, [[marius, stranger]]);
+  const [{ id }] = await q(`select create_group('Kortklubben', '🃏', null, 'Kort hver torsdag', $1, '{}', array['Petter']) id`, [[marius, stranger]]);
   poker = id;
   const members = await q(`select user_id, guest_id, role, display_name from group_members where group_id = $1 order by joined_at`, [poker]);
   assert.equal(members.length, 3, JSON.stringify(members));
@@ -249,7 +249,7 @@ await check('create event from group: users + group guest + new guest get person
   await as(alex);
   const [{ id: petter }] = await q(`select guest_id id from group_members where group_id = $1 and guest_id is not null`, [poker]);
   const [{ r }] = await q(`select create_event($1) r`, [{
-    title: 'Pokerkveld', category: 'poker', date_mode: 'poll', option_dates: ['2026-10-16', '2026-10-17'],
+    title: 'Kortkveld', category: 'games', date_mode: 'poll', option_dates: ['2026-10-16', '2026-10-17'],
     time_hint: 'evening', group_id: poker, member_user_ids: [marius], guest_ids: [petter], guest_names: ['Kristian'],
   }]);
   eventId = r.event_id;
@@ -292,7 +292,7 @@ await check('new account claims guest history via device secret (events + groups
 });
 await check('group guest claims via personal invite link → becomes group member', async () => {
   const [{ token }] = await q(`select i.token from event_invites i join guest_profiles g on g.id = i.guest_profile_id where i.event_id = $1 and g.display_name = 'Petter'`, [eventId]);
-  const petter = await newUser('petter@example.com', { display_name: 'Petter Pokerface', username: 'pokerpetter' });
+  const petter = await newUser('petter@example.com', { display_name: 'Petter Kortsen', username: 'kortpetter' });
   await as(petter);
   const [{ r }] = await q(`select claim_guest_invite($1) r`, [token]);
   assert.equal(r.events, 1);
@@ -307,11 +307,11 @@ await check('identities are never linked by name', async () => {
 await check('people you may know + smart invite suggestions from own history', async () => {
   await as(marius);
   const pymk = await q(`select * from people_you_may_know()`);
-  assert.ok(pymk.length >= 1, 'marius should see poker people');
+  assert.ok(pymk.length >= 1, 'marius should see people from the card club');
   assert.ok(pymk.every((p) => p.id !== alex), 'friends excluded');
   await as(alex);
-  await q(`select create_event($1)`, [{ title: 'Poker igjen', category: 'poker', date_mode: 'undecided', time_hint: 'any', member_user_ids: [marius] }]);
-  const [{ s }] = await q(`select suggest_invitees('poker', 'Pokerkveld') s`);
+  await q(`select create_event($1)`, [{ title: 'Kort igjen', category: 'games', date_mode: 'undecided', time_hint: 'any', member_user_ids: [marius] }]);
+  const [{ s }] = await q(`select suggest_invitees('games', 'Kortkveld') s`);
   assert.equal(s.group_id, poker);
   assert.equal(s.people[0].id, marius);
   const recent = await q(`select * from list_recent_people()`);

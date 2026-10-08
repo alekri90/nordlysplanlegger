@@ -97,10 +97,30 @@ describe('dates', () => {
 describe('suggestCategory', () => {
   it('maps titles to categories', () => {
     assert.equal(suggestCategory('Badstu med jentene'), 'sauna');
-    assert.equal(suggestCategory('Poker hos Marius'), 'poker');
+    assert.equal(suggestCategory('Kortkveld hos Marius'), 'games');
     assert.equal(suggestCategory('Middag'), 'dinner');
     assert.equal(suggestCategory('Padel'), 'sport');
-    assert.equal(suggestCategory('Middag og poker'), 'dinner');
+    assert.equal(suggestCategory('Middag og kortspill'), 'dinner');
     assert.equal(suggestCategory('Noe helt annet'), 'hangout');
+  });
+
+  it('knows the newer themes, and resolves ties by category order', () => {
+    const cases: [string, string][] = [
+      ['Filmkveld', 'movie'],
+      ['Quiz på puben', 'quiz'],
+      ['Bursdag til Ida', 'birthday'],
+      ['Julebord', 'christmas'],
+      ['Julemiddag med familien', 'family'],
+      ['FIFA-kveld', 'gaming'],
+      ['Badetur', 'beach'],
+      ['Badstu', 'sauna'],
+      ['Skitur til Hemsedal', 'ski'],
+      ['Fjelltur', 'outdoor'],
+      ['Tur til Berlin', 'travel'],
+      ['Konsert i Spektrum', 'concert'],
+      ['Brunsj', 'brunch'],
+      ['Brettspill', 'games'],
+    ];
+    for (const [title, id] of cases) assert.equal(suggestCategory(title), id, title);
   });
 });

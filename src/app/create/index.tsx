@@ -6,11 +6,14 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 import { StepHeader } from '@/components/create/StepHeader';
 import { BottomBar, Button, Chip, Icon, Input, KeyboardAware, PageTitle, PressableScale, Screen, ScreenScroll, Text } from '@/components/ui';
-import { CATEGORIES, coverOptions, thumb } from '@/lib/categories';
+import { CATEGORY_LIST, coverOptions, defaultCover, thumb } from '@/lib/categories';
 import { useCreateDraft } from '@/state/createDraft';
-import { radius, spacing, useColors } from '@/theme';
+import { gutter, radius, spacing, useColors } from '@/theme';
 
-const IDEAS = ['Badstu med jentene', 'Middag', 'Pokerkveld', 'Padel', 'Hyttetur', 'Vors'];
+/** Every theme, the catch-all last. */
+const THEMES = [...CATEGORY_LIST.filter((c) => c.id !== 'hangout'), ...CATEGORY_LIST.filter((c) => c.id === 'hangout')];
+
+const IDEAS = ['Badstu med jentene', 'Middag', 'Spillkveld', 'Filmkveld', 'Quiz', 'Padel', 'Hyttetur', 'Vors', 'Julebord'];
 
 /** Step 1 — what are we doing? Typing suggests a category and matching photos. */
 export default function CreateWhat() {
@@ -57,14 +60,26 @@ export default function CreateWhat() {
             </Animated.View>
           ) : null}
 
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: spacing.xxl, marginBottom: spacing.md }}>
-            <Text variant="title3">Velg et bilde</Text>
-            {draft.title ? (
-              <Text variant="footnote" color="textSecondary">
-                Forslag: {CATEGORIES[category].label}
-              </Text>
-            ) : null}
-          </View>
+          <Text variant="title3" style={{ marginTop: spacing.xxl, marginBottom: spacing.md }}>
+            Velg tema og bilde
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            style={{ marginHorizontal: -gutter, marginBottom: spacing.md }}
+            contentContainerStyle={{ gap: spacing.sm, paddingHorizontal: gutter }}
+          >
+            {THEMES.map((c) => (
+              <Chip
+                key={c.id}
+                label={c.label}
+                icon={c.icon}
+                selected={c.id === category}
+                onPress={() => draft.set({ category: c.id, coverImageUrl: defaultCover(c.id), coverTouched: true })}
+              />
+            ))}
+          </ScrollView>
 
           <Animated.View key={category} entering={FadeInDown.duration(300)} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             {grid.map((url, i) => {

@@ -562,7 +562,7 @@ export const demoRepository: Repository = {
       henrik.status = 'responded';
       henrik.respondedAt = now();
       henrik.unavailableOptionIds = [e.options[5]?.id, e.options[0]?.id].filter(Boolean) as string[];
-      notify(e.organizer.id, { type: 'response_received', title: 'Henrik har svart på Pokerkveld', body: '6 av 8 har svart', url: `/event/${eventId}`, actor: PEOPLE.henrik });
+      notify(e.organizer.id, { type: 'response_received', title: 'Henrik har svart på Kortkveld', body: '6 av 8 har svart', url: `/event/${eventId}`, actor: PEOPLE.henrik });
       onChange();
     }, 5000);
     return () => clearTimeout(timer);

@@ -14,7 +14,7 @@ export const ME: Profile = {
   name: 'Emma Larsen',
   username: 'emmal',
   avatarUrl: portrait('women', 44),
-  bio: 'Badstu, poker og lange middager.',
+  bio: 'Badstu, kortspill og lange middager.',
   discoverability: 'everyone',
   onboarded: true,
   tier: 'free',
@@ -46,7 +46,7 @@ const P = PEOPLE;
 /** People Emma hasn't planned with yet — only reachable through search (respecting their privacy). */
 export const STRANGERS: (Person & { username: string; discoverability: Discoverability })[] = [
   { id: 'u-thomas', name: 'Thomas Berg', username: 'thomas', avatarUrl: portrait('men', 22), discoverability: 'everyone' },
-  { id: 'u-petter', name: 'Petter Pokerface', username: 'pokerpetter', avatarUrl: portrait('men', 61), discoverability: 'everyone' },
+  { id: 'u-petter', name: 'Petter Kortsen', username: 'kortpetter', avatarUrl: portrait('men', 61), discoverability: 'everyone' },
   { id: 'u-martin', name: 'Martin Aas', username: 'martin', avatarUrl: portrait('men', 18), discoverability: 'friends_of_friends' },
   { id: 'u-alex', name: 'Alexander Kristensen', username: 'alexk', avatarUrl: portrait('men', 41), discoverability: 'everyone' },
   { id: 'u-silje', name: 'Silje Moe', username: 'siljem', avatarUrl: portrait('women', 26), discoverability: 'nobody' },
@@ -161,15 +161,15 @@ export function createSeed(): DemoState {
     lockedAt: iso(60 * 24 * 3),
   };
 
-  // --- Pokerkveld: polling, 5 of 8 answered ----------------------------------
+  // --- Kortkveld: polling, 5 of 8 answered ----------------------------------
   const firstFri = nextWeekday(t, 4, 4);
   const pokerDates = [0, 1, 7, 8, 14, 15, 21, 22].map((d) => addDays(firstFri, d));
   const po = pokerDates.map((date, i) => ({ id: `ev-poker-o${i}`, date }));
   const poker: PlannerEvent = {
     id: 'ev-poker',
-    title: 'Pokerkveld',
-    category: 'poker',
-    coverImageUrl: unsplash('1780091891244-8e6d48ce53a4'),
+    title: 'Kortkveld',
+    category: 'games',
+    coverImageUrl: unsplash('1746635732312-0083b7f9423f'),
     status: 'polling',
     dateMode: 'poll',
     organizer: ME,
@@ -178,7 +178,7 @@ export function createSeed(): DemoState {
     timeHint: 'evening',
     startTime: null,
     location: { name: 'Hos Marius', address: 'Grünerløkka' },
-    description: 'Buy-in 200 kr. Marius fikser snacks, resten tar med drikke.',
+    description: 'Kaboo, Yatzy eller det noen tar med. Marius fikser snacks, resten tar med drikke.',
     options: po,
     members: [
       member('ev-poker', ME, 'responded', { organizer: true, unavailable: [po[0].id] }),
@@ -190,7 +190,7 @@ export function createSeed(): DemoState {
       member('ev-poker', P.kristian, 'invited'),
       member('ev-poker', P.sofie, 'invited'),
     ],
-    inviteToken: 'poker-demo',
+    inviteToken: 'kortkveld-demo',
     photos: [],
     createdAt: iso(60 * 26),
   };
@@ -261,8 +261,8 @@ export function createSeed(): DemoState {
     timeHint: 'exact',
     options: [{ id: 'ev-poker-past-o0', date: pokerPastDate }],
     members: poker.members.map((m) => ({ ...m, id: m.id.replace('ev-poker', 'ev-poker-past'), status: 'attending', unavailableOptionIds: [] })),
-    inviteToken: 'poker-past-demo',
-    photos: [unsplash('1746635732312-0083b7f9423f', 800), unsplash('1774660980275-3a2e7100a1fa', 800)],
+    inviteToken: 'kortkveld-past-demo',
+    photos: [unsplash('1746635732312-0083b7f9423f', 800), unsplash('1607438802263-ada36dae55c5', 800)],
     createdAt: iso(60 * 24 * 35),
     lockedAt: iso(60 * 24 * 28),
   };
@@ -309,15 +309,15 @@ export function createSeed(): DemoState {
     },
     {
       id: 'g-poker',
-      name: 'Pokerklubben',
+      name: 'Kortklubben',
       emoji: '🃏',
-      description: 'Første fredag i måneden, buy-in 200.',
+      description: 'Første fredag i måneden. Kort, brettspill og god stemning.',
       createdBy: P.marius.id,
       myRole: 'admin',
       lastActivityAt: iso(60 * 26),
-      coverImageUrl: unsplash('1774660980275-3a2e7100a1fa', 600),
+      coverImageUrl: unsplash('1746635732312-0083b7f9423f', 600),
       members: [gm(P.marius, 'owner'), gm(ME, 'admin'), ...[P.jonas, P.henrik, P.andreas, P.erik, P.kristian, P.sofie].map((p) => gm(p)), guest('guest-ole', 'Ole'), guest('guest-sindre', 'Sindre')],
-      defaults: { title: 'Pokerkveld', category: 'poker', timeHint: 'evening', preferredWeekdays: [4, 5] },
+      defaults: { title: 'Kortkveld', category: 'games', timeHint: 'evening', preferredWeekdays: [4, 5] },
       lastEvent: ref(pokerPast),
       nextEvent: ref(poker),
       pastEvents: [ref(pokerPast)],
@@ -362,7 +362,7 @@ export function createSeed(): DemoState {
       id: 'n0',
       type: 'friend_request',
       title: 'Henrik vil legge deg til som venn',
-      body: 'Dere var sammen på Pokerkveld',
+      body: 'Dere var sammen på Kortkveld',
       url: '/friends/requests',
       actor: P.henrik,
       createdAt: iso(60 * 5),
@@ -379,7 +379,7 @@ export function createSeed(): DemoState {
     {
       id: 'n2',
       type: 'response_received',
-      title: 'Erik har svart på Pokerkveld',
+      title: 'Erik har svart på Kortkveld',
       body: '5 av 8 har svart',
       url: '/event/ev-poker',
       actor: P.erik,
@@ -389,7 +389,7 @@ export function createSeed(): DemoState {
       id: 'n3',
       type: 'reminder_respond',
       title: '3 personer mangler å svare',
-      body: 'Pokerkveld',
+      body: 'Kortkveld',
       url: '/event/ev-poker',
       createdAt: iso(60 * 7),
     },

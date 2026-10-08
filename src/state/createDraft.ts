@@ -74,8 +74,8 @@ export const useCreateDraft = create<CreateDraft & Actions>((set, get) => ({
   set: (patch) => set(patch),
   setTitle: (title) => {
     const { coverTouched, category: previous, coverImageUrl } = get();
-    const category = suggestCategory(title);
-    // Keep a photo the user chose; otherwise follow the suggested category.
+    // Keep a theme or photo the user chose; otherwise follow the title.
+    const category = coverTouched ? previous : suggestCategory(title);
     set({ title, category, coverImageUrl: coverTouched || category === previous ? coverImageUrl : defaultCover(category) });
   },
   toggleDate: (date) => {

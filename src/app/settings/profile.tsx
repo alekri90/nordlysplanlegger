@@ -78,7 +78,7 @@ export default function EditProfile() {
               <UsernameField value={username} onChange={setUsername} displayName={name} current={me?.username} onValidChange={onValid} />
             </View>
             <View>
-              <Input label="Om deg (valgfritt)" value={bio} onChangeText={setBio} maxLength={160} placeholder="Badstu, poker og lange middager." multiline style={{ minHeight: 72, paddingTop: spacing.md, textAlignVertical: 'top' }} />
+              <Input label="Om deg (valgfritt)" value={bio} onChangeText={setBio} maxLength={160} placeholder="Badstu, kortspill og lange middager." multiline style={{ minHeight: 72, paddingTop: spacing.md, textAlignVertical: 'top' }} />
               <Text variant="footnote" color="textTertiary" style={{ marginTop: spacing.xs, marginLeft: 4 }}>
                 {bio.length}/160
               </Text>

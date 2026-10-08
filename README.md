@@ -23,7 +23,7 @@ npm run web          # eller: npm run ios / npm run android
 ```
 
 Uten Supabase-nøkler kjører appen på realistiske demodata generert ut fra dagens dato:
-Badstu med jentene (låst), Pokerkveld (5 av 8 har svart – et nytt svar «kommer inn» live etter
+Badstu med jentene (låst), Kortkveld (5 av 8 har svart – et nytt svar «kommer inn» live etter
 fem sekunder), Middag (dato ikke bestemt), en Padel-invitasjon fra Sofie og fire gjenger.
 Innlogging simuleres.
 
@@ -32,12 +32,12 @@ Prøv:
 | Flyt | Hvor |
 |---|---|
 | Lag noe → finn dato → inviter → (logg inn) → sendt | «Planlegg noe» på velkomstskjermen |
-| Resultater live → lås dato → «Vi har en dato!» | Hjem → Pokerkveld |
-| Gjest uten konto svarer i nettleseren | Logg ut, åpne `/i/poker-demo` |
+| Resultater live → lås dato → «Vi har en dato!» | Hjem → Kortkveld |
+| Gjest uten konto svarer i nettleseren | Logg ut, åpne `/i/kortkveld-demo` |
 | Ett trykk til neste gang | Gjenger → Familien → «Finn neste dato» |
-| Gjest → profil → venn | Logg ut, åpne `/i/poker-demo`, svar, «Opprett profil», «Legg til Emma» |
+| Gjest → profil → venn | Logg ut, åpne `/i/kortkveld-demo`, svar, «Opprett profil», «Legg til Emma» |
 | Venner, forespørsler, søk | Profil → Venner (prøv å søke «thomas»), eller `/@thomas` |
-| Gjeng med gjester uten konto | Gjenger → Pokerklubben → «Planlegg noe» → send → personlige lenker |
+| Gjeng med gjester uten konto | Gjenger → Kortklubben → «Planlegg noe» → send → personlige lenker |
 
 ## Koble til Supabase
 

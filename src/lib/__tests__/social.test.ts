@@ -13,7 +13,7 @@ describe('usernames', () => {
   });
 
   it('accepts letters, digits, underscore and dots', () => {
-    for (const ok of ['alexander', 'alex.k', 'alex90', 'pokerpetter', 'a_b']) assert.equal(usernameFormatProblem(ok), null, ok);
+    for (const ok of ['alexander', 'alex.k', 'alex90', 'kortpetter', 'a_b']) assert.equal(usernameFormatProblem(ok), null, ok);
   });
 
   it('rejects bad formats and reserved names', () => {
@@ -36,9 +36,9 @@ describe('usernames', () => {
 
 describe('suggestGroupName', () => {
   it('derives a short group name from the event title', () => {
-    assert.equal(suggestGroupName('Poker hos Alexander'), 'Poker');
+    assert.equal(suggestGroupName('Quiz hos Alexander'), 'Quiz');
     assert.equal(suggestGroupName('Badstu med jentene'), 'Jentene');
-    assert.equal(suggestGroupName('Pokerkveld'), 'Poker');
+    assert.equal(suggestGroupName('Spillkveld'), 'Spill');
     assert.equal(suggestGroupName('Middag'), 'Middag');
   });
 });
