@@ -1,3 +1,5 @@
+import type { RepeatConfig } from '@/lib/recurrence';
+
 /**
  * Domain models. Screens and components only ever see these types —
  * never raw database rows — so the backend can evolve independently.
@@ -143,6 +145,12 @@ export interface EventLocation {
   detailsPending?: boolean;
 }
 
+/** The repetition an event belongs to ("Hver måned · Vi finner dato sammen"). */
+export interface EventSeriesInfo extends RepeatConfig {
+  id: string;
+  status: 'active' | 'paused' | 'ended';
+}
+
 export interface PlannerEvent {
   id: string;
   title: string;
@@ -165,6 +173,8 @@ export interface PlannerEvent {
   photos: string[];
   createdAt: string;
   lockedAt?: string | null;
+  /** Set when this is one time of a recurring event. */
+  series?: EventSeriesInfo | null;
 }
 
 export interface GroupDefaults {

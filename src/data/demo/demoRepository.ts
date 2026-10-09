@@ -555,6 +555,20 @@ export const demoRepository: Repository = {
     refreshGroupRefs();
   },
 
+  async createEventSeries(eventId, config) {
+    await wait(200);
+    const e = findEvent(eventId);
+    if (e.organizer.id !== meId()) throw new Error('Bare arrangøren kan gjenta arrangementet');
+    // Demo: the series is shown on the event; new rounds are made by the server job in production.
+    e.series = { ...config, id: uid('series'), status: 'active' };
+    return e.series.id;
+  },
+
+  async updateEventSeries(seriesId, patch) {
+    await wait(200);
+    for (const e of state.events) if (e.series?.id === seriesId) e.series = { ...e.series, ...patch };
+  },
+
   async listEventMessages(eventId) {
     await wait(150);
     const e = findEvent(eventId);

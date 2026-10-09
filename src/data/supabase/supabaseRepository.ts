@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { defaultCover } from '@/lib/categories';
 import { periodLabelFor } from '@/lib/dates';
 import { clearGuestSecret, getGuestSecret, getPendingClaimToken, setGuestName, setGuestSecret, setPendingClaimToken } from '@/lib/guestIdentity';
+import type { RepeatConfig, RepeatDateMode, RepeatUnit } from '@/lib/recurrence';
 import { isLocalUri, readImageBytes } from '@/lib/upload';
 import type { Repository } from '../repository';
 import type {
@@ -13,6 +14,7 @@ import type {
   Discoverability,
   EventMember,
   EventMessage,
+  EventSeriesInfo,
   FriendshipState,
   Group,
   GroupEventRef,
@@ -67,6 +69,17 @@ type EventRow = {
   }[];
   invites: { token: string; revoked_at: string | null }[];
   images: { url: string; kind: string }[];
+  series: {
+    id: string;
+    interval_unit: RepeatUnit;
+    interval_count: number;
+    date_mode: RepeatDateMode;
+    weekdays: number[];
+    requires_confirmation: boolean;
+    confirmation_lead_days: number;
+    auto_invite_group: boolean;
+    status: EventSeriesInfo['status'];
+  } | null;
 };
 
 const EVENT_SELECT = `
@@ -79,7 +92,8 @@ const EVENT_SELECT = `
     profile:profiles(id, display_name, avatar_url, username),
     availability:event_availability(date_option_id, status)),
   invites:event_invites(token, revoked_at),
-  images:event_images(url, kind)
+  images:event_images(url, kind),
+  series:event_series(id, interval_unit, interval_count, date_mode, weekdays, requires_confirmation, confirmation_lead_days, auto_invite_group, status)
 `;
 
 const toPerson = (p: ProfileRow | null | undefined, fallbackName = 'Gjest', fallbackId = ''): Person => ({
@@ -124,6 +138,19 @@ function toEvent(r: EventRow): PlannerEvent {
     photos: (r.images ?? []).filter((i) => i.kind === 'memory').map((i) => i.url),
     createdAt: r.created_at,
     lockedAt: r.locked_at,
+    series: r.series
+      ? {
+          id: r.series.id,
+          unit: r.series.interval_unit,
+          count: r.series.interval_count,
+          dateMode: r.series.date_mode,
+          weekdays: r.series.weekdays ?? [],
+          requiresConfirmation: r.series.requires_confirmation,
+          confirmationLeadDays: r.series.confirmation_lead_days,
+          autoInviteGroup: r.series.auto_invite_group,
+          status: r.series.status,
+        }
+      : null,
   };
 }
 
@@ -202,6 +229,19 @@ const fromPersonRow = (p: PersonRow): Person => ({ id: p.id, name: p.display_nam
  * list) would crash the second one, so every subscription gets its own topic.
  */
 const uniqueTopic = (topic: string) => `${topic}:${Math.random().toString(36).slice(2, 10)}`;
+
+function seriesPatchJson(patch: Partial<RepeatConfig> & { status?: string }) {
+  const out: Record<string, unknown> = {};
+  if (patch.unit !== undefined) out.unit = patch.unit;
+  if (patch.count !== undefined) out.count = patch.count;
+  if (patch.dateMode !== undefined) out.date_mode = patch.dateMode;
+  if (patch.weekdays !== undefined) out.weekdays = patch.weekdays;
+  if (patch.requiresConfirmation !== undefined) out.requires_confirmation = patch.requiresConfirmation;
+  if (patch.confirmationLeadDays !== undefined) out.confirmation_lead_days = patch.confirmationLeadDays;
+  if (patch.autoInviteGroup !== undefined) out.auto_invite_group = patch.autoInviteGroup;
+  if (patch.status !== undefined) out.status = patch.status;
+  return out;
+}
 
 function fail(error: { message: string } | null): asserts error is null {
   if (error) throw new Error(friendlyError(error.message));
@@ -528,6 +568,17 @@ export const supabaseRepository: Repository = {
     return () => {
       sb.removeChannel(channel);
     };
+  },
+
+  async createEventSeries(eventId, config) {
+    const { data, error } = await getSupabase().rpc('create_event_series', { p_event_id: eventId, config: seriesPatchJson(config) });
+    fail(error);
+    return data as string;
+  },
+
+  async updateEventSeries(seriesId, patch) {
+    const { error } = await getSupabase().rpc('update_event_series', { p_series_id: seriesId, patch: seriesPatchJson(patch) });
+    fail(error);
   },
 
   async listEventMessages(eventId) {

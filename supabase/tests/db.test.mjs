@@ -545,5 +545,109 @@ await check('deleting an account removes their photos and group covers they uplo
   assert.equal((await q(`select count(*)::int c from profiles where id = $1`, [leaver]))[0].c, 0);
 });
 
+console.log('\nRecurring events');
+{
+  const host = await newUser('serie@example.com', { display_name: 'Siri Serie', username: 'siriserie' });
+  const a = await newUser('sa@example.com', { display_name: 'Anders A', username: 'andersa' });
+  const b = await newUser('sb@example.com', { display_name: 'Bente B', username: 'benteb' });
+  for (const [x, y] of [[host, a], [host, b]]) { await as(x); await q(`select send_friend_request($1)`, [y]); await as(y); await q(`select send_friend_request($1)`, [x]); }
+  await as(host);
+  const [{ id: gang }] = await q(`select create_group('Kortklubben', null, null, null, $1) id`, [[a, b]]);
+  const occ = async (series) => q(`select id, status, selected_date::text d, series_period_start::text p, period_label from events where series_id = $1 order by series_period_start`, [series]);
+
+  await check('month rule: first friday, last friday', async () => {
+    assert.equal((await q(`select series_month_date('2026-11-01', '2026-10-02')::text d`))[0].d, '2026-11-06');
+    assert.equal((await q(`select series_month_date('2026-11-01', '2026-10-30')::text d`))[0].d, '2026-11-27');
+  });
+
+  await check('fixed, every other week: the next one appears when the last is past, with the group', async () => {
+    await as(host);
+    const [{ r }] = await q(`select create_event($1) r`, [{ title: 'Badstu', category: 'sauna', date_mode: 'fixed', fixed_date: '2026-10-22', time_hint: 'exact', start_time: '19:00', group_id: gang, member_user_ids: [a] }]);
+    const [{ s }] = await q(`select create_event_series($1, $2) s`, [r.event_id, { unit: 'week', count: 2, date_mode: 'fixed' }]);
+    await as(null);
+    await q(`select run_event_series('2026-10-20 10:00+00')`);
+    assert.equal((await occ(s)).length, 1, 'nothing new while the first is upcoming');
+    await q(`select run_event_series('2026-10-23 10:00+00')`);
+    const list = await occ(s);
+    assert.deepEqual(list.map((e) => e.d), ['2026-10-22', '2026-11-05']);
+    assert.equal(list[1].status, 'confirmed');
+    const members = await q(`select user_id from event_members where event_id = $1 and role = 'guest'`, [list[1].id]);
+    assert.deepEqual(new Set(members.map((m) => m.user_id)), new Set([a, b]), 'whole group, also b who was not on the first');
+    await q(`select run_event_series('2026-10-23 10:15+00')`);
+    assert.equal((await occ(s)).length, 2, 'only one upcoming at a time');
+  });
+
+  await check('pause stops new rounds; resume continues without making past ones', async () => {
+    await as(host);
+    const [{ r }] = await q(`select create_event($1) r`, [{ title: 'Middag', category: 'dinner', date_mode: 'fixed', fixed_date: '2026-10-02', time_hint: 'any', group_id: gang, member_user_ids: [a, b] }]);
+    const [{ s }] = await q(`select create_event_series($1, $2) s`, [r.event_id, { unit: 'month', count: 1, date_mode: 'fixed' }]);
+    await q(`select update_event_series($1, '{"status":"paused"}')`, [s]);
+    await as(null);
+    await q(`select run_event_series('2026-10-03 10:00+00')`);
+    assert.equal((await occ(s)).length, 1);
+    await as(host);
+    await q(`select update_event_series($1, '{"status":"active"}')`, [s]);
+    await as(null);
+    await q(`select run_event_series('2026-12-10 10:00+00')`);
+    assert.deepEqual((await occ(s)).map((e) => e.d), ['2026-10-02', '2027-01-01'], 'first friday, skipping the missed months');
+    await as(a);
+    await assert.rejects(q(`select update_event_series($1, '{"status":"ended"}')`, [s]), /not_organizer/);
+  });
+
+  await check('find a date each month: waiting round, poll opens, warning, auto-lock, confirmation', async () => {
+    await as(host);
+    const [{ r }] = await q(`select create_event($1) r`, [{ title: 'Kortkveld', category: 'games', date_mode: 'poll', option_dates: ['2026-10-15', '2026-10-22', '2026-10-29'], time_hint: 'evening', group_id: gang, member_user_ids: [a, b] }]);
+    const [{ s }] = await q(`select create_event_series($1, $2) s`, [r.event_id, { unit: 'month', count: 1, date_mode: 'poll_each', requires_confirmation: true, confirmation_lead_days: 3 }]);
+    assert.deepEqual((await q(`select weekdays from event_series where id = $1`, [s]))[0].weekdays, [3], 'thursdays from the chosen dates');
+    const [{ id: opt }] = await q(`select id from event_date_options where event_id = $1 and date = '2026-10-22'`, [r.event_id]);
+    await q(`select lock_event_date($1, $2)`, [r.event_id, opt]);
+
+    await as(null);
+    await q(`select run_event_series('2026-10-23 10:00+00')`);
+    let list = await occ(s);
+    assert.equal(list[1].status, 'draft');
+    assert.equal(list[1].p, '2026-11-01');
+    assert.equal(list[1].period_label, 'November');
+    assert.equal((await q(`select 1 from notifications where event_id = $1 and type = 'invited'`, [list[1].id])).length, 0, 'quiet until the poll opens');
+
+    await q(`select run_event_series('2026-10-19 10:00+00')`); // before the round exists in time – no-op
+    await q(`select run_event_series('2026-10-24 10:00+00')`); // ≤ 14 days before 1 Nov → opens
+    list = await occ(s);
+    assert.equal(list[1].status, 'polling');
+    const opts = await q(`select date::text d from event_date_options where event_id = $1 order by date`, [list[1].id]);
+    assert.deepEqual(opts.map((o) => o.d), ['2026-11-05', '2026-11-12', '2026-11-19', '2026-11-26']);
+    const ping = await q(`select title from notifications where user_id = $1 and event_id = $2 and data ->> 'kind' = 'series_poll'`, [b, list[1].id]);
+    assert.deepEqual(ping.map((n) => n.title), ['Ny runde: Kortkveld i november']);
+
+    // b can't on the 5th
+    await as(b);
+    const [{ id: nov5 }] = await q(`select id from event_date_options where event_id = $1 and date = '2026-11-05'`, [list[1].id]);
+    const [{ id: bm }] = await q(`select id from event_members where event_id = $1 and user_id = $2`, [list[1].id, b]);
+    await q(`insert into event_availability (event_member_id, date_option_id, status) values ($1, $2, 'unavailable')`, [bm, nov5]);
+    await q(`update event_members set status = 'responded' where id = $1`, [bm]);
+    await as(null);
+
+    await q(`select run_event_series('2026-10-30 09:30+00')`); // 10:30 Oslo, 6 days before the 5th
+    const warn = await q(`select title from notifications where user_id = $1 and event_id = $2 and data ->> 'kind' = 'autolock_warning'`, [host, list[1].id]);
+    assert.equal(warn.length, 1);
+    assert.equal((await occ(s))[1].status, 'polling');
+
+    await q(`select run_event_series('2026-10-31 09:30+00')`); // 5 days before → Nordlys locks
+    list = await occ(s);
+    assert.equal(list[1].status, 'confirmed');
+    assert.equal(list[1].d, '2026-11-12', 'the day most people can');
+    const fake = await q(`select 1 from notifications where user_id = $1 and event_id = $2 and title like '%kan ikke likevel%'`, [host, list[1].id]);
+    assert.equal(fake.length, 0, 'locking is not "kan ikke likevel"');
+
+    await q(`select run_event_series('2026-11-08 09:30+00')`); // 4 days before: not yet
+    assert.equal((await q(`select 1 from notifications where event_id = $1 and data ->> 'kind' = 'confirm'`, [list[1].id])).length, 0);
+    await q(`select run_event_series('2026-11-09 09:30+00')`); // 3 days before
+    await q(`select run_event_series('2026-11-09 09:45+00')`);
+    const conf = await q(`select user_id, title from notifications where event_id = $1 and data ->> 'kind' = 'confirm' order by user_id`, [list[1].id]);
+    assert.equal(conf.length, 2);
+    assert.equal(conf[0].title, 'Kortkveld på torsdag');
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

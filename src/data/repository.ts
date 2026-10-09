@@ -1,3 +1,4 @@
+import type { RepeatConfig } from '@/lib/recurrence';
 import type {
   AddMembersInput,
   AppNotification,
@@ -6,6 +7,7 @@ import type {
   CreateGroupInput,
   Discoverability,
   EventMessage,
+  EventSeriesInfo,
   EventPatch,
   FriendRequest,
   FriendshipInfo,
@@ -78,6 +80,10 @@ export interface Repository {
   startPoll(eventId: string, optionDates: string[]): Promise<void>;
   setRsvp(eventId: string, attending: boolean): Promise<void>;
   cancelEvent(eventId: string): Promise<void>;
+  /** Makes a just-created event the first time of a recurring series. */
+  createEventSeries(eventId: string, config: RepeatConfig): Promise<string>;
+  /** Change how often, date mode, confirmation; pause (paused), resume (active) or end (ended). */
+  updateEventSeries(seriesId: string, patch: Partial<RepeatConfig> & { status?: EventSeriesInfo['status'] }): Promise<void>;
   /** Newest first. */
   listEventMessages(eventId: string): Promise<EventMessage[]>;
   /** Organizer only; everyone else with an account is notified. */

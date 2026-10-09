@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import type { CategoryId, DateMode, Group, PlannerEvent, TimeHint } from '@/data/types';
 import { defaultCover, suggestCategory } from '@/lib/categories';
 import { weekday } from '@/lib/dates';
+import { DEFAULT_REPEAT, type RepeatConfig } from '@/lib/recurrence';
 import { suggestDatesForWeekdays, suggestedMonth, type Period } from '@/lib/period';
 
 /**
@@ -35,6 +36,8 @@ export type CreateDraft = {
   groupName: string;
   /** Set when finding a date for an existing, undecided event. */
   existingEventId: string | null;
+  /** "Gjenta arrangementet": off unless the user turns it on. */
+  repeat: RepeatConfig & { enabled: boolean };
   /** Where the flow started — used to keep it as short as possible. */
   source: 'new' | 'group' | 'event';
 };
@@ -68,6 +71,7 @@ const initial = (): CreateDraft => ({
   saveAsGroup: false,
   groupName: '',
   existingEventId: null,
+  repeat: { ...DEFAULT_REPEAT, enabled: false },
   source: 'new',
 });
 

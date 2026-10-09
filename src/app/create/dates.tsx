@@ -5,10 +5,11 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { CalendarLegend, MonthCalendar, type DayState } from '@/components/calendar/MonthCalendar';
 import { StepHeader } from '@/components/create/StepHeader';
+import { RepeatEditor, RepeatSection } from '@/components/create/RepeatEditor';
 import { TimePicker } from '@/components/create/TimePicker';
 import { BottomBar, Button, Chip, PageTitle, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
 import { useStartPoll } from '@/data/hooks';
-import { addMonths, monthKey, monthName, today } from '@/lib/dates';
+import { addMonths, monthKey, monthName, today, weekday } from '@/lib/dates';
 import { haptics } from '@/lib/haptics';
 import { applyQuickPick, periodDates, periodMonths, QUICK_PICKS, suggestedMonth, type Period, type QuickPick } from '@/lib/period';
 import { useCreateDraft } from '@/state/createDraft';
@@ -123,6 +124,26 @@ export default function CreateDates() {
         <View style={{ marginTop: spacing.xxl }}>
           <TimePicker hint={draft.timeHint} time={draft.startTime} onChange={(timeHint, startTime) => draft.set({ timeHint, startTime })} />
         </View>
+
+        {!draft.existingEventId ? (
+          <RepeatSection
+            enabled={draft.repeat.enabled}
+            onToggle={(enabled) =>
+              draft.set({
+                repeat: {
+                  ...draft.repeat,
+                  enabled,
+                  dateMode: 'poll_each',
+                  unit: draft.repeat.enabled ? draft.repeat.unit : 'month',
+                  // Suggest the weekdays they picked ("Torsdager").
+                  weekdays: draft.repeat.weekdays.length ? draft.repeat.weekdays : [...new Set(draft.optionDates.map(weekday))].sort(),
+                },
+              })
+            }
+          >
+            <RepeatEditor value={draft.repeat} poll onChange={(patch) => draft.set({ repeat: { ...draft.repeat, ...patch } })} />
+          </RepeatSection>
+        ) : null}
       </ScreenScroll>
       <BottomBar>
         <Button

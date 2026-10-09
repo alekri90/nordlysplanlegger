@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Alert, Platform, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { RepeatEditor } from '@/components/create/RepeatEditor';
 import { ActionButton } from '@/components/event/ActionButton';
 import { EventHero } from '@/components/event/EventHero';
 import { EventMessages } from '@/components/event/EventMessages';
@@ -12,14 +13,15 @@ import { GuestList } from '@/components/event/GuestList';
 import { ResultsView } from '@/components/event/ResultsView';
 import { ShareSheet } from '@/components/event/ShareSheet';
 import { BottomBar, Button, Card, EmptyState, ErrorState, Icon, IconButton, ListRow, PageSkeleton, Screen, Segmented, Sheet, Text, useToast, type IconName } from '@/components/ui';
-import { useAddEventPhotos, useCancelEvent, useEvent, useSetRsvp } from '@/data/hooks';
-import type { Person, PlannerEvent } from '@/data/types';
+import { useAddEventPhotos, useCancelEvent, useEvent, useSetRsvp, useUpdateEventSeries } from '@/data/hooks';
+import type { EventSeriesInfo, Person, PlannerEvent } from '@/data/types';
 import { confirmDestructive, PersonSheet } from '@/components/people/PersonSheet';
 import { ReportForm } from '@/components/people/ReportSheet';
 import { CATEGORIES, thumb } from '@/lib/categories';
 import { formatLong, formatTime, today } from '@/lib/dates';
 import { addEventToCalendar } from '@/lib/eventActions';
 import { firstName, timeHintLabel } from '@/lib/eventText';
+import { repeatSummary } from '@/lib/recurrence';
 import { useCreateDraft } from '@/state/createDraft';
 import { useMe } from '@/state/session';
 import { gutter, radius, spacing, useColors } from '@/theme';
@@ -64,6 +66,9 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
   const [shareOpen, setShareOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [repeatOpen, setRepeatOpen] = useState(false);
+  const [repeatDraft, setRepeatDraft] = useState<EventSeriesInfo | null>(null);
+  const updateSeries = useUpdateEventSeries();
   const [person, setPerson] = useState<Person | null>(null);
   const rsvp = useSetRsvp(e.id);
   const cancel = useCancelEvent(e.id);
@@ -142,11 +147,21 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
             <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
               <InfoLine icon="calendar" text={time ? `${when} · ${time}` : when} />
               {place ? <InfoLine icon="map-pin" text={place} /> : null}
+              {e.series && e.series.status !== 'ended' ? (
+                <InfoLine icon="repeat" text={`${repeatSummary(e.series, e.selectedDate)}${e.series.status === 'paused' ? ' · på pause' : ''}`} />
+              ) : null}
               {!isOrganizer ? <InfoLine icon="user" text={`Arrangert av ${firstName(e.organizer.name)}`} /> : null}
             </View>
           </Animated.View>
 
-          {isPast && e.groupId ? (
+          {isPast && e.series?.status === 'active' ? (
+            <Card muted style={{ marginTop: spacing.xl, flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <Icon name="repeat" size={18} color="textSecondary" />
+              <Text variant="subhead" color="textSecondary" style={{ flex: 1 }}>
+                Neste gang lages automatisk – du finner den på Hjem.
+              </Text>
+            </Card>
+          ) : isPast && e.groupId ? (
             <Card style={{ marginTop: spacing.xl, backgroundColor: colors.ink, borderWidth: 0 }}>
               <Text variant="title3" style={{ color: colors.textOnInk }}>
                 Skal vi finne neste dato?
@@ -275,6 +290,26 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
 
       <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} title={e.title} token={e.inviteToken} organizerName={firstName(e.organizer.name)} />
       <PersonSheet person={person} onClose={() => setPerson(null)} />
+      {e.series ? (
+        <Sheet visible={repeatOpen} onClose={() => setRepeatOpen(false)} title="Endre gjentakelse">
+          <RepeatEditor value={repeatDraft ?? e.series} poll={e.series.dateMode === 'poll_each'} firstDate={e.selectedDate} onChange={(patch) => setRepeatDraft({ ...(repeatDraft ?? e.series!), ...patch })} />
+          <Button
+            title="Lagre"
+            variant="ink"
+            loading={updateSeries.isPending}
+            style={{ marginTop: spacing.lg }}
+            onPress={async () => {
+              if (repeatDraft) {
+                const { id: _id, status: _status, ...patch } = repeatDraft;
+                await updateSeries.mutateAsync({ seriesId: e.series!.id, patch });
+              }
+              setRepeatOpen(false);
+              setRepeatDraft(null);
+              toast({ message: 'Gjelder fra neste gang', tone: 'success' });
+            }}
+          />
+        </Sheet>
+      ) : null}
       <Sheet visible={moreOpen} onClose={() => { setMoreOpen(false); setReporting(false); }} title={reporting ? 'Rapporter arrangementet' : e.title}>
         {reporting ? (
           <ReportForm target={{ eventId: e.id }} onDone={() => { setMoreOpen(false); setReporting(false); }} />
@@ -283,6 +318,33 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
             {e.selectedDate && !isPast ? <ListRow icon="calendar" title="Legg i kalender" onPress={() => { setMoreOpen(false); calendar(); }} /> : null}
             <ListRow icon="share-2" title="Del invitasjonen" onPress={() => { setMoreOpen(false); setShareOpen(true); }} />
             {isOrganizer && e.groupId ? <ListRow icon="users" title="Gå til gjengen" onPress={() => { setMoreOpen(false); router.push(`/group/${e.groupId}`); }} /> : null}
+            {isOrganizer && e.series && e.series.status !== 'ended' ? (
+              <>
+                <ListRow icon="repeat" title="Endre gjentakelse" onPress={() => { setMoreOpen(false); setRepeatOpen(true); }} />
+                <ListRow
+                  icon={e.series.status === 'paused' ? 'play' : 'pause'}
+                  title={e.series.status === 'paused' ? 'Fortsett gjentakelsen' : 'Sett gjentakelsen på pause'}
+                  onPress={async () => {
+                    setMoreOpen(false);
+                    const status = e.series!.status === 'paused' ? 'active' : 'paused';
+                    await updateSeries.mutateAsync({ seriesId: e.series!.id, patch: { status } });
+                    toast(status === 'paused' ? 'Satt på pause – ingen nye runder før du fortsetter' : 'Gjentakelsen fortsetter');
+                  }}
+                />
+                <ListRow
+                  icon="x-circle"
+                  title="Avslutt gjentakelsen"
+                  destructive
+                  onPress={() =>
+                    confirmDestructive('Avslutte gjentakelsen?', 'Dette arrangementet blir som det er, men det lages ingen nye.', 'Avslutt', async () => {
+                      setMoreOpen(false);
+                      await updateSeries.mutateAsync({ seriesId: e.series!.id, patch: { status: 'ended' } });
+                      toast('Gjentakelsen er avsluttet');
+                    })
+                  }
+                />
+              </>
+            ) : null}
             {!isOrganizer ? <ListRow icon="flag" title="Rapporter arrangementet" subtitle="Også bilder som er delt her" onPress={() => setReporting(true)} /> : null}
             {isOrganizer && !isPast ? <ListRow icon="x-circle" title="Avlys arrangementet" destructive onPress={confirmCancel} /> : null}
           </>

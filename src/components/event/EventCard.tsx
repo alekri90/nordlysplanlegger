@@ -6,6 +6,7 @@ import { AvatarStack, Icon, PressableScale, Tag, Text } from '@/components/ui';
 import type { PlannerEvent } from '@/data/types';
 import { thumb } from '@/lib/categories';
 import { eventDateLine, eventStatusLine } from '@/lib/eventText';
+import { repeatTag } from '@/lib/recurrence';
 import { radius, shadows, spacing } from '@/theme';
 
 type Props = {
@@ -43,7 +44,7 @@ export function EventCard({ event, meId, onPress, invite }: Props) {
         <Text variant="headline" style={{ color: '#fff' }} numberOfLines={2}>
           {event.title}
         </Text>
-        <Meta icon="calendar" text={dateLine} />
+        <Meta icon={event.series ? 'repeat' : 'calendar'} text={event.series ? `${dateLine} · ${repeatTag(event.series)}` : dateLine} />
         {invite ? (
           <Meta icon="user" text={`Fra ${event.organizer.name.split(' ')[0]}`} />
         ) : event.status === 'polling' || event.status === 'draft' ? (
@@ -66,7 +67,7 @@ export function EventCard({ event, meId, onPress, invite }: Props) {
   );
 }
 
-function Meta({ icon, text, highlight }: { icon: 'calendar' | 'clock' | 'user' | 'check-circle'; text: string; highlight?: boolean }) {
+function Meta({ icon, text, highlight }: { icon: 'calendar' | 'repeat' | 'clock' | 'user' | 'check-circle'; text: string; highlight?: boolean }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
       <Icon name={icon} size={13} tint={highlight ? '#FF9AA2' : 'rgba(255,255,255,0.75)'} />

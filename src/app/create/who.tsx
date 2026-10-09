@@ -7,7 +7,7 @@ import { StepHeader } from '@/components/create/StepHeader';
 import { PeoplePicker } from '@/components/people/PeoplePicker';
 import { PersonRow } from '@/components/people/PersonRow';
 import { AvatarStack, BottomBar, Button, Card, Divider, Icon, Input, KeyboardAware, ListRow, PageTitle, PressableScale, Screen, ScreenScroll, SectionHeader, Text, Toggle, useToast } from '@/components/ui';
-import { useCreateEvent, useGroups, useInviteSuggestions } from '@/data/hooks';
+import { useCreateEvent, useCreateEventSeries, useGroups, useInviteSuggestions } from '@/data/hooks';
 import type { Group, Person } from '@/data/types';
 import { periodLabelFor } from '@/lib/dates';
 import { firstName } from '@/lib/eventText';
@@ -30,6 +30,7 @@ export default function CreateWho() {
   const groups = useGroups();
   const suggestion = useInviteSuggestions(draft.category, draft.title);
   const createEvent = useCreateEvent();
+  const createSeries = useCreateEventSeries();
   const awaitingAuth = useRef(false);
 
   const groupList = groups.data ?? [];
@@ -89,6 +90,14 @@ export default function CreateWho() {
         location: draft.placeName.trim() ? { name: draft.placeName.trim() } : null,
         description: draft.details.trim() || null,
       });
+      if (draft.repeat.enabled && draft.dateMode !== 'undecided') {
+        const { enabled: _on, ...config } = draft.repeat;
+        try {
+          await createSeries.mutateAsync({ eventId: result.eventId, config });
+        } catch {
+          toast({ message: 'Arrangementet er sendt, men gjentakelsen kunne ikke lagres. Prøv fra «Mer».', tone: 'error' });
+        }
+      }
       haptics.success();
       router.replace({
         pathname: '/create/sent',
@@ -140,6 +149,17 @@ export default function CreateWho() {
                     <PersonRow key={m.id} person={m} size={40} selected={selected.has(m.id)} onPress={() => toggle(m)} />
                   ))}
                 </View>
+                {draft.repeat.enabled ? (
+                  <>
+                    <Divider />
+                    <ListRow
+                      icon="repeat"
+                      title="Samme gjeng neste gang"
+                      subtitle="Nye i gjengen blir med automatisk"
+                      trailing={<Toggle value={draft.repeat.autoInviteGroup} onValueChange={(autoInviteGroup) => draft.set({ repeat: { ...draft.repeat, autoInviteGroup } })} accessibilityLabel="Samme gjeng neste gang" />}
+                    />
+                  </>
+                ) : null}
               </Card>
             </Animated.View>
           ) : (

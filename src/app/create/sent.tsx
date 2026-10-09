@@ -11,6 +11,7 @@ import type { GuestInvite } from '@/data/types';
 import { useEvent } from '@/data/hooks';
 import { thumb } from '@/lib/categories';
 import { inviteUrl } from '@/lib/config';
+import { repeatSummary } from '@/lib/recurrence';
 import { inviteMessage, shareTo } from '@/lib/share';
 import { eventDateLine, firstName } from '@/lib/eventText';
 import { pushPermissionStatus, registerForPush } from '@/lib/push';
@@ -69,6 +70,11 @@ export default function CreateSent() {
                 <Text variant="footnote" color="textSecondary">
                   {eventDateLine(e)} · fra {firstName(e.organizer.name)}
                 </Text>
+                {e.series ? (
+                  <Text variant="footnote" color="primary" style={{ marginTop: 2 }}>
+                    {repeatSummary(e.series, e.selectedDate)}
+                  </Text>
+                ) : null}
               </View>
             </Card>
           </Animated.View>

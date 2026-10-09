@@ -221,6 +221,22 @@ export function useStartPoll(eventId: string) {
   return useMutation({ mutationFn: (dates: string[]) => repo.startPoll(eventId, dates), onSuccess: () => invalidateAll(qc) });
 }
 
+export function useCreateEventSeries() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ eventId, config }: { eventId: string; config: Parameters<typeof repo.createEventSeries>[1] }) => repo.createEventSeries(eventId, config),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+export function useUpdateEventSeries() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ seriesId, patch }: { seriesId: string; patch: Parameters<typeof repo.updateEventSeries>[1] }) => repo.updateEventSeries(seriesId, patch),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
 export function useEventMessages(eventId: string | undefined) {
   const signedIn = useIsSignedIn();
   return useQuery({ queryKey: ['eventMessages', eventId ?? ''], queryFn: () => repo.listEventMessages(eventId!), enabled: signedIn && !!eventId });

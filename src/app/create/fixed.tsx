@@ -4,6 +4,7 @@ import { View } from 'react-native';
 
 import { MonthCalendar, type DayState } from '@/components/calendar/MonthCalendar';
 import { StepHeader } from '@/components/create/StepHeader';
+import { RepeatEditor, RepeatSection } from '@/components/create/RepeatEditor';
 import { TimePicker } from '@/components/create/TimePicker';
 import { BottomBar, Button, PageTitle, Screen, ScreenScroll } from '@/components/ui';
 import { addMonths, formatLong, monthKey, today } from '@/lib/dates';
@@ -39,6 +40,10 @@ export default function CreateFixed() {
             onChange={(timeHint, startTime) => draft.set({ timeHint, startTime })}
           />
         </View>
+
+        <RepeatSection enabled={draft.repeat.enabled} onToggle={(enabled) => draft.set({ repeat: { ...draft.repeat, enabled, dateMode: 'fixed' } })}>
+          <RepeatEditor value={draft.repeat} poll={false} firstDate={draft.fixedDate} onChange={(patch) => draft.set({ repeat: { ...draft.repeat, ...patch } })} />
+        </RepeatSection>
       </ScreenScroll>
       <BottomBar>
         <Button

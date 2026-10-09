@@ -4,12 +4,13 @@ import { View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 import { TimePicker } from '@/components/create/TimePicker';
-import { Avatar, BottomBar, Button, Card, Confetti, Header, IconButton, PressableScale, Screen, ScreenScroll, Sheet, Text, useToast } from '@/components/ui';
+import { Avatar, BottomBar, Button, Card, Confetti, Header, Icon, IconButton, PressableScale, Screen, ScreenScroll, Sheet, Text, useToast } from '@/components/ui';
 import { useEventRealtime, useLockDate, useUpdateEvent } from '@/data/hooks';
 import type { PlannerEvent, TimeHint } from '@/data/types';
 import { formatDayMonth, formatLong } from '@/lib/dates';
 import { firstName } from '@/lib/eventText';
 import { haptics } from '@/lib/haptics';
+import { repeatSummary } from '@/lib/recurrence';
 import { shortNames } from '@/lib/names';
 import { hasResponded, rankDateOptions, responseProgress } from '@/lib/ranking';
 import { spacing } from '@/theme';
@@ -77,6 +78,15 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
           <Text variant="body" color="textSecondary" style={{ marginTop: spacing.sm }}>
             {everyoneCan && best ? `Alle kan ${formatDayMonth(best.option.date)}! 🎉` : 'Her er oversikten over hva som passer.'}
           </Text>
+          {event.series && event.series.status !== 'ended' ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm }}>
+              <Icon name="repeat" size={14} color="textSecondary" />
+              <Text variant="footnote" color="textSecondary">
+                {repeatSummary(event.series, null)}
+                {event.series.status === 'paused' ? ' · på pause' : ''}
+              </Text>
+            </View>
+          ) : null}
         </Animated.View>
 
         {scores.length ? (

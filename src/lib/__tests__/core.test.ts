@@ -124,3 +124,31 @@ describe('suggestCategory', () => {
     for (const [title, id] of cases) assert.equal(suggestCategory(title), id, title);
   });
 });
+
+describe('recurrence in plain words', async () => {
+  const { repeatLabel, repeatSummary, weekdaysLabel, confirmLabel } = await import('../recurrence.ts');
+  it('labels how often', () => {
+    assert.equal(repeatLabel('week', 1), 'Hver uke');
+    assert.equal(repeatLabel('week', 2), 'Annenhver uke');
+    assert.equal(repeatLabel('week', 3), 'Hver 3. uke');
+    assert.equal(repeatLabel('month', 1), 'Hver måned');
+    assert.equal(repeatLabel('month', 2), 'Annenhver måned');
+    assert.equal(repeatLabel('day', 5), 'Hver 5. dag');
+  });
+  it('summarises a series like a person would', () => {
+    assert.equal(repeatSummary({ unit: 'week', count: 1, dateMode: 'fixed' }, '2026-10-22'), 'Hver torsdag');
+    assert.equal(repeatSummary({ unit: 'week', count: 2, dateMode: 'fixed' }, '2026-10-21'), 'Annenhver onsdag');
+    assert.equal(repeatSummary({ unit: 'month', count: 1, dateMode: 'fixed' }, '2026-10-02'), 'Første fredag hver måned');
+    assert.equal(repeatSummary({ unit: 'month', count: 1, dateMode: 'fixed' }, '2026-10-30'), 'Siste fredag hver måned');
+    assert.equal(repeatSummary({ unit: 'month', count: 1, dateMode: 'poll_each' }), 'Én gang hver måned · Vi finner dato sammen');
+    assert.equal(repeatSummary({ unit: 'week', count: 3, dateMode: 'poll_each' }), 'Én gang hver 3. uke · Vi finner dato sammen');
+  });
+  it('names weekdays and confirmation timing', () => {
+    assert.equal(weekdaysLabel([3]), 'Torsdager');
+    assert.equal(weekdaysLabel([5, 4]), 'Fredager og lørdager');
+    assert.equal(weekdaysLabel([]), 'Alle dager');
+    assert.equal(confirmLabel(3), 'Spør gjengen 3 dager før');
+    assert.equal(confirmLabel(1), 'Spør gjengen 1 dag før');
+    assert.equal(confirmLabel(7), 'Spør gjengen 1 uke før');
+  });
+});
