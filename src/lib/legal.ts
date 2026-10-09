@@ -49,7 +49,7 @@ export const PRIVACY: LegalSection[] = [
   {
     title: 'Hvor lenge',
     paragraphs: [
-      'Opplysningene lagres så lenge du har profil. Sletter du profilen, slettes profilen, arrangementene og gjengene du har laget, vennskapene, varslene og push-nøklene dine. Svar du har gitt på andres arrangementer blir stående som «En gjest», uten navn. Arrangøren kan når som helst slette et arrangement med alle svar.',
+      'Opplysningene lagres så lenge du har profil. Sletter du profilen, slettes profilen, arrangementene og gjengene du har laget, bildene du har lastet opp (også bilder du har delt i andres arrangementer), vennskapene, blokkeringene, varslene og push-nøklene dine. Svar du har gitt på andres arrangementer blir stående som «En gjest», uten navn. Arrangøren kan når som helst slette et arrangement med alle svar.',
     ],
   },
   {

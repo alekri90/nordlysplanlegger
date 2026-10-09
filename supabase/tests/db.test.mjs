@@ -524,5 +524,26 @@ console.log('\nMessages, declines & reminders');
   });
 }
 
+console.log('\nAccount deletion');
+await check('deleting an account removes their photos and group covers they uploaded', async () => {
+  const owner = await newUser('owner@example.com', { display_name: 'Eva Eier', username: 'evaeier' });
+  const leaver = await newUser('leaver@example.com', { display_name: 'Lars Går', username: 'larsgar' });
+  await as(owner);
+  await q(`select send_friend_request($1)`, [leaver]);
+  await as(leaver);
+  await q(`select send_friend_request($1)`, [owner]);
+  await as(owner);
+  const [{ id: grp }] = await q(`select create_group('Turgjengen', null, null, null, $1) id`, [[leaver]]);
+  const [{ r }] = await q(`select create_event($1) r`, [{ title: 'Tur', category: 'outdoor', date_mode: 'fixed', fixed_date: '2026-10-20', time_hint: 'any', member_user_ids: [leaver] }]);
+  await as(leaver);
+  await q(`insert into event_images (event_id, url, kind, uploaded_by) values ($1, 'https://x/storage/v1/object/public/covers/${leaver}/a.jpg', 'memory', $2)`, [r.event_id, leaver]);
+  await q(`update groups set image_url = 'https://x/storage/v1/object/public/covers/${leaver}/g.jpg' where id = $1`, [grp]);
+  await q(`select delete_my_account()`);
+  assert.equal((await q(`select count(*)::int c from event_images where event_id = $1`, [r.event_id]))[0].c, 0);
+  const [g] = await q(`select image_url from groups where id = $1`, [grp]);
+  assert.equal(g.image_url, null);
+  assert.equal((await q(`select count(*)::int c from profiles where id = $1`, [leaver]))[0].c, 0);
+});
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

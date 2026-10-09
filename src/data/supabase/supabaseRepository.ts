@@ -384,9 +384,23 @@ export const supabaseRepository: Repository = {
   },
 
   async deleteAccount() {
-    const { error } = await getSupabase().rpc('delete_my_account');
+    const sb = getSupabase();
+    // Pictures first, while we're still signed in: everything this user uploaded lives under
+    // <bucket>/<userId>/ (profile picture, covers, event photos). The database part follows.
+    const userId = await requireUserId();
+    for (const bucket of ['avatars', 'covers'] as const) {
+      for (;;) {
+        const { data: files, error: listError } = await sb.storage.from(bucket).list(userId, { limit: 100 });
+        fail(listError);
+        if (!files?.length) break;
+        const { error: removeError } = await sb.storage.from(bucket).remove(files.map((f) => `${userId}/${f.name}`));
+        fail(removeError);
+        if (files.length < 100) break;
+      }
+    }
+    const { error } = await sb.rpc('delete_my_account');
     fail(error);
-    await getSupabase().auth.signOut();
+    await sb.auth.signOut();
   },
 
   async updateProfile(patch) {
