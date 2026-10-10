@@ -541,7 +541,7 @@ await check('deleting an account removes their photos and group covers they uplo
   await q(`select delete_my_account()`);
   assert.equal((await q(`select count(*)::int c from event_images where event_id = $1`, [r.event_id]))[0].c, 0);
   const [g] = await q(`select image_url from groups where id = $1`, [grp]);
-  assert.equal(g.image_url, null);
+  assert.match(g.image_url, /^https:\/\/images\.unsplash\.com\//, 'falls back to the theme photo');
   assert.equal((await q(`select count(*)::int c from profiles where id = $1`, [leaver]))[0].c, 0);
 });
 
@@ -646,6 +646,43 @@ console.log('\nRecurring events');
     const conf = await q(`select user_id, title from notifications where event_id = $1 and data ->> 'kind' = 'confirm' order by user_id`, [list[1].id]);
     assert.equal(conf.length, 2);
     assert.equal(conf[0].title, 'Kortkveld på torsdag');
+  });
+}
+
+console.log('\nPictures');
+{
+  const host = await newUser('bilde@example.com', { display_name: 'Bia Bilde', username: 'biabilde' });
+  await as(host);
+  const coverOf = async (id) => (await q(`select cover_image_url u, cover_from_series f from events where id = $1`, [id]))[0];
+
+  await check('groups and events without a picture get the theme photo; never empty', async () => {
+    const [{ id: g }] = await q(`select create_group('Turgjengen', null, null, null, '{}') id`);
+    const [{ image_url }] = await q(`select image_url from groups where id = $1`, [g]);
+    assert.match(image_url, /^https:\/\/images\.unsplash\.com\/photo-/);
+    await q(`update groups set image_url = null where id = $1`, [g]);
+    assert.ok((await q(`select image_url from groups where id = $1`, [g]))[0].image_url, 'clearing falls back, not empty');
+    const [{ r }] = await q(`select create_event($1) r`, [{ title: 'Badstu', category: 'sauna', date_mode: 'fixed', fixed_date: '2027-03-04', time_hint: 'any' }]);
+    assert.equal((await coverOf(r.event_id)).u, (await q(`select default_cover('sauna') u`))[0].u);
+  });
+
+  await check('series picture: own picture on one round stays; series change updates the rest', async () => {
+    const [{ r }] = await q(`select create_event($1) r`, [{ title: 'Kortkveld', category: 'games', cover_image_url: 'https://x.test/poker.jpg', date_mode: 'fixed', fixed_date: '2027-03-05', time_hint: 'any' }]);
+    const [{ s: series }] = await q(`select create_event_series($1, $2) s`, [r.event_id, { unit: 'week', count: 1, date_mode: 'fixed' }]);
+    assert.deepEqual(await coverOf(r.event_id), { u: 'https://x.test/poker.jpg', f: true });
+    await as(null);
+    await q(`select run_event_series('2027-03-06 10:00+00')`);
+    const [{ id: next }] = await q(`select id from events where series_id = $1 and id <> $2`, [series, r.event_id]);
+    assert.deepEqual(await coverOf(next), { u: 'https://x.test/poker.jpg', f: true }, 'new round uses the series picture');
+    await as(host);
+    await q(`update events set cover_image_url = 'https://x.test/jul.jpg' where id = $1`, [next]);
+    assert.deepEqual(await coverOf(next), { u: 'https://x.test/jul.jpg', f: false }, 'one round, own picture');
+    await q(`select set_series_cover($1, 'https://x.test/ny.jpg', $2)`, [series, r.event_id]);
+    assert.equal((await coverOf(r.event_id)).u, 'https://x.test/ny.jpg');
+    assert.equal((await coverOf(next)).u, 'https://x.test/jul.jpg', 'the round with its own picture keeps it');
+    assert.equal((await q(`select cover_image_url u from event_series where id = $1`, [series]))[0].u, 'https://x.test/ny.jpg');
+    const stranger = await newUser('fremmed@example.com', { display_name: 'Frank F', username: 'frankf' });
+    await as(stranger);
+    await assert.rejects(q(`select set_series_cover($1, 'https://x.test/hack.jpg')`, [series]));
   });
 }
 

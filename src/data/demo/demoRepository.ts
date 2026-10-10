@@ -564,6 +564,13 @@ export const demoRepository: Repository = {
     return e.series.id;
   },
 
+  async setSeriesCover(seriesId, coverImageUrl, eventId) {
+    await wait(200);
+    // Demo: only the round you're looking at; the server also updates the coming rounds.
+    findEvent(eventId).coverImageUrl = coverImageUrl;
+    void seriesId;
+  },
+
   async updateEventSeries(seriesId, patch) {
     await wait(200);
     for (const e of state.events) if (e.series?.id === seriesId) e.series = { ...e.series, ...patch };

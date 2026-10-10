@@ -84,6 +84,8 @@ export interface Repository {
   createEventSeries(eventId: string, config: RepeatConfig): Promise<string>;
   /** Change how often, date mode, confirmation; pause (paused), resume (active) or end (ended). */
   updateEventSeries(seriesId: string, patch: Partial<RepeatConfig> & { status?: EventSeriesInfo['status'] }): Promise<void>;
+  /** New main picture for the series: this round and the coming ones that don't have their own. */
+  setSeriesCover(seriesId: string, coverImageUrl: string, eventId: string): Promise<void>;
   /** Newest first. */
   listEventMessages(eventId: string): Promise<EventMessage[]>;
   /** Organizer only; everyone else with an account is notified. */

@@ -576,6 +576,12 @@ export const supabaseRepository: Repository = {
     return data as string;
   },
 
+  async setSeriesCover(seriesId, coverImageUrl, eventId) {
+    const url = isLocalUri(coverImageUrl) ? await uploadImage('covers', await requireUserId(), coverImageUrl) : coverImageUrl;
+    const { error } = await getSupabase().rpc('set_series_cover', { p_series_id: seriesId, p_url: url, p_event_id: eventId });
+    fail(error);
+  },
+
   async updateEventSeries(seriesId, patch) {
     const { error } = await getSupabase().rpc('update_event_series', { p_series_id: seriesId, patch: seriesPatchJson(patch) });
     fail(error);

@@ -1,3 +1,4 @@
+import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { ScrollView, View } from 'react-native';
 
@@ -7,7 +8,7 @@ import { radius, spacing, useColors } from '@/theme';
 
 export const GROUP_EMOJI = ['🃏', '🧖‍♀️', '🎾', '🏡', '🍷', '🍕', '⛷️', '🥾', '🎉', '⚽️', '🎮', '🍻'];
 
-/** Pick a photo and/or an emoji for a group — two quick rows, no forms. */
+/** A photo (always one picked: ready-made or your own) and, if you like, an emoji. Two quick rows, no forms. */
 export function GroupLookPicker({
   photos,
   photo,
@@ -22,10 +23,15 @@ export function GroupLookPicker({
   onEmoji: (e: string | null) => void;
 }) {
   const colors = useColors();
+  const all = photos.includes(photo) ? photos : [photo, ...photos];
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+    if (!result.canceled && result.assets[0]) onPhoto(result.assets[0].uri);
+  };
   return (
     <View style={{ gap: spacing.lg }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }} keyboardShouldPersistTaps="handled">
-        {photos.map((url, i) => {
+        {all.map((url, i) => {
           const selected = photo === url;
           return (
             <PressableScale
@@ -45,6 +51,16 @@ export function GroupLookPicker({
             </PressableScale>
           );
         })}
+        <PressableScale
+          onPress={pickImage}
+          accessibilityLabel="Velg fra bilder"
+          style={{ width: 84, height: 84, borderRadius: radius.pill, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.borderStrong, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', gap: 2 }}
+        >
+          <Icon name="image" size={20} color="textSecondary" />
+          <Text variant="caption" color="textSecondary">
+            Eget
+          </Text>
+        </PressableScale>
       </ScrollView>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
         {GROUP_EMOJI.map((e) => {

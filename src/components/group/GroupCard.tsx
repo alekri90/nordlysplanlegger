@@ -14,7 +14,7 @@ export function groupNextLine(g: Group) {
 }
 
 /**
- * A crew: who, when we last met, what's next — and the one-tap way to meet again.
+ * A crew, picture first: who, when we last met, what's next — and the one-tap way to meet again.
  * The card body and the action are sibling touch targets (never a button inside a button).
  */
 export function GroupCard({ group, onPress, onFindDate }: { group: Group; onPress: () => void; onFindDate: () => void }) {
@@ -29,8 +29,8 @@ export function GroupCard({ group, onPress, onFindDate }: { group: Group; onPres
         accessibilityHint="Åpner gjengen"
         style={{ gap: spacing.md }}
       >
+        <Image source={{ uri: thumb(group.coverImageUrl, 900) }} style={{ width: '100%', aspectRatio: 2.4, borderRadius: radius.md, backgroundColor: colors.surfaceMuted }} contentFit="cover" transition={200} />
         <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
-          <Image source={{ uri: thumb(group.coverImageUrl, 240) }} style={{ width: 64, height: 64, borderRadius: radius.md, backgroundColor: colors.surfaceMuted }} contentFit="cover" />
           <View style={{ flex: 1, gap: 2 }}>
             <Text variant="headline" numberOfLines={1}>
               {group.name}

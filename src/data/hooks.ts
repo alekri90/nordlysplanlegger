@@ -229,6 +229,14 @@ export function useCreateEventSeries() {
   });
 }
 
+export function useSetSeriesCover() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ seriesId, coverImageUrl, eventId }: { seriesId: string; coverImageUrl: string; eventId: string }) => repo.setSeriesCover(seriesId, coverImageUrl, eventId),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
 export function useUpdateEventSeries() {
   const qc = useQueryClient();
   return useMutation({

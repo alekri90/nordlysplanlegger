@@ -50,7 +50,8 @@ function NewGroupForm({ initialName, initialCover, eventPeople, eventTitle }: { 
     return initialCover && !base.includes(initialCover) ? [initialCover, ...base] : base;
   }, [name, eventTitle, initialCover]);
   const [photo, setPhoto] = useState<string | null>(null);
-  const chosenPhoto = photo && photos.includes(photo) ? photo : photos[0];
+  // Until they choose, follow the name ("Padel" → padel photos). Their own photo always stays.
+  const chosenPhoto = photo ?? photos[0];
 
   const toggleUser = (p: Person) => setUserIds((ids) => (ids.includes(p.id) ? ids.filter((x) => x !== p.id) : [...ids, p.id]));
   const toggleGuest = (p: Person) => setGuestIds((ids) => (ids.includes(p.id) ? ids.filter((x) => x !== p.id) : [...ids, p.id]));
@@ -75,7 +76,10 @@ function NewGroupForm({ initialName, initialCover, eventPeople, eventTitle }: { 
           <PageTitle title={eventTitle ? 'Lag gruppe av gjengen' : 'Ny gjeng'} subtitle={eventTitle ? `Alle fra ${eventTitle} er valgt. Neste gang er det ett trykk.` : 'Folk du gjør ting med igjen og igjen.'} />
           <Input size="lg" autoFocus={!initialName} placeholder="F.eks. Kortklubben" value={name} onChangeText={setName} maxLength={60} accessibilityLabel="Navn på gjengen" />
 
-          <View style={{ marginTop: spacing.xl }}>
+          <Text variant="title3" style={{ marginTop: spacing.xl, marginBottom: spacing.md }}>
+            Bilde
+          </Text>
+          <View>
             <GroupLookPicker photos={photos} photo={chosenPhoto} onPhoto={setPhoto} emoji={emoji} onEmoji={setEmoji} />
           </View>
 
