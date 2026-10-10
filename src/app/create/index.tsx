@@ -7,11 +7,11 @@ import { CoverPicker } from '@/components/create/CoverPicker';
 import { StepHeader } from '@/components/create/StepHeader';
 import { BottomBar, Button, Chip, Icon, Input, KeyboardAware, PageTitle, PressableScale, Screen, ScreenScroll, Text } from '@/components/ui';
 import { useGroup } from '@/data/hooks';
-import { defaultCover } from '@/lib/categories';
+import { defaultCover, suggestCategory } from '@/lib/categories';
+import { suggestIdeas } from '@/lib/ideas';
 import { useCreateDraft } from '@/state/createDraft';
 import { spacing } from '@/theme';
 
-const IDEAS = ['Badstu med jentene', 'Middag', 'Spillkveld', 'Filmkveld', 'Quiz', 'Padel', 'Hyttetur', 'Vors', 'Julebord'];
 
 /** Step 1 — what are we doing, and the picture that goes with it. Typing suggests a theme and photos. */
 export default function CreateWhat() {
@@ -19,11 +19,13 @@ export default function CreateWhat() {
 
   const valid = draft.title.trim().length > 0;
 
-  // From a group: what this group usually does first, then the generic ideas.
+  // What this gjeng usually does (its history, then its name), then the time of year, then evergreens.
   const group = useGroup(draft.groupId ?? undefined);
   const g = group.data;
-  const groupIdeas = g ? [g.defaults.title, g.nextEvent?.title, ...g.pastEvents.map((p) => p.title)].filter((t): t is string => !!t) : [];
-  const ideas = [...new Set([...groupIdeas, ...IDEAS])].slice(0, 10);
+  const history = g ? [g.nextEvent?.title, ...g.pastEvents.map((p) => p.title), g.defaults.title].filter((t): t is string => !!t) : [];
+  const ideas = suggestIdeas({ history, nameTheme: g ? suggestCategory(g.name) : undefined }).filter((idea) => idea !== draft.title);
+  // From a gjeng the title starts as what they usually do; keep the alternatives in view until it's changed.
+  const showIdeas = !draft.title || (!!g && draft.title === g.defaults.title);
 
   const [moreOpen, setMoreOpen] = useState(false);
   const showMore = moreOpen || !!draft.placeName || !!draft.details;
@@ -47,7 +49,7 @@ export default function CreateWhat() {
             accessibilityLabel="Hva skal dere gjøre?"
           />
 
-          {!draft.title ? (
+          {showIdeas ? (
             <Animated.View entering={FadeIn} style={{ marginTop: spacing.md }}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }} keyboardShouldPersistTaps="handled">
                 {ideas.map((idea) => (
@@ -88,7 +90,6 @@ export default function CreateWhat() {
             onCategory={(c) => draft.set({ category: c, coverImageUrl: defaultCover(c), coverTouched: true })}
             value={draft.coverImageUrl}
             onChange={(coverImageUrl) => draft.set({ coverImageUrl, coverTouched: true })}
-            featured={g ? { url: g.coverImageUrl, label: `Gjengbildet · ${g.name}` } : null}
           />
         </ScreenScroll>
         <BottomBar>

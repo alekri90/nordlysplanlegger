@@ -22,7 +22,7 @@ export const CATEGORIES: Record<CategoryId, Category> = {
     id: 'beach',
     label: 'Strand og sommer',
     icon: 'sun',
-    keywords: ['strand', 'badetur', 'bading', 'svømm', 'sommerfest', 'sommer'],
+    keywords: ['strand', 'badetur', 'bading', 'svømm', 'sommerfest', 'sommer', 'båt', 'seiling', 'st. hans', 'sankthans'],
     photos: [
       '1536869338989-e7ffd2297454', // friends on the beach
       '1530541930197-ff16ac917b0e', // campfire on the beach
@@ -125,7 +125,7 @@ export const CATEGORIES: Record<CategoryId, Category> = {
     id: 'sport',
     label: 'Trening',
     icon: 'activity',
-    keywords: ['padel', 'tennis', 'fotball', 'trening', 'løp', 'løpe', 'yoga', 'squash', 'golf', 'bowling'],
+    keywords: ['padel', 'tennis', 'fotball', 'trening', 'løp', 'løpe', 'yoga', 'squash', 'golf', 'bowling', 'badminton'],
     photos: [
       '1658723826297-fe4d1b1e6600', // padel rackets
       '1612534847738-b3af9bc31f0c', // holding padel racket
@@ -138,7 +138,7 @@ export const CATEGORIES: Record<CategoryId, Category> = {
     id: 'ski',
     label: 'Ski og vinter',
     icon: 'cloud-snow',
-    keywords: ['skitur', 'ski', 'alpin', 'slalom', 'langrenn', 'snowboard', 'vinter', 'afterski'],
+    keywords: ['skitur', 'ski', 'alpin', 'slalom', 'langrenn', 'snowboard', 'vinter', 'afterski', 'aking', 'akebakke', 'skøyte'],
     photos: [
       '1459196198227-6655e22114d8', // skiing down the slope
       '1734366965512-1ef84f81c513', // friends in the snow
@@ -163,7 +163,7 @@ export const CATEGORIES: Record<CategoryId, Category> = {
     id: 'outdoor',
     label: 'Tur',
     icon: 'map',
-    keywords: ['tur', 'fjell', 'topptur', 'hike', 'hiking', 'telt', 'padling', 'kajakk'],
+    keywords: ['tur', 'fjell', 'topptur', 'hike', 'hiking', 'telt', 'padling', 'kajakk', 'sopp', 'høsttur', 'bærtur'],
     photos: [
       '1629185752152-fe65698ddee4', // hiking towards peaks
       '1520880867055-1e30d1cb001c', // friends on mountain edge
@@ -174,7 +174,7 @@ export const CATEGORIES: Record<CategoryId, Category> = {
     id: 'cabin',
     label: 'Hyttetur',
     icon: 'home',
-    keywords: ['hytte', 'hyttetur', 'cabin', 'helg', 'weekend'],
+    keywords: ['hytte', 'hyttetur', 'cabin', 'helg', 'weekend', 'påskefjell'],
     photos: [
       '1504233529578-6d46baba6d34', // red house by the water
       '1663428520845-056989f8a664', // Lofoten
@@ -199,7 +199,7 @@ export const CATEGORIES: Record<CategoryId, Category> = {
     id: 'christmas',
     label: 'Julebord',
     icon: 'star',
-    keywords: ['julebord', 'julefest', 'juleavslutning', 'gløgg', 'pepperkake'],
+    keywords: ['julebord', 'julefest', 'juleavslutning', 'gløgg', 'pepperkake', 'juleverksted', 'romjul'],
     photos: [
       '1601118964938-228a89955311', // toast over a festive dinner
       '1735324475776-177baaa34d5b', // glasses by the christmas tree
@@ -211,7 +211,7 @@ export const CATEGORIES: Record<CategoryId, Category> = {
     id: 'party',
     label: 'Fest',
     icon: 'music',
-    keywords: ['fest', 'vors', 'øl', 'vin', 'drinks', 'bar', 'utepils', 'party', 'feiring'],
+    keywords: ['fest', 'vors', 'øl', 'vin', 'drinks', 'bar', 'utepils', 'party', 'feiring', 'nyttår', 'halloween'],
     photos: [
       '1699730164892-d7c433524ff3', // glasses up
       '1640766322140-ab90a7bc71e5', // drinks
@@ -268,13 +268,16 @@ export function suggestCategory(title: string): CategoryId {
   const t = title.toLowerCase();
   let best: CategoryId = 'hangout';
   let bestIndex = Infinity;
+  let bestLength = 0;
   for (const c of CATEGORY_LIST) {
     for (const k of c.keywords) {
       const i = t.indexOf(k);
-      // Earliest keyword wins: "Middag og kortspill" → dinner; on a tie the earlier category wins.
-      if (i >= 0 && i < bestIndex) {
+      // Earliest keyword wins: "Middag og kortspill" → dinner. At the same position the longer, more
+      // specific word wins ("Badminton" → sport, not "bad"); then the earlier category.
+      if (i >= 0 && (i < bestIndex || (i === bestIndex && k.length > bestLength))) {
         best = c.id;
         bestIndex = i;
+        bestLength = k.length;
       }
     }
   }

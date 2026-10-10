@@ -75,8 +75,6 @@ const initial = (): CreateDraft => ({
   source: 'new',
 });
 
-const bigCover = (url: string) => (url.includes('images.unsplash.com') ? url.replace(/w=\d+/, 'w=1200') : url);
-
 export const useCreateDraft = create<CreateDraft & Actions>((set, get) => ({
   ...initial(),
   reset: () => set(initial()),
@@ -97,8 +95,7 @@ export const useCreateDraft = create<CreateDraft & Actions>((set, get) => ({
       ...initial(),
       title: group.defaults.title ?? '',
       category,
-      coverTouched: true,
-      coverImageUrl: group.coverImageUrl ? bigCover(group.coverImageUrl) : defaultCover(category),
+      coverImageUrl: defaultCover(category),
       timeHint: group.defaults.timeHint ?? 'evening',
       startTime: group.defaults.startTime ?? null,
       period: { kind: 'next30' },

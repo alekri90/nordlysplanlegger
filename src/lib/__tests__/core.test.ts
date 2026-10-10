@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { suggestCategory } from '../categories.ts';
+import { easterSunday, seasonalIdeas, suggestIdeas } from '../ideas.ts';
 import { addDays, countWeekends, dateRange, formatDayMonth, formatLong, periodLabelFor, weekday } from '../dates.ts';
 import { rankDateOptions, responseProgress } from '../ranking.ts';
 
@@ -91,6 +92,53 @@ describe('dates', () => {
 
   it('counts weekends (fri–sun of one week = one weekend)', () => {
     assert.equal(countWeekends(['2026-10-09', '2026-10-10', '2026-10-16', '2026-10-17', '2026-10-24']), 3);
+  });
+});
+
+describe('suggestIdeas', () => {
+  const on = (y: number, m: number, d: number) => new Date(y, m - 1, d);
+
+  it('easter dates', () => {
+    assert.equal(easterSunday(2026).toDateString(), on(2026, 4, 5).toDateString());
+    assert.equal(easterSunday(2027).toDateString(), on(2027, 3, 28).toDateString());
+  });
+
+  it('follows the Norwegian year, a few weeks ahead', () => {
+    const october = seasonalIdeas(on(2026, 10, 10));
+    assert.ok(october.includes('Julebord'), 'julebord season is coming');
+    assert.ok(october.includes('Halloweenfest'));
+    assert.ok(october.includes('Sopptur'));
+    assert.ok(!october.includes('Bading'));
+    const january = seasonalIdeas(on(2027, 1, 15));
+    assert.deepEqual(january.slice(0, 3), ['Skitur', 'Aking', 'Skøyter']);
+    const july = seasonalIdeas(on(2027, 7, 1));
+    assert.ok(july.includes('Båttur') && july.includes('Bading'));
+    assert.ok(!july.includes('Skitur'));
+    assert.equal(seasonalIdeas(on(2027, 5, 5))[0], '17. mai-frokost');
+    assert.ok(seasonalIdeas(on(2027, 3, 10)).includes('Påskefjellet'), 'easter 2027 is 28 March');
+    assert.ok(seasonalIdeas(on(2027, 12, 22)).includes('Nyttårsaften'));
+  });
+
+  it('the gjeng first: its own history, then its name, then the season', () => {
+    const ideas = suggestIdeas({ history: ['Badstu', 'Isbading', 'Badstu'], nameTheme: suggestCategory('Saunagjengen'), today: on(2026, 12, 1) });
+    assert.deepEqual(ideas.slice(0, 2), ['Badstu', 'Isbading']);
+    assert.ok(ideas.indexOf('Julebord') > 1, 'the season comes after');
+    assert.deepEqual(suggestIdeas({ nameTheme: suggestCategory('Saunagjengen'), today: on(2026, 12, 1) }).slice(0, 2), ['Badstu', 'Isbading']);
+    // A name that says nothing: the season leads.
+    assert.equal(suggestIdeas({ nameTheme: suggestCategory('Jentene'), today: on(2027, 1, 15) })[0], 'Skitur');
+    assert.equal(new Set(ideas.map((i) => i.toLowerCase())).size, ideas.length, 'no duplicates');
+    assert.ok(ideas.length <= 10);
+  });
+
+  it('every idea lands on a fitting theme', () => {
+    const cases: [string, string][] = [
+      ['Julebord', 'christmas'], ['Juleverksted', 'christmas'], ['Romjulstreff', 'christmas'], ['Pepperkakebaking', 'christmas'],
+      ['Nyttårsaften', 'party'], ['Halloweenfest', 'party'], ['Skøyter', 'ski'], ['Aking', 'ski'], ['Afterski', 'ski'],
+      ['Båttur', 'beach'], ['St. Hans', 'beach'], ['Strandtur', 'beach'], ['Isbading', 'sauna'], ['Sopptur', 'outdoor'],
+      ['Høsttur', 'outdoor'], ['Påskefjellet', 'cabin'], ['17. mai-frokost', 'brunch'], ['Grilling', 'dinner'],
+      ['Badmintongjengen', 'sport'], ['Saunagjengen', 'sauna'], ['Kortklubben', 'games'],
+    ];
+    for (const [title, id] of cases) assert.equal(suggestCategory(title), id, title);
   });
 });
 
