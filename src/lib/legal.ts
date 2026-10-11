@@ -123,6 +123,10 @@ export const SUPPORT: LegalSection[] = [
   },
   {
     title: 'Slette profilen',
-    paragraphs: ['Gå til Profil → Personvern → Slett kontoen. Profilen, arrangementene og gjengene du har laget slettes med en gang. Du kan også eksportere dataene dine samme sted.'],
+    paragraphs: [
+      'Gå til Profil → Personvern → Slett kontoen. Profilen, arrangementene og gjengene du har laget slettes med en gang. Du kan også eksportere dataene dine samme sted.',
+      'Uten appen: logg inn på nordlysplanlegger.vercel.app og gjør det samme, eller send oss en e-post fra adressen du bruker i appen (se kontakt øverst), så sletter vi kontoen innen 30 dager.',
+      'Dette slettes: profil, e-postadresse, profilbilde, arrangementer og gjenger du har laget, bilder du har delt og push-nøkler. Svar du har gitt i andres arrangementer blir stående uten navn, så deres oversikt fortsatt stemmer.',
+    ],
   },
 ];
