@@ -1,12 +1,13 @@
 /**
- * Privacy policy, terms and support (Norwegian). Served at /personvern, /vilkar and /support — the App Store listing
+ * Privacy policy, terms, support and child safety standards (Norwegian). Served at /personvern, /vilkar, /support and
+ * /barnesikkerhet — the App Store listing
  * and the sign-in screen link here. Keep in sync with what the app actually stores.
  */
 export const LEGAL = {
   /** Shown as the contact address on both pages. Empty → the line is hidden. */
   contactEmail: 'alekri90@gmail.com',
   owner: 'Alexander Kristensen',
-  updated: '8. oktober 2026',
+  updated: '12. oktober 2026',
 };
 
 export type LegalSection = { title: string; paragraphs: string[] };
@@ -97,6 +98,45 @@ export const TERMS: LegalSection[] = [
   {
     title: 'Personvern',
     paragraphs: ['Hvordan vi behandler opplysninger om deg står i personvernerklæringen.'],
+  },
+];
+
+/** Child safety standards (Google Play CSAE policy). Public, at /barnesikkerhet. */
+export const CHILD_SAFETY: LegalSection[] = [
+  {
+    title: 'Null toleranse for seksuell utnyttelse av barn',
+    paragraphs: [
+      'Nordlys Planlegger har null toleranse for seksuelt misbruk og seksuell utnyttelse av barn (CSAE), inkludert overgrepsmateriale (CSAM), grooming, seksualisering av mindreårige og all annen kontakt eller innhold som utsetter barn for fare.',
+      'Slikt innhold og slik oppførsel er forbudt i vilkårene våre. Profiler som bryter dette stenges permanent.',
+    ],
+  },
+  {
+    title: 'Aldersgrense',
+    paragraphs: ['Du må være minst 13 år for å opprette profil. Appen er laget for å planlegge arrangementer med folk du kjenner, og har ingen åpen feed, ingen søk etter fremmede ut fra alder eller sted, og ingen private meldinger mellom fremmede.'],
+  },
+  {
+    title: 'Slik melder du fra i appen',
+    paragraphs: [
+      'Trykk på en person og velg «Rapporter», eller velg «Rapporter» fra menyen «Mer» på et arrangement eller en gjeng. Velg «Bekymring for barns sikkerhet». Du kan også blokkere personen med en gang.',
+      'Du kan også sende e-post til oss (se kontakt øverst) – også uten å ha profil.',
+    ],
+  },
+  {
+    title: 'Slik håndterer vi rapporter',
+    paragraphs: [
+      'Rapporter om barns sikkerhet behandles før alle andre, og alltid innen 24 timer. Innhold som kan være overgrepsmateriale fjernes med en gang, og profilen stenges.',
+      'Vi tar vare på nødvendig informasjon og melder fra til politiet (Kripos, tips.kripos.no) og, der det er aktuelt, til NCMEC. Vi samarbeider med myndighetene i etterforskningen.',
+    ],
+  },
+  {
+    title: 'Lover vi følger',
+    paragraphs: ['Vi følger norsk lov og relevante internasjonale lover om beskyttelse av barn, og Google Plays og Apples retningslinjer for barns sikkerhet.'],
+  },
+  {
+    title: 'In English',
+    paragraphs: [
+      'Nordlys Planlegger has zero tolerance for child sexual abuse and exploitation (CSAE), including child sexual abuse material (CSAM) and grooming. Users must be at least 13. Anyone can report a person, an event or a group in the app (reason: "Bekymring for barns sikkerhet" – child safety concern) or by e-mail. Child safety reports are handled first, always within 24 hours: the content is removed, the account is banned and the case is reported to the Norwegian police (Kripos) and, where applicable, NCMEC. Contact: the e-mail address at the top of this page.',
+    ],
   },
 ];
 

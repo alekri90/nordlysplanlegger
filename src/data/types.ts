@@ -24,7 +24,7 @@ export type Discoverability = 'everyone' | 'friends_of_friends' | 'nobody';
 /** Friendship as seen from the current user. */
 export type FriendshipState = 'self' | 'none' | 'outgoing' | 'incoming' | 'friends' | 'anonymous';
 
-export type ReportReason = 'spam' | 'harassment' | 'inappropriate' | 'other';
+export type ReportReason = 'spam' | 'harassment' | 'inappropriate' | 'child_safety' | 'other';
 
 /** What is being reported: a person, an event or a group (at least one). */
 export interface ReportInput {

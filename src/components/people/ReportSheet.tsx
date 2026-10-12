@@ -10,6 +10,7 @@ const REASONS: { id: ReportReason; title: string }[] = [
   { id: 'harassment', title: 'Trakassering eller mobbing' },
   { id: 'inappropriate', title: 'Støtende innhold eller bilder' },
   { id: 'spam', title: 'Søppelpost eller svindel' },
+  { id: 'child_safety', title: 'Bekymring for barns sikkerhet' },
   { id: 'other', title: 'Noe annet' },
 ];
 
