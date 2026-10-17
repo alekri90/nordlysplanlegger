@@ -7,7 +7,7 @@ import { CoverPicker } from '@/components/create/CoverPicker';
 import { StepHeader } from '@/components/create/StepHeader';
 import { BottomBar, Button, Chip, Icon, Input, KeyboardAware, PageTitle, PressableScale, Screen, ScreenScroll, Text } from '@/components/ui';
 import { useGroup } from '@/data/hooks';
-import { defaultCover, suggestCategory } from '@/lib/categories';
+import { defaultCoverFor, suggestCategory } from '@/lib/categories';
 import { suggestIdeas } from '@/lib/ideas';
 import { useCreateDraft } from '@/state/createDraft';
 import { spacing } from '@/theme';
@@ -86,8 +86,9 @@ export default function CreateWhat() {
             Velg bilde
           </Text>
           <CoverPicker
+            title={draft.title}
             category={draft.category}
-            onCategory={(c) => draft.set({ category: c, coverImageUrl: defaultCover(c), coverTouched: true })}
+            onCategory={(c) => draft.set({ category: c, coverImageUrl: defaultCoverFor(draft.title, c), coverTouched: true })}
             value={draft.coverImageUrl}
             onChange={(coverImageUrl) => draft.set({ coverImageUrl, coverTouched: true })}
           />

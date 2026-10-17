@@ -299,3 +299,233 @@ export function defaultCover(category: CategoryId): string {
 export function thumb(url: string, width = 400): string {
   return url.includes('images.unsplash.com') ? url.replace(/w=\d+/, `w=${width}`) : url;
 }
+
+/**
+ * Photos for specific occasions inside a theme ("Halloweenfest" is a party, but should look like
+ * Halloween). Matched against the title like the themes; they come first in the photo grid and are the
+ * default cover. Every seasonal idea in src/lib/ideas.ts has a set here or a theme whose photos fit
+ * (checked by the tests). Each photo was looked at before it was added.
+ */
+export type PhotoSet = { id: string; keywords: string[]; photos: string[] };
+
+export const PHOTO_SETS: PhotoSet[] = [
+  {
+    id: 'halloween',
+    keywords: ['halloween'],
+    photos: [
+      '1509558567730-6c838437b06b', // lit jack-o'-lantern
+      '1667852916327-c0444978d171', // carved pumpkins and candles
+      '1727454145163-aad0eb3ff81c', // table with halloween decorations
+      '1509557965875-b88c97052f0e', // skeletons and string lights
+    ],
+  },
+  {
+    id: 'gingerbread',
+    keywords: ['pepperkake'],
+    photos: [
+      '1742988700812-fd76a68ad09c', // decorated gingerbread
+      '1698672362756-14375dbb571c', // gingerbread men on a plate
+      '1610562275255-03b7fa0d4655', // iced cookies
+      '1639590229762-3c9a8c98ca31', // cookies on a cooling rack
+    ],
+  },
+  {
+    id: 'mulledWine',
+    keywords: ['gløgg'],
+    photos: [
+      '1512589848202-673dfdab1972', // pot of gløgg with orange
+      '1542143601-0b3d84693663', // glasses of mulled wine
+      '1542143708653-1a0d78f64f21', // gløgg with star anise
+      '1734084959344-d0228c84da82', // glass by candlelight
+    ],
+  },
+  {
+    id: 'christmasCraft',
+    keywords: ['juleverksted', 'julepynt'],
+    photos: [
+      '1762320859632-304e91db5bf5', // handmade ornaments and a candle
+      '1638829154930-9b47ff9cb533', // table with craft supplies
+      '1766160796234-063e8fae3902', // dried orange on the tree
+    ],
+  },
+  {
+    id: 'newYear',
+    keywords: ['nyttår'],
+    photos: [
+      '1535379665706-aea78de84a41', // people watching fireworks
+      '1605941407951-fa62495beb54', // fireworks over the water
+      '1549194400-06e6874c2fd1', // fireworks display
+      '1639501252219-130096b7b904', // pink fireworks
+    ],
+  },
+  {
+    id: 'sledding',
+    keywords: ['aking', 'akebakke', 'akedag'],
+    photos: [
+      '1767798426108-215be29507cc', // crowd sledding down a hill
+      '1768065449207-8dbb71d853f7', // people sledding, cloudy day
+      '1624060329290-119a2fdc7794', // red sled
+      '1771365095302-5ea5ed3e1388', // sleds in the snow
+    ],
+  },
+  {
+    id: 'iceSkating',
+    keywords: ['skøyte'],
+    photos: [
+      '1790750541235-b9f38861886a', // friends' selfie on the ice
+      '1575808433605-aafc277c4d19', // people skating outdoors
+      '1669184773984-b1a177330ee9', // skates on the ice
+      '1609987052013-0f4e84e9ff5d', // couple by an ice rink
+    ],
+  },
+  {
+    id: 'iceBath',
+    keywords: ['isbad', 'vinterbad', 'kaldbad'],
+    photos: [
+      '1734117928667-c7f943a27e80', // group in an ice hole
+      '1701895853566-bd08afa0c422', // man in icy water
+      '1701854305546-3a93741e3b37', // swimmer in a frozen lake
+      '1612194881610-85422ec3eab9', // dip in the snowy sea
+    ],
+  },
+  {
+    id: 'easterMountain',
+    keywords: ['påskefjell', 'påsketur', 'påskeski'],
+    photos: [
+      '1670510521063-ad2aea33dd96', // skier with a backpack in the mountains
+      '1710198080758-01736705e8b6', // ski touring above a fjord
+      '1641369022944-ff17797243c7', // people crossing a snowy slope
+      '1692078138818-9a9c0abf16c2', // skiing down towards the sea
+    ],
+  },
+  {
+    id: 'easterLunch',
+    keywords: ['påskelunsj', 'påskefrokost', 'påskebrunsj', 'påskemiddag'],
+    photos: [
+      '1775474535127-655dd8208cf3', // easter breakfast with painted eggs
+      '1619854858908-8f2733bd6b8d', // painted eggs
+      '1504754524776-8f4f37790ca0', // brunch spread
+      '1522570778432-5c3580febe04', // eggs in a nest with flowers
+    ],
+  },
+  {
+    id: 'constitutionDay',
+    keywords: ['17. mai', '17.mai', 'nasjonaldag'],
+    photos: [
+      '1780339500471-88f7f17f6e5d', // 17. mai parade with flags and bunads
+      '1785141877073-39ef1fb4348e', // Norwegian flags in a window
+      '1652787645351-ea4726aee9f5', // flag in a field of flowers
+      '1520769669658-f07657f5a307', // flag over the sunset
+    ],
+  },
+  {
+    id: 'midsummer',
+    keywords: ['st. hans', 'st.hans', 'sankthans', 'bål'],
+    photos: [
+      '1596326270763-87f26e0f9225', // friends around a bonfire at night
+      '1687370139318-951abbe9d082', // people by a fire on the beach at dusk
+      '1663247168201-1d6ea2d448fc', // bonfire on the beach
+      '1625119161833-57f8a7009f7b', // sparks from a beach fire
+    ],
+  },
+  {
+    id: 'boatTrip',
+    keywords: ['båt', 'seiling', 'seiltur'],
+    photos: [
+      '1519801584609-8ee5f072eddd', // friends on a sailing boat
+      '1552600337-6f42e4fb2e78', // friends on a boat in clear water
+      '1764677804641-62cf2722b62e', // boat on a calm river
+      '1605472075294-4c73b9909d08', // sailing boat at sunset
+    ],
+  },
+  {
+    id: 'barbecue',
+    keywords: ['grill'],
+    photos: [
+      '1579405317876-9340f1d26061', // friends grilling outside
+      '1463183427169-5df5a06d5447', // food on the grill
+      '1526369495938-1be4ba6257ce', // grill in the park
+      '1687424201737-6c7b1eb9ff86', // table with food and drinks
+    ],
+  },
+  {
+    id: 'beerOutside',
+    keywords: ['utepils'],
+    photos: [
+      '1770230901477-5e90b1c67be1', // friends with drinks in the sun
+      '1758244241016-20a95d099de1', // friends with drinks outdoors
+      '1788804360930-9510ae4a14b2', // laughing with drinks at an event
+      '1759753972050-839775c071e3', // outdoor café
+    ],
+  },
+  {
+    id: 'mushrooms',
+    keywords: ['sopp'],
+    photos: [
+      '1749592884024-dbbde04c77cd', // basket of mushrooms
+      '1788507280988-8cf2683ff18f', // chanterelles
+      '1762921168471-d29b18135dd8', // holding a mushroom in the forest
+      '1632144808655-cfdeb247abcf', // mushrooms on the forest floor
+    ],
+  },
+  {
+    id: 'autumnHike',
+    keywords: ['høsttur', 'høst'],
+    photos: [
+      '1700148575422-5bfa0bc0c069', // hiker on a hill in autumn
+      '1738443213794-3f3f89a52a05', // autumn path
+      '1441100094486-eff37b2c8e19', // autumn trees
+      '1664750958844-a535c5b3d865', // path through the forest
+    ],
+  },
+  {
+    id: 'football',
+    keywords: ['fotball'],
+    photos: [
+      '1626058914034-25e3ad6fae3c', // friends playing football
+      '1773006088941-0262e88a7e60', // kicking a ball on a sunny day
+      '1785240029703-c37147e77e56', // football on a grass pitch
+    ],
+  },
+  {
+    id: 'theatre',
+    keywords: ['teater', 'revy'],
+    photos: [
+      '1516307365426-bea591f05011', // theatre hall
+      '1515168985652-8454bcc8fcaf', // audience
+      '1763962274119-1a0a0d418520', // audience in a dark theatre
+    ],
+  },
+];
+
+/** The photo set for a title ("Halloweenfest" → Halloween), or null. Earliest, then longest keyword wins. */
+export function photoSetFor(title: string): PhotoSet | null {
+  const t = title.toLowerCase();
+  let best: PhotoSet | null = null;
+  let bestIndex = Infinity;
+  let bestLength = 0;
+  for (const set of PHOTO_SETS) {
+    for (const k of set.keywords) {
+      const i = t.indexOf(k);
+      if (i >= 0 && (i < bestIndex || (i === bestIndex && k.length > bestLength))) {
+        best = set;
+        bestIndex = i;
+        bestLength = k.length;
+      }
+    }
+  }
+  return best;
+}
+
+/** Photos that fit this title first, then the theme's. */
+export function coverOptionsFor(title: string, category: CategoryId, width = 1200): string[] {
+  const set = photoSetFor(title);
+  const own = set ? set.photos.map((id) => unsplash(id, width)) : [];
+  return [...own, ...coverOptions(category, width).filter((url) => !own.includes(url))];
+}
+
+/** The picture a new plan starts with: the occasion's photo if there is one, else the theme's. */
+export function defaultCoverFor(title: string, category: CategoryId): string {
+  const set = photoSetFor(title);
+  return set ? unsplash(set.photos[0]) : defaultCover(category);
+}

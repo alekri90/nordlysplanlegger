@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 import type { CategoryId, DateMode, Group, PlannerEvent, TimeHint } from '@/data/types';
-import { defaultCover, suggestCategory } from '@/lib/categories';
+import { defaultCover, defaultCoverFor, suggestCategory } from '@/lib/categories';
 import { weekday } from '@/lib/dates';
 import { DEFAULT_REPEAT, type RepeatConfig } from '@/lib/recurrence';
 import { suggestDatesForWeekdays, suggestedMonth, type Period } from '@/lib/period';
@@ -81,9 +81,9 @@ export const useCreateDraft = create<CreateDraft & Actions>((set, get) => ({
   set: (patch) => set(patch),
   setTitle: (title) => {
     const { coverTouched, category: previous, coverImageUrl } = get();
-    // Keep a theme or photo the user chose; otherwise follow the title.
+    // Keep a theme or photo the user chose; otherwise follow the title ("Halloweenfest" → a pumpkin, not just "Fest").
     const category = coverTouched ? previous : suggestCategory(title);
-    set({ title, category, coverImageUrl: coverTouched || category === previous ? coverImageUrl : defaultCover(category) });
+    set({ title, category, coverImageUrl: coverTouched ? coverImageUrl : defaultCoverFor(title, category) });
   },
   toggleDate: (date) => {
     const { optionDates } = get();
@@ -95,7 +95,7 @@ export const useCreateDraft = create<CreateDraft & Actions>((set, get) => ({
       ...initial(),
       title: group.defaults.title ?? '',
       category,
-      coverImageUrl: defaultCover(category),
+      coverImageUrl: defaultCoverFor(group.defaults.title ?? '', category),
       timeHint: group.defaults.timeHint ?? 'evening',
       startTime: group.defaults.startTime ?? null,
       period: { kind: 'next30' },

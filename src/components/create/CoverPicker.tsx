@@ -5,7 +5,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Chip, Icon, PressableScale, Text } from '@/components/ui';
 import type { CategoryId } from '@/data/types';
-import { CATEGORY_LIST, coverOptions, thumb } from '@/lib/categories';
+import { CATEGORY_LIST, coverOptionsFor, thumb } from '@/lib/categories';
 import { gutter, radius, spacing, useColors } from '@/theme';
 
 /** Every theme, the catch-all last. */
@@ -14,6 +14,8 @@ const THEMES = [...CATEGORY_LIST.filter((c) => c.id !== 'hangout'), ...CATEGORY_
 const sameImage = (a: string, b: string) => thumb(a, 1200) === thumb(b, 1200);
 
 type Props = {
+  /** Photos for the occasion in the title come first ("Halloweenfest" → pumpkins). */
+  title: string;
   category: CategoryId;
   /** Picking a theme also picks its first photo. */
   onCategory: (category: CategoryId) => void;
@@ -25,9 +27,9 @@ type Props = {
  * The picture is part of the plan, not a setting: ready-made photos per theme a tap away,
  * and your own from the camera roll. There is always one selected.
  */
-export function CoverPicker({ category, onCategory, value, onChange }: Props) {
+export function CoverPicker({ title, category, onCategory, value, onChange }: Props) {
   const colors = useColors();
-  const photos = coverOptions(category);
+  const photos = coverOptionsFor(title, category);
   const custom = !photos.some((url) => sameImage(url, value)) ? value : null;
   const grid = [...(custom ? [custom] : []), ...photos].slice(0, 5);
 

@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { suggestCategory } from '../categories.ts';
+import { coverOptionsFor, defaultCover, defaultCoverFor, PHOTO_SETS, photoSetFor, suggestCategory } from '../categories.ts';
 import { easterSunday, seasonalIdeas, suggestIdeas } from '../ideas.ts';
 import { addDays, countWeekends, dateRange, formatDayMonth, formatLong, periodLabelFor, weekday } from '../dates.ts';
 import { rankDateOptions, responseProgress } from '../ranking.ts';
@@ -139,6 +139,41 @@ describe('suggestIdeas', () => {
       ['Badmintongjengen', 'sport'], ['Saunagjengen', 'sauna'], ['Kortklubben', 'games'],
     ];
     for (const [title, id] of cases) assert.equal(suggestCategory(title), id, title);
+  });
+});
+
+describe('photos for ideas', () => {
+  // Ideas whose theme's own photos show exactly that activity. Anything else needs a photo set.
+  const THEME_PHOTOS_FIT: Record<string, string> = {
+    Julebord: 'christmas', Romjulstreff: 'christmas', Skitur: 'ski', Hyttetur: 'cabin', Tur: 'outdoor',
+    Bading: 'beach', Strandtur: 'beach', Quiz: 'quiz', Spillkveld: 'games',
+  };
+
+  it('every seasonal idea has pictures that show it', () => {
+    const all = new Set<string>();
+    for (let d = 0; d < 366 * 2; d++) for (const idea of seasonalIdeas(new Date(2027, 0, 1 + d))) all.add(idea);
+    for (const idea of all) {
+      const ok = photoSetFor(idea) !== null || THEME_PHOTOS_FIT[idea] === suggestCategory(idea);
+      assert.ok(ok, `${idea} needs a photo set in PHOTO_SETS (or theme photos that fit)`);
+    }
+  });
+
+  it('the occasion picks its own photos and leads the grid', () => {
+    assert.equal(photoSetFor('Halloweenfest')?.id, 'halloween');
+    assert.equal(photoSetFor('Båttur i skjærgården')?.id, 'boatTrip');
+    assert.equal(photoSetFor('17. mai-frokost')?.id, 'constitutionDay');
+    assert.equal(photoSetFor('Middag'), null);
+    const grid = coverOptionsFor('Halloweenfest', 'party');
+    assert.ok(grid[0].includes('1509558567730'), 'halloween first');
+    assert.ok(grid.length > 4, 'theme photos follow');
+    assert.ok(defaultCoverFor('Halloweenfest', 'party').includes('1509558567730'));
+    assert.ok(defaultCoverFor('Middag', 'dinner').includes(defaultCover('dinner').split('photo-')[1].split('?')[0]));
+  });
+
+  it('photo ids look like Unsplash ids and are not repeated', () => {
+    const ids = PHOTO_SETS.flatMap((s) => s.photos);
+    for (const id of ids) assert.match(id, /^\d{10,13}-[0-9a-f]{12}$/);
+    assert.equal(new Set(ids).size, ids.length);
   });
 });
 

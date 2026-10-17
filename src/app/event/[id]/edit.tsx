@@ -7,7 +7,7 @@ import { TimePicker } from '@/components/create/TimePicker';
 import { BottomBar, Button, Card, Header, Input, KeyboardAware, ListRow, PageSkeleton, Screen, ScreenScroll, Text, Toggle, useToast } from '@/components/ui';
 import { useEvent, useSetSeriesCover, useUpdateEvent } from '@/data/hooks';
 import type { CategoryId, PlannerEvent, TimeHint } from '@/data/types';
-import { defaultCover } from '@/lib/categories';
+import { defaultCoverFor } from '@/lib/categories';
 import { spacing } from '@/theme';
 
 /** Short form for the details that come later: picture, place, time, a note. */
@@ -65,10 +65,11 @@ function EditForm({ event: e }: { event: PlannerEvent }) {
                 Bilde
               </Text>
               <CoverPicker
+                title={title}
                 category={category}
                 onCategory={(c) => {
                   setCategory(c);
-                  setCover(defaultCover(c));
+                  setCover(defaultCoverFor(title, c));
                 }}
                 value={cover}
                 onChange={setCover}
