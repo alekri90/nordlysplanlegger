@@ -47,3 +47,7 @@ yarn-error.*
 
 # Supabase CLI link state
 supabase/.temp/
+
+# Firebase service account key (FCM) — upload to EAS, never commit
+*firebase-adminsdk*.json
+service-account*.json

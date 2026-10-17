@@ -39,6 +39,8 @@ const config: ExpoConfig = {
   },
   android: {
     package: 'no.nordlys.planlegger',
+    // Firebase (FCM) for Android push. Public identifiers; the FCM service account key is stored on EAS.
+    googleServicesFile: './google-services.json',
     adaptiveIcon: {
       backgroundColor: '#FFF4EE',
       foregroundImage: './assets/android-icon-foreground.png',

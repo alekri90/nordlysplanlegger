@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "900666216903",
+    "project_id": "nordlys-planlegger",
+    "storage_bucket": "nordlys-planlegger.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:900666216903:android:c84b936ff88310b58749e2",
+        "android_client_info": {
+          "package_name": "no.nordlys.planlegger"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1l5ee-cULK7ygP8wHDnfbb3887vHmRhQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
