@@ -94,10 +94,13 @@ Svar **Nei** på deling av fysisk posisjon og kjøp i appen. Resultatet blir van
 | Personlig info → E-postadresse | Ja | Påkrevd | Kontoadministrasjon |
 | Personlig info → Bruker-ID-er | Ja | Påkrevd | Appfunksjonalitet, Kontoadministrasjon |
 | Bilder og videoer → Bilder | Ja | Valgfritt | Appfunksjonalitet |
-| Appaktivitet → Annet brukergenerert innhold (arrangementer, svar, beskjeder, rapporter) | Ja | Påkrevd | Appfunksjonalitet |
+| Meldinger → Andre meldinger i appen (beskjeder fra arrangøren) | Ja | Valgfritt | Appfunksjonalitet |
+| Appaktivitet → Annet brukergenerert innhold (arrangementer, svar, gjenger, rapporter) | Ja | Påkrevd | Appfunksjonalitet |
 | Enhets-ID eller andre ID-er (push-nøkkel) | Ja | Valgfritt | Appfunksjonalitet |
 
-Ikke samlet inn: posisjon, kontakter, økonomi, helse, meldinger (SMS/e-post), nettleserhistorikk, filer, kalender, appytelse/diagnostikk.
+Ikke samlet inn: posisjon, kontakter, økonomi, helse, SMS/e-post, nettleserhistorikk, filer, kalender («Legg i kalender» skriver bare til telefonens kalender), appytelse/diagnostikk.
+
+For hver datatype: **Samlet inn** ja, **Delt** nei, **Behandles midlertidig** nei.
 
 ## Lukket test (krav for personlige kontoer)
 
