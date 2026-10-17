@@ -10,7 +10,8 @@
 
     <!-- Installable web app: opens full screen from the home screen, without the browser address bar. -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#FBF8F6" />
+    <meta name="theme-color" content="#FBF8F6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#101116" media="(prefers-color-scheme: dark)" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Planlegger" />
@@ -31,6 +32,13 @@
       body {
         height: 100%;
         background-color: #fbf8f6;
+      }
+      /* Before the app has loaded; afterwards the app sets the colour from Profil → Utseende. */
+      @media (prefers-color-scheme: dark) {
+        html,
+        body {
+          background-color: #101116;
+        }
       }
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {

@@ -1,7 +1,7 @@
 import { forwardRef, useState } from 'react';
 import { Platform, Pressable, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
 
-import { fonts, radius, spacing, useColors } from '@/theme';
+import { fonts, radius, spacing, useTheme } from '@/theme';
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
 
@@ -19,7 +19,7 @@ export const Input = forwardRef<TextInput, Props>(function Input(
   { label, icon, error, clearable, size = 'md', containerStyle, value, onChangeText, onFocus, onBlur, style, ...rest },
   ref,
 ) {
-  const colors = useColors();
+  const { colors, scheme } = useTheme();
   const [focused, setFocused] = useState(false);
   const height = size === 'lg' ? 60 : 52;
 
@@ -50,6 +50,7 @@ export const Input = forwardRef<TextInput, Props>(function Input(
           onChangeText={onChangeText}
           placeholderTextColor={colors.textTertiary}
           selectionColor={colors.primary}
+          keyboardAppearance={scheme}
           accessibilityLabel={label ?? rest.placeholder}
           onFocus={(e) => {
             setFocused(true);

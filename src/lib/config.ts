@@ -16,8 +16,6 @@ export const isDemoMode = process.env.EXPO_PUBLIC_DEMO_MODE === '1' || !env.supa
 
 /** Feature flags. Planning features are never gated behind payment. */
 export const FEATURES = {
-  /** Dark tokens exist; enable once every screen has been reviewed in dark mode. */
-  darkMode: false,
   /** Native sponsored suggestions (e.g. "Trenger dere sted?") — data model ready, UI off. */
   sponsored: false,
 } as const;

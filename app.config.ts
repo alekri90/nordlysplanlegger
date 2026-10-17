@@ -13,8 +13,8 @@ const config: ExpoConfig = {
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
-  // Dark tokens are ready (src/theme). Flip to 'automatic' together with FEATURES.darkMode.
-  userInterfaceStyle: 'light',
+  // Follows the phone; Profil → Utseende can force light or dark (src/state/appearance.ts).
+  userInterfaceStyle: 'automatic',
   backgroundColor: '#FBF8F6',
   ios: {
     bundleIdentifier: 'no.nordlys.planlegger',
@@ -77,7 +77,7 @@ const config: ExpoConfig = {
         image: './assets/splash-icon.png',
         imageWidth: 160,
         backgroundColor: '#FBF8F6',
-        dark: { backgroundColor: '#0F0D0C', image: './assets/splash-icon.png' },
+        dark: { backgroundColor: '#101116', image: './assets/splash-icon.png' },
       },
     ],
     [

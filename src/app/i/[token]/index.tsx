@@ -17,7 +17,7 @@ import { formatLong, formatTime } from '@/lib/dates';
 import { firstName, inviteSubtitle, optionsSummary, timeHintLabel } from '@/lib/eventText';
 import { getGuestName } from '@/lib/guestIdentity';
 import { useMe } from '@/state/session';
-import { gutter, radius, spacing } from '@/theme';
+import { gutter, radius, spacing, useColors } from '@/theme';
 
 const INK = '#16120F';
 
@@ -26,6 +26,7 @@ const INK = '#16120F';
  * Works without an account, in the app and as a mobile web page.
  */
 export default function Invitation() {
+  const colors = useColors();
   const { token } = useLocalSearchParams<{ token: string }>();
   const invite = useInvite(token);
   const insets = useSafeAreaInsets();
@@ -39,7 +40,7 @@ export default function Invitation() {
   }
   if (!invite.data) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#FBF8F6', paddingTop: insets.top + spacing.huge }}>
+      <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top + spacing.huge }}>
         <EmptyState icon="link-2" title="Invitasjonen finnes ikke lenger" body="Den kan ha blitt avlyst. Spør den som inviterte deg om en ny lenke." />
       </View>
     );

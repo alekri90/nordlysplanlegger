@@ -167,13 +167,13 @@ export default function CreateWho() {
               {suggestedGroup ? (
                 <Animated.View entering={FadeInDown.duration(260)}>
                   <PressableScale onPress={() => chooseGroup(suggestedGroup)} accessibilityLabel={`Velg ${suggestedGroup.name}, ${suggestedGroup.members.length} personer`}>
-                    <Card style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.ink, borderWidth: 0 }}>
+                    <Card style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.feature, borderWidth: 0 }}>
                       <Icon name="zap" size={18} tint="#FF9AA2" />
                       <View style={{ flex: 1 }}>
                         <Text variant="footnote" style={{ color: 'rgba(255,255,255,0.7)' }}>
                           Forslag
                         </Text>
-                        <Text variant="headline" style={{ color: colors.textOnInk }}>
+                        <Text variant="headline" style={{ color: colors.textOnFeature }}>
                           {suggestedGroup.emoji ? `${suggestedGroup.emoji} ` : ''}
                           {suggestedGroup.name} · {suggestedGroup.members.length} personer
                         </Text>

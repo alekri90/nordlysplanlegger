@@ -41,7 +41,7 @@ export default function CreateWhen() {
                     alignItems: 'center',
                     padding: spacing.xl,
                     borderRadius: radius.lg,
-                    backgroundColor: o.recommended ? colors.ink : colors.surface,
+                    backgroundColor: o.recommended ? colors.feature : colors.surface,
                     borderWidth: o.recommended ? 0 : 1,
                     borderColor: colors.border,
                   },
@@ -62,7 +62,7 @@ export default function CreateWhen() {
                 </View>
                 <View style={{ flex: 1, gap: 4 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                    <Text variant="title3" style={{ color: o.recommended ? colors.textOnInk : colors.text }}>
+                    <Text variant="title3" style={{ color: o.recommended ? colors.textOnFeature : colors.text }}>
                       {o.title}
                     </Text>
                     {o.recommended ? <Tag label="Anbefalt" tone="glass" /> : null}

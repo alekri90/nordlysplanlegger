@@ -13,7 +13,7 @@ import type { GroupInviteView } from '@/data/types';
 import { haptics } from '@/lib/haptics';
 import { setPendingGroupJoin } from '@/lib/pendingJoin';
 import { useSession } from '@/state/session';
-import { gutter, spacing } from '@/theme';
+import { gutter, spacing, useColors } from '@/theme';
 
 const INK = '#16120F';
 
@@ -22,6 +22,7 @@ const INK = '#16120F';
  * account (e-mail code, no password). Works in the app and as a mobile web page.
  */
 export default function GroupInvitation() {
+  const colors = useColors();
   const { token } = useLocalSearchParams<{ token: string }>();
   const invite = useGroupInvite(token);
   const insets = useSafeAreaInsets();
@@ -35,7 +36,7 @@ export default function GroupInvitation() {
   }
   if (!invite.data) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#FBF8F6', paddingTop: insets.top + spacing.huge }}>
+      <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top + spacing.huge }}>
         <EmptyState icon="link-2" title="Lenken virker ikke lenger" body="Spør den som inviterte deg om en ny lenke." />
       </View>
     );

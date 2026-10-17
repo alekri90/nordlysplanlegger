@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Platform, ScrollView, View } from 'react-native';
 
 import { ShareProfileSheet } from '@/components/people/ShareProfileSheet';
+import { AppearanceSetting } from '@/components/settings/AppearanceSetting';
 import { Avatar, Button, Card, Divider, ListRow, PressableScale, Screen, Tag, Text } from '@/components/ui';
 import { repo } from '@/data';
 import { queryClient, useEvents, useFriendRequests, useFriends, useFriendsRealtime, useGroups } from '@/data/hooks';
@@ -107,6 +108,8 @@ export default function Profile() {
           />
           <Divider />
           <ListRow icon="bell" title="Varsler" subtitle="Velg hva du vil få beskjed om" chevron onPress={() => router.push('/settings/notifications')} />
+          <Divider />
+          <AppearanceSetting />
           <Divider />
           <ListRow icon="shield" title="Personvern" subtitle="Hvem kan finne meg, blokkerte, eksport og sletting" chevron onPress={() => router.push('/settings/privacy')} />
           <Divider />

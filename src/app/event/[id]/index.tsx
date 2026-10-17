@@ -162,8 +162,8 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
               </Text>
             </Card>
           ) : isPast && e.groupId ? (
-            <Card style={{ marginTop: spacing.xl, backgroundColor: colors.ink, borderWidth: 0 }}>
-              <Text variant="title3" style={{ color: colors.textOnInk }}>
+            <Card style={{ marginTop: spacing.xl, backgroundColor: colors.feature, borderWidth: 0 }}>
+              <Text variant="title3" style={{ color: colors.textOnFeature }}>
                 Skal vi finne neste dato?
               </Text>
               <Text variant="subhead" style={{ color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>
@@ -172,8 +172,8 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
               <Button title="Finn neste dato" icon="refresh-cw" size="md" onPress={findDate} style={{ marginTop: spacing.lg }} />
             </Card>
           ) : isPast || (isOrganizer && !e.groupId && e.status === 'confirmed' && e.members.length > 2) ? (
-            <Card style={{ marginTop: spacing.xl, backgroundColor: colors.ink, borderWidth: 0 }}>
-              <Text variant="title3" style={{ color: colors.textOnInk }}>
+            <Card style={{ marginTop: spacing.xl, backgroundColor: colors.feature, borderWidth: 0 }}>
+              <Text variant="title3" style={{ color: colors.textOnFeature }}>
                 Skal dere gjøre dette igjen?
               </Text>
               <Text variant="subhead" style={{ color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>

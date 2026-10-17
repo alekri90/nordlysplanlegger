@@ -43,7 +43,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: spacing.sm,
-                backgroundColor: colors.ink,
+                backgroundColor: colors.feature,
                 paddingHorizontal: spacing.lg,
                 paddingVertical: spacing.md,
                 borderRadius: radius.pill,
@@ -52,8 +52,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               shadows.lg,
             ]}
           >
-            <Icon name={icon} size={18} tint={toast.tone === 'error' ? '#FF9AA2' : toast.tone === 'success' ? '#7EE2B0' : colors.textOnInk} />
-            <Text variant="callout" style={{ color: colors.textOnInk, flexShrink: 1 }}>
+            <Icon name={icon} size={18} tint={toast.tone === 'error' ? '#FF9AA2' : toast.tone === 'success' ? '#7EE2B0' : colors.textOnFeature} />
+            <Text variant="callout" style={{ color: colors.textOnFeature, flexShrink: 1 }}>
               {toast.message}
             </Text>
           </Animated.View>

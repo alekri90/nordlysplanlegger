@@ -18,31 +18,40 @@ import { queryClient } from '@/data/hooks';
 import { usePendingGroupJoin } from '@/lib/pendingJoin';
 import { useNotificationRouting } from '@/lib/push';
 import { useSession, useSessionBootstrap } from '@/state/session';
-import { lightColors, ThemeProvider, useTheme } from '@/theme';
+import { useAppearance } from '@/state/appearance';
+import { ThemeProvider, useColors, useTheme } from '@/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold });
 
+  const appearanceReady = useAppearance((s) => s.ready);
+
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: lightColors.background }}>
-      <SafeAreaProvider>
-        <ThemeProvider>
+    <ThemeProvider>
+      <Root>
+        <SafeAreaProvider>
           <QueryClientProvider client={queryClient}>
-            <ToastProvider>{fontsLoaded || fontError ? <WebFrame><AppStack /></WebFrame> : null}</ToastProvider>
+            <ToastProvider>{(fontsLoaded || fontError) && appearanceReady ? <WebFrame><AppStack /></WebFrame> : null}</ToastProvider>
           </QueryClientProvider>
-        </ThemeProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+        </SafeAreaProvider>
+      </Root>
+    </ThemeProvider>
   );
+}
+
+function Root({ children }: { children: React.ReactNode }) {
+  const colors = useColors();
+  return <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>{children}</GestureHandlerRootView>;
 }
 
 /** On desktop browsers the invitation page is shown phone-width, centred. */
 function WebFrame({ children }: { children: React.ReactNode }) {
+  const colors = useColors();
   if (Platform.OS !== 'web') return <>{children}</>;
   return (
-    <View style={{ flex: 1, backgroundColor: '#EDE7E3' }}>
+    <View style={{ flex: 1, backgroundColor: colors.backdrop }}>
       <View style={{ flex: 1, width: '100%', maxWidth: 520, alignSelf: 'center', overflow: 'hidden' }}>{children}</View>
     </View>
   );

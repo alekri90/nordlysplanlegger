@@ -2,7 +2,7 @@ import { Platform, type TextStyle, type ViewStyle } from 'react-native';
 
 /**
  * Design tokens for Nordlys Planlegger.
- * Warm, light and calm by default; a matching dark palette is prepared.
+ * Warm, light and calm by default; dark is soft charcoal (never pure black) with the same coral–pink signature.
  * Coral is the social "do something" colour; ink (near-black) moves you forward in a flow.
  */
 
@@ -27,13 +27,17 @@ const palette = {
   sand500: '#A39B96',
   sand600: '#6E6661',
   sand900: '#16120F',
-  night950: '#0F0D0C',
-  night900: '#1A1716',
-  night800: '#25211F',
-  night700: '#34302D',
-  night500: '#7C7470',
-  night300: '#B7AEA9',
-  night100: '#F4EFEC',
+  night950: '#101116',
+  night900: '#191A21',
+  night800: '#202128',
+  night750: '#292A32',
+  night700: '#303139',
+  night600: '#3E3F48',
+  night500: '#898992',
+  night300: '#A1A1AA',
+  night100: '#F8F8FA',
+  pinkDark: '#FF6385',
+  coralDark: '#FF7772',
 } as const;
 
 export type ColorTokens = {
@@ -66,6 +70,11 @@ export type ColorTokens = {
   scrim: string;
   skeleton: string;
   tabBar: string;
+  /** Dark highlight cards and toasts: ink in light mode, a raised charcoal in dark (ink turns light there). */
+  feature: string;
+  textOnFeature: string;
+  /** Behind the phone-width web layout on desktop. */
+  backdrop: string;
 };
 
 export const lightColors: ColorTokens = {
@@ -98,38 +107,44 @@ export const lightColors: ColorTokens = {
   scrim: 'rgba(15, 12, 10, 0.4)',
   skeleton: palette.sand200,
   tabBar: 'rgba(255, 255, 255, 0.96)',
+  feature: palette.sand900,
+  textOnFeature: '#FFFFFF',
+  backdrop: palette.sand200,
 };
 
 export const darkColors: ColorTokens = {
   background: palette.night950,
-  surface: palette.night900,
-  surfaceMuted: palette.night800,
-  surfaceRaised: palette.night800,
+  surface: palette.night800,
+  surfaceMuted: palette.night900,
+  surfaceRaised: palette.night750,
   border: palette.night700,
-  borderStrong: '#4A4440',
+  borderStrong: palette.night600,
   text: palette.night100,
   textSecondary: palette.night300,
   textTertiary: palette.night500,
   textOnDark: '#FFFFFF',
   textOnPrimary: '#FFFFFF',
-  primary: palette.coral500,
-  primaryPressed: palette.coral400,
-  primarySoft: '#3A1E21',
-  primaryOnSoft: palette.coral200,
+  primary: palette.pinkDark,
+  primaryPressed: palette.coralDark,
+  primarySoft: '#3A1D29',
+  primaryOnSoft: '#FFB3C3',
   gradientStart: '#FF7A6B',
   gradientEnd: palette.pink500,
   ink: palette.night100,
   inkPressed: '#FFFFFF',
   textOnInk: palette.night950,
   success: '#3CC48A',
-  successSoft: '#13291F',
+  successSoft: '#15291F',
   warning: palette.amber500,
-  danger: palette.coral400,
-  dangerSoft: '#3A1E21',
+  danger: palette.coralDark,
+  dangerSoft: '#3A1D23',
   overlay: 'rgba(0, 0, 0, 0.6)',
   scrim: 'rgba(0, 0, 0, 0.55)',
-  skeleton: palette.night800,
-  tabBar: 'rgba(26, 23, 22, 0.96)',
+  skeleton: palette.night750,
+  tabBar: 'rgba(25, 26, 33, 0.97)',
+  feature: palette.night750,
+  textOnFeature: palette.night100,
+  backdrop: '#0B0C10',
 };
 
 export const fonts = {
