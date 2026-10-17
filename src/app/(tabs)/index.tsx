@@ -155,7 +155,8 @@ function splitEvents(events: PlannerEvent[], meId?: string) {
     if (e.status === 'completed' || e.status === 'cancelled') continue;
     if (e.selectedDate && e.selectedDate < t) continue;
     const mine = e.members.find((m) => m.userId === meId);
-    if (e.status === 'polling' && mine?.role === 'guest' && (mine.status === 'invited' || mine.status === 'opened')) invitations.push(e);
+    const unanswered = mine?.role === 'guest' && (mine.status === 'invited' || mine.status === 'opened');
+    if ((e.status === 'polling' || e.status === 'draft') && unanswered) invitations.push(e);
     else upcoming.push(e);
   }
   upcoming.sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || (a.selectedDate ?? '').localeCompare(b.selectedDate ?? '') || b.createdAt.localeCompare(a.createdAt));

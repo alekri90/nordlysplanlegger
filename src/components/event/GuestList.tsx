@@ -5,7 +5,12 @@ import type { EventMember } from '@/data/types';
 import { shortNames } from '@/lib/names';
 import { spacing } from '@/theme';
 
-type Props = { members: EventMember[]; onPressMember?: (m: EventMember) => void };
+type Props = {
+  members: EventMember[];
+  onPressMember?: (m: EventMember) => void;
+  /** No date yet: the answers are «Er med» / «Ikke denne gangen». */
+  interest?: boolean;
+};
 
 function Group({ title, members, names, dim, onPress }: { title: string; members: EventMember[]; names: Map<string, string>; dim?: boolean; onPress?: (m: EventMember) => void }) {
   if (!members.length) return null;
@@ -36,15 +41,15 @@ function Group({ title, members, names, dim, onPress }: { title: string; members
 }
 
 /** Kommer · Kan ikke · Har ikke svart — status is in the heading text, never only colour. Tap someone for actions. */
-export function GuestList({ members, onPressMember }: Props) {
+export function GuestList({ members, onPressMember, interest }: Props) {
   const coming = members.filter((m) => m.status === 'attending' || (m.role === 'organizer' && m.status !== 'declined'));
   const notComing = members.filter((m) => m.status === 'declined');
   const waiting = members.filter((m) => !coming.includes(m) && !notComing.includes(m));
   const names = shortNames(members.map((m) => ({ id: m.id, name: m.person.name })));
   return (
     <View>
-      <Group title="Kommer" members={coming} names={names} onPress={onPressMember} />
-      <Group title="Kan ikke" members={notComing} names={names} dim onPress={onPressMember} />
+      <Group title={interest ? 'Er med' : 'Kommer'} members={coming} names={names} onPress={onPressMember} />
+      <Group title={interest ? 'Ikke denne gangen' : 'Kan ikke'} members={notComing} names={names} dim onPress={onPressMember} />
       <Group title="Har ikke svart" members={waiting} names={names} dim onPress={onPressMember} />
     </View>
   );

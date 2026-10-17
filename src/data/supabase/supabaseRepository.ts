@@ -536,10 +536,8 @@ export const supabaseRepository: Repository = {
   },
 
   async startPoll(eventId, optionDates) {
-    const sb = getSupabase();
-    const { error: insertError } = await sb.from('event_date_options').insert(optionDates.map((date) => ({ event_id: eventId, date })));
-    fail(insertError);
-    const { error } = await sb.from('events').update({ status: 'polling', date_mode: 'poll', period_label: periodLabelFor(optionDates) }).eq('id', eventId);
+    // Adds the dates, opens the poll and asks everyone who didn't say «Ikke denne gangen».
+    const { error } = await getSupabase().rpc('start_event_poll', { p_event_id: eventId, p_dates: optionDates, p_period_label: periodLabelFor(optionDates) });
     fail(error);
   },
 

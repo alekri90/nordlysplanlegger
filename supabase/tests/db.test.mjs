@@ -686,5 +686,50 @@ console.log('\nPictures');
   });
 }
 
+console.log('\nUndecided events: «Er du med?»');
+{
+  const org = await newUser('ide@example.com', { display_name: 'Ida Ide', username: 'idaide' });
+  const yes = await newUser('ja@example.com', { display_name: 'Jens Ja', username: 'jensja' });
+  const no = await newUser('nei@example.com', { display_name: 'Nina Nei', username: 'ninanei' });
+  const quiet = await newUser('stille@example.com', { display_name: 'Stine Stille', username: 'stinestille' });
+  for (const u of [yes, no, quiet]) { await as(org); await q(`select send_friend_request($1)`, [u]); await as(u); await q(`select send_friend_request($1)`, [org]); }
+  await as(org);
+  const [{ r }] = await q(`select create_event($1) r`, [{ title: 'Hyttetur', category: 'cabin', date_mode: 'undecided', time_hint: 'any', member_user_ids: [yes, no, quiet] }]);
+  const ev = r.event_id;
+  const status = async (u) => (await q(`select status from event_members where event_id = $1 and user_id = $2`, [ev, u]))[0].status;
+
+  await check('guests answer «Jeg er med» / «Ikke denne gangen»; the organizer hears who is in', async () => {
+    await as(yes);
+    await q(`update event_members set status = 'attending', responded_at = now() where event_id = $1 and user_id = $2`, [ev, yes]);
+    await as(no);
+    await q(`update event_members set status = 'declined', responded_at = now() where event_id = $1 and user_id = $2`, [ev, no]);
+    const n = await q(`select title from notifications where user_id = $1 and event_id = $2 and data ->> 'kind' = 'interest'`, [org, ev]);
+    assert.deepEqual(n.map((x) => x.title), ['Jens er med']);
+    const decl = await q(`select 1 from notifications where user_id = $1 and event_id = $2 and title like '%likevel%'`, [org, ev]);
+    assert.equal(decl.length, 0, 'no «kan ikke likevel» without a date');
+  });
+
+  await check('finding a date asks everyone who did not opt out, and the reminder clock starts then', async () => {
+    await as(yes);
+    await assert.rejects(q(`select start_event_poll($1, $2)`, [ev, ['2027-02-05', '2027-02-12']]), 'only the organizer');
+    await as(org);
+    await q(`update events set created_at = now() - interval '30 days' where id = $1`, [ev]);
+    await q(`select start_event_poll($1, $2, 'Februar')`, [ev, ['2027-02-05', '2027-02-12']]);
+    const [e] = await q(`select status, date_mode, period_label, polling_started_at is not null started from events where id = $1`, [ev]);
+    assert.deepEqual(e, { status: 'polling', date_mode: 'poll', period_label: 'Februar', started: true });
+    assert.equal((await q(`select count(*)::int n from event_date_options where event_id = $1`, [ev]))[0].n, 2);
+    assert.equal(await status(yes), 'invited', '«Jeg er med» still has to answer the dates');
+    assert.equal(await status(no), 'declined');
+    const asked = await q(`select user_id from notifications where event_id = $1 and data ->> 'kind' = 'poll_started'`, [ev]);
+    assert.deepEqual(new Set(asked.map((x) => x.user_id)), new Set([yes, quiet]));
+    await as(null);
+    await q(`select send_event_reminders(date_trunc('day', now()) + interval '1 day 12 hours')`);
+    const early = await q(`select 1 from notifications where event_id = $1 and type = 'reminder_respond'`, [ev]);
+    assert.equal(early.length, 0, 'no reminder right after the poll opened, even for an old event');
+    await as(org);
+    await assert.rejects(q(`select start_event_poll($1, $2)`, [ev, ['2027-03-05']]), 'only from an undecided event');
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

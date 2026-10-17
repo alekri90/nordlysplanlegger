@@ -26,7 +26,16 @@ export function eventStatusLine(e: PlannerEvent, meId?: string): { text: string;
     const p = responseProgress(e.members);
     return { text: `${p.responded} av ${p.invited} har svart`, tone: p.pending === 0 ? 'success' : 'neutral' };
   }
-  if (e.status === 'draft') return { text: 'Finn dato', tone: 'primary' };
+  if (e.status === 'draft') {
+    // No date yet: guests say whether they're in; the organizer sees how many are.
+    if (me && me.role === 'guest') {
+      if (me.status === 'attending') return { text: 'Du er med', tone: 'success' };
+      if (me.status === 'declined') return { text: 'Ikke denne gangen', tone: 'neutral' };
+      return { text: 'Er du med?', tone: 'primary' };
+    }
+    const inCount = e.members.filter((m) => m.role === 'guest' && m.status === 'attending').length;
+    return { text: inCount ? `${inCount} er med · Finn dato` : 'Finn dato', tone: 'primary' };
+  }
   const coming = e.members.filter((m) => m.status === 'attending').length;
   return { text: `${coming} ${coming === 1 ? 'person' : 'personer'}`, tone: 'neutral' };
 }

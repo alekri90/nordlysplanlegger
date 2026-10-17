@@ -35,8 +35,15 @@ export default function Done() {
   const pop = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   const title = attending === '0' ? 'Takk for beskjed' : name ? `Takk, ${firstName(name)}!` : 'Takk for svaret!';
-  const body =
-    attending === '1'
+  // No date yet: «Jeg er med» / «Ikke denne gangen».
+  const undecided = invite.data?.event.status === 'draft';
+  const body = undecided
+    ? attending === '1'
+      ? signedIn
+        ? `${organizer} vet at du er med. Du får beskjed i appen når det er foreslått datoer.`
+        : `${organizer} vet at du er med. Når det er foreslått datoer, åpner du den samme lenken og svarer.`
+      : `${organizer} vet at du ikke er med denne gangen.`
+    : attending === '1'
       ? `${organizer} vet at du kommer. Vi sees!`
       : attending === '0'
         ? `${organizer} vet at du ikke kan denne gangen.`

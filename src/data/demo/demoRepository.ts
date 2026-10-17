@@ -537,6 +537,8 @@ export const demoRepository: Repository = {
     e.status = 'polling';
     e.dateMode = 'poll';
     e.periodLabel = periodLabelFor(optionDates);
+    // «Jeg er med» still has to answer the dates; «Ikke denne gangen» stays out.
+    for (const m of e.members) if (m.role === 'guest' && m.status === 'attending') m.status = 'invited';
     refreshGroupRefs();
   },
 

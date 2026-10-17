@@ -125,6 +125,9 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
   };
 
   const showRsvp = !isOrganizer && !!mine && (e.status === 'confirmed' || e.status === 'date_selected');
+  const showInterest = !isOrganizer && !!mine && mine.role === 'guest' && e.status === 'draft';
+  const interested = e.members.filter((m) => m.role === 'guest' && m.status === 'attending').length;
+  const notInterested = e.members.filter((m) => m.role === 'guest' && m.status === 'declined').length;
 
   return (
     <Screen edges={[]}>
@@ -208,7 +211,7 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
           </View>
 
           <View style={{ paddingTop: spacing.xl }}>
-            {tab === 'guests' ? <GuestList members={e.members} onPressMember={(m) => m.userId !== meId && setPerson(m.person)} /> : null}
+            {tab === 'guests' ? <GuestList members={e.members} interest={e.status === 'draft'} onPressMember={(m) => m.userId !== meId && setPerson(m.person)} /> : null}
             {tab === 'details' ? (
               <View style={{ gap: spacing.lg }}>
                 {e.description ? <Text variant="body">{e.description}</Text> : <Text variant="body" color="textSecondary">Ingen detaljer ennå.</Text>}
@@ -240,7 +243,37 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
 
       {e.status === 'draft' && isOrganizer ? (
         <BottomBar>
-          <Button title="Finn dato" icon="calendar" onPress={findDate} accessibilityHint="Velg mulige dager og la gjengen svare" />
+          {interested || notInterested ? (
+            <Text variant="callout" align="center" color="textSecondary">
+              {[interested ? `${interested} er med` : null, notInterested ? `${notInterested} ikke denne gangen` : null].filter(Boolean).join(' · ')}
+            </Text>
+          ) : null}
+          <Button title="Finn dato" icon="calendar" onPress={findDate} accessibilityHint="Velg mulige dager. Alle som ikke har sagt nei, får spørsmål om datoene." />
+        </BottomBar>
+      ) : showInterest ? (
+        <BottomBar>
+          <Text variant="callout" align="center" color="textSecondary">
+            {mine!.status === 'attending'
+              ? `Du er med. Du får beskjed når ${firstName(e.organizer.name)} foreslår datoer.`
+              : mine!.status === 'declined'
+                ? 'Du har sagt ikke denne gangen'
+                : 'Datoen er ikke satt ennå – er du med?'}
+          </Text>
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <Button
+              title="Ikke denne gangen"
+              variant={mine!.status === 'declined' ? 'ink' : 'secondary'}
+              style={{ flex: 1 }}
+              onPress={() => rsvp.mutate(false, { onSuccess: () => toast(`${firstName(e.organizer.name)} har fått svaret ditt`) })}
+            />
+            <Button
+              title="Jeg er med"
+              icon="check"
+              variant={mine!.status === 'attending' ? 'ink' : 'primary'}
+              style={{ flex: 1 }}
+              onPress={() => rsvp.mutate(true, { onSuccess: () => toast({ message: `Supert! ${firstName(e.organizer.name)} vet at du er med.`, tone: 'success' }) })}
+            />
+          </View>
         </BottomBar>
       ) : showRsvp && mine!.status === 'attending' ? (
         // Answered yes: a quiet confirmation, and a way out that tells the organizer.

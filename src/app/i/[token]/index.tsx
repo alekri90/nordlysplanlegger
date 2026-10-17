@@ -178,9 +178,18 @@ function InvitationView({ invite }: { invite: InviteView }) {
                 </View>
               </>
             ) : (
-              <Text variant="callout" align="center" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                {firstName(invite.organizer.name)} finner en dato snart. Du får beskjed.
-              </Text>
+              <>
+                <Text variant="headline" align="center" style={{ color: '#fff' }}>
+                  {invite.myResponse?.status === 'attending' ? 'Du er med 🎉' : invite.myResponse?.status === 'declined' ? 'Du har sagt ikke denne gangen' : 'Er du med?'}
+                </Text>
+                <Text variant="footnote" align="center" style={{ color: 'rgba(255,255,255,0.75)', marginBottom: spacing.sm }}>
+                  {firstName(invite.organizer.name)} planlegger {e.title}. Datoen er ikke satt ennå.
+                </Text>
+                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                  <Button title="Ikke denne gangen" variant="secondary" style={{ flex: 1 }} onPress={() => sendRsvp(false)} disabled={rsvp.isPending} />
+                  <Button title="Jeg er med" icon="check" style={{ flex: 1 }} onPress={() => sendRsvp(true)} loading={rsvp.isPending} />
+                </View>
+              </>
             )}
             <PressableScale onPress={() => setDetailsOpen(true)} style={{ alignSelf: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: 4 }} accessibilityLabel="Se detaljer">
               <Text variant="callout" style={{ color: 'rgba(255,255,255,0.8)' }}>
