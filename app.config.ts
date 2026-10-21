@@ -11,7 +11,9 @@ const config: ExpoConfig = {
   slug: 'nordlys-planlegger',
   scheme: 'nordlysplanlegger',
   version: '1.1.0',
-  orientation: 'portrait',
+  // Android 16 ignores orientation locks on tablets and foldables, so Android follows the device
+  // (the layout centres itself on wide screens). The iPhone app stays portrait (infoPlist below).
+  orientation: 'default',
   icon: './assets/icon.png',
   // Follows the phone; Profil → Utseende can force light or dark (src/state/appearance.ts).
   userInterfaceStyle: 'automatic',
@@ -26,6 +28,7 @@ const config: ExpoConfig = {
       // Lets us check if share targets are installed before deep linking into them.
       LSApplicationQueriesSchemes: ['whatsapp', 'fb-messenger', 'snapchat', 'instagram'],
       ITSAppUsesNonExemptEncryption: false,
+      UISupportedInterfaceOrientations: ['UIInterfaceOrientationPortrait'],
     },
     // Required-reason APIs used by React Native, Expo modules and AsyncStorage.
     privacyManifests: {

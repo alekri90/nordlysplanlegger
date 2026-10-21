@@ -9,7 +9,7 @@ import { router, Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, useWindowDimensions, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -46,10 +46,11 @@ function Root({ children }: { children: React.ReactNode }) {
   return <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>{children}</GestureHandlerRootView>;
 }
 
-/** On desktop browsers the invitation page is shown phone-width, centred. */
+/** Phone-width and centred on wide screens: desktop browsers, tablets, foldables and landscape. */
 function WebFrame({ children }: { children: React.ReactNode }) {
   const colors = useColors();
-  if (Platform.OS !== 'web') return <>{children}</>;
+  const { width } = useWindowDimensions();
+  if (Platform.OS !== 'web' && width < 600) return <>{children}</>;
   return (
     <View style={{ flex: 1, backgroundColor: colors.backdrop }}>
       <View style={{ flex: 1, width: '100%', maxWidth: 520, alignSelf: 'center', overflow: 'hidden' }}>{children}</View>
