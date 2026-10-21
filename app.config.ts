@@ -68,6 +68,8 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    // Google Play: shrink and obfuscate the Android code (R8) and drop unused resources.
+    ['expo-build-properties', { android: { enableMinifyInReleaseBuilds: true, enableShrinkResourcesInReleaseBuilds: true } }],
     'expo-status-bar',
     'expo-image',
     'expo-font',
