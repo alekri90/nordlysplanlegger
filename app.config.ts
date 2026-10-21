@@ -10,7 +10,7 @@ const config: ExpoConfig = {
   name: 'Nordlys Planlegger',
   slug: 'nordlys-planlegger',
   scheme: 'nordlysplanlegger',
-  version: '1.0.0',
+  version: '1.1.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
   // Follows the phone; Profil → Utseende can force light or dark (src/state/appearance.ts).
