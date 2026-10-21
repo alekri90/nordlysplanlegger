@@ -8,6 +8,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppLogo } from '@/components/brand/AppLogo';
+import { confirmDecline } from '@/components/event/confirmDecline';
 import { EventMessages } from '@/components/event/EventMessages';
 import { Avatar, AvatarStack, Button, EmptyState, Icon, IconButton, Input, PressableScale, Sheet, Skeleton, Tag, Text, useToast, type IconName } from '@/components/ui';
 import { useInvite, useSubmitRsvp } from '@/data/hooks';
@@ -77,6 +78,11 @@ function InvitationView({ invite }: { invite: InviteView }) {
     { icon: 'clock', label: e.startTime ? `Kl. ${formatTime(e.startTime)}` : timeHintLabel(e.timeHint) },
     { icon: 'users', label: `${invite.invitedCount} inviterte` },
   ];
+
+  const declineRsvp = () => {
+    if (invite.myResponse?.status === 'declined') return;
+    confirmDecline(firstName(invite.organizer.name), !!me, () => void sendRsvp(false));
+  };
 
   const sendRsvp = async (attending: boolean, guestName?: string) => {
     if (!me && !guestName && !knownName && !invite.myResponse) {
@@ -169,7 +175,7 @@ function InvitationView({ invite }: { invite: InviteView }) {
                 />
                 {!declined ? (
                   <PressableScale
-                    onPress={() => sendRsvp(false)}
+                    onPress={declineRsvp}
                     disabled={rsvp.isPending}
                     style={{ alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg }}
                     accessibilityRole="button"
@@ -187,7 +193,7 @@ function InvitationView({ invite }: { invite: InviteView }) {
                   {invite.myResponse?.status === 'attending' ? 'Du kommer 🎉' : invite.myResponse?.status === 'declined' ? 'Du har sagt at du ikke kan' : 'Kommer du?'}
                 </Text>
                 <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                  <Button title="Kan ikke" variant="secondary" style={{ flex: 1 }} onPress={() => sendRsvp(false)} disabled={rsvp.isPending} />
+                  <Button title="Kan ikke" variant="secondary" style={{ flex: 1 }} onPress={declineRsvp} disabled={rsvp.isPending} />
                   <Button title="Kommer" icon="check" style={{ flex: 1 }} onPress={() => sendRsvp(true)} loading={rsvp.isPending} />
                 </View>
               </>
@@ -200,7 +206,7 @@ function InvitationView({ invite }: { invite: InviteView }) {
                   {firstName(invite.organizer.name)} planlegger {e.title}. Datoen er ikke satt ennå.
                 </Text>
                 <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                  <Button title="Ikke denne gangen" variant="secondary" style={{ flex: 1 }} onPress={() => sendRsvp(false)} disabled={rsvp.isPending} />
+                  <Button title="Ikke denne gangen" variant="secondary" style={{ flex: 1 }} onPress={declineRsvp} disabled={rsvp.isPending} />
                   <Button title="Jeg er med" icon="check" style={{ flex: 1 }} onPress={() => sendRsvp(true)} loading={rsvp.isPending} />
                 </View>
               </>

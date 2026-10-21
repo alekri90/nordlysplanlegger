@@ -30,6 +30,7 @@ export default function Home() {
   const duplicateEvent = useCreateDraft((s) => s.duplicateEvent);
   const [showAll, setShowAll] = useState(false);
   const [pastOpen, setPastOpen] = useState(false);
+  const [decidingOpen, setDecidingOpen] = useState(true);
   const [allPast, setAllPast] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -146,29 +147,22 @@ export default function Home() {
 
             {deciding.length ? (
               <View style={{ marginTop: spacing.xxl }}>
-                <SectionHeader title="Dato bestemmes" />
-                <View style={{ gap: spacing.md }}>
-                  {deciding.map((e, i) => (
-                    <Animated.View key={e.id} entering={FadeInDown.delay(180 + i * 60).duration(380)}>
-                      <EventCard event={e} meId={me?.id} onPress={() => router.push(`/event/${e.id}`)} />
-                    </Animated.View>
-                  ))}
-                </View>
+                <FoldHeader title="Dato bestemmes" count={deciding.length} open={decidingOpen} onToggle={() => setDecidingOpen((v) => !v)} />
+                {decidingOpen ? (
+                  <View style={{ gap: spacing.md, marginTop: spacing.sm }}>
+                    {deciding.map((e, i) => (
+                      <Animated.View key={e.id} entering={FadeInDown.delay(i * 40).duration(300)}>
+                        <EventCard event={e} meId={me?.id} onPress={() => router.push(`/event/${e.id}`)} />
+                      </Animated.View>
+                    ))}
+                  </View>
+                ) : null}
               </View>
             ) : null}
 
             {past.length ? (
               <View style={{ marginTop: spacing.xxl }}>
-                <PressableScale
-                  onPress={() => setPastOpen((v) => !v)}
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded: pastOpen }}
-                  accessibilityLabel={`Tidligere arrangementer, ${past.length}`}
-                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs }}
-                >
-                  <Text variant="title3">Tidligere ({past.length})</Text>
-                  <Icon name={pastOpen ? 'chevron-up' : 'chevron-down'} size={20} color="textSecondary" />
-                </PressableScale>
+                <FoldHeader title="Tidligere" count={past.length} open={pastOpen} onToggle={() => setPastOpen((v) => !v)} />
                 {pastOpen ? (
                   <Card style={{ marginTop: spacing.sm, paddingVertical: spacing.xs }}>
                     {(allPast ? past : past.slice(0, PAST_LIMIT)).map((e, i) => (
@@ -235,6 +229,25 @@ function splitEvents(events: PlannerEvent[], meId?: string) {
   deciding.sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || b.createdAt.localeCompare(a.createdAt));
   past.sort((a, b) => (b.selectedDate ?? b.createdAt).localeCompare(a.selectedDate ?? a.createdAt));
   return { invitations, upcoming, deciding, past };
+}
+
+/** A section heading you can fold away: «Dato bestemmes (3) ⌄». */
+function FoldHeader({ title, count, open, onToggle }: { title: string; count: number; open: boolean; onToggle: () => void }) {
+  return (
+    <PressableScale
+      onPress={onToggle}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: open }}
+      accessibilityLabel={`${title}, ${count}`}
+      accessibilityHint={open ? 'Skjuler listen' : 'Viser listen'}
+      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs }}
+    >
+      <Text variant="title3">
+        {title} ({count})
+      </Text>
+      <Icon name={open ? 'chevron-up' : 'chevron-down'} size={20} color="textSecondary" />
+    </PressableScale>
+  );
 }
 
 /** A past plan, small: picture, name, date — and «Gjør igjen». */

@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { RepeatEditor } from '@/components/create/RepeatEditor';
 import { ActionButton } from '@/components/event/ActionButton';
+import { confirmDecline } from '@/components/event/confirmDecline';
 import { EventHero } from '@/components/event/EventHero';
 import { EventMessages } from '@/components/event/EventMessages';
 import { GuestList } from '@/components/event/GuestList';
@@ -264,7 +265,9 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
               title="Ikke denne gangen"
               variant={mine!.status === 'declined' ? 'ink' : 'secondary'}
               style={{ flex: 1 }}
-              onPress={() => rsvp.mutate(false, { onSuccess: () => toast(`${firstName(e.organizer.name)} har fått svaret ditt`) })}
+              onPress={() =>
+                mine!.status === 'declined' || confirmDecline(firstName(e.organizer.name), true, () => rsvp.mutate(false, { onSuccess: () => toast(`${firstName(e.organizer.name)} har fått svaret ditt`) }))
+              }
             />
             <Button
               title="Jeg er med"
@@ -308,7 +311,7 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
               title="Kan ikke"
               variant={mine!.status === 'declined' ? 'ink' : 'secondary'}
               style={{ flex: 1 }}
-              onPress={() => rsvp.mutate(false, { onSuccess: () => toast('Svaret ditt er sendt') })}
+              onPress={() => mine!.status === 'declined' || confirmDecline(firstName(e.organizer.name), true, () => rsvp.mutate(false, { onSuccess: () => toast('Svaret ditt er sendt') }))}
             />
             <Button
               title="Kommer"
