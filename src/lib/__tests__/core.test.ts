@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 
 import { coverOptionsFor, defaultCover, defaultCoverFor, PHOTO_SETS, photoSetFor, suggestCategory } from '../categories.ts';
 import { easterSunday, seasonalIdeas, suggestIdeas } from '../ideas.ts';
+import { activitiesFor, activity, ALL_ACTIVITIES, INSPIRATION_GROUPS, searchActivities } from '../inspiration.ts';
 import { addDays, countWeekends, dateRange, formatDayMonth, formatLong, periodLabelFor, weekday } from '../dates.ts';
 import { rankDateOptions, responseProgress } from '../ranking.ts';
 
@@ -188,6 +189,40 @@ describe('rankDateOptions with someone who can\'t come', () => {
     assert.equal(scores[0].option.id, 'b', 'the decliner\'s marks don\'t count');
     assert.equal(scores[0].invited, 2);
     assert.equal(scores[0].everyoneCan, true, 'everyone who is coming can');
+  });
+});
+
+describe('inspiration', () => {
+  // Activities whose theme photos show exactly that; everything else needs its own photo set.
+  const THEME_FITS: Record<string, string> = {
+    Spillkveld: 'games', Kortkveld: 'games', Hyttetur: 'cabin', 'Badstu og bading': 'sauna', 'Badstu med jentene': 'sauna',
+    Quizkveld: 'quiz', Sommerfest: 'beach', 'Middag hjemme': 'dinner', 'Felles middag': 'dinner', Konsert: 'concert',
+    Stranddag: 'beach', Strandtur: 'beach', Padelturnering: 'sport', Gamingkveld: 'gaming', Skitur: 'ski', Brunsj: 'brunch',
+    Julebord: 'christmas', Filmkveld: 'movie', Kino: 'movie', Bursdagsfeiring: 'birthday', Bursdagsfest: 'birthday', Weekendtur: 'cabin',
+  };
+
+  it('every activity has pictures that show it', () => {
+    for (const title of ALL_ACTIVITIES) {
+      const ok = photoSetFor(title) !== null || THEME_FITS[title] === suggestCategory(title);
+      assert.ok(ok, `${title} needs a photo set (or a theme whose photos fit)`);
+    }
+  });
+
+  it('no alcohol or gambling, no duplicates within a group', () => {
+    for (const g of INSPIRATION_GROUPS) {
+      assert.equal(new Set(g.activities).size, g.activities.length, g.label);
+      assert.ok(g.activities.length >= 8, g.label);
+    }
+    for (const t of ALL_ACTIVITIES) assert.doesNotMatch(t.toLowerCase(), /øl|vin(?!ter)|cocktail|poker|vors|pils|casino/, t);
+  });
+
+  it('the season comes first; search works across groups', () => {
+    const october = new Date(2026, 9, 17);
+    const holidays = activitiesFor(INSPIRATION_GROUPS.find((g) => g.id === 'holidays')!.activities, october);
+    assert.equal(holidays[0].inSeason, true);
+    assert.ok(holidays.slice(0, 3).some((a) => a.title === 'Halloweenfest'));
+    assert.deepEqual(searchActivities('bowl', october).map((a) => a.title), ['Bowling']);
+    assert.ok(activity('Gokart').cover.includes('1779128773287'));
   });
 });
 

@@ -6,7 +6,7 @@ import type { CategoryId } from '@/data/types';
  */
 
 /** Always-good ideas, last in line. */
-export const EVERGREEN_IDEAS = ['Middag', 'Spillkveld', 'Filmkveld', 'Quiz', 'Badstu', 'Padel', 'Hyttetur', 'Vors'];
+export const EVERGREEN_IDEAS = ['Middag', 'Spillkveld', 'Filmkveld', 'Quiz', 'Badstu', 'Padel', 'Hyttetur', 'Piknik'];
 
 /** What a gjeng named after a theme probably does ("Saunagjengen" → badstu). */
 const IDEAS_FOR_THEME: Partial<Record<CategoryId, string[]>> = {
@@ -25,7 +25,7 @@ const IDEAS_FOR_THEME: Partial<Record<CategoryId, string[]>> = {
   cabin: ['Hyttetur', 'Hyttehelg'],
   birthday: ['Bursdag', 'Bursdagsfeiring'],
   christmas: ['Julebord', 'Pepperkakebaking', 'Gløgg'],
-  party: ['Vors', 'Fest', 'Utepils'],
+  party: ['Fest', 'Hagefest', 'Sommerfest'],
   concert: ['Konsert', 'Teater', 'Festival'],
   family: ['Familiemiddag', 'Søndagsmiddag'],
 };
@@ -45,8 +45,8 @@ const SEASONS: Season[] = [
   { from: [10, 15], to: [12, 20], ideas: ['Julebord', 'Pepperkakebaking', 'Gløgg', 'Juleverksted'] },
   { from: [12, 1], to: [12, 31], ideas: ['Romjulstreff', 'Nyttårsaften'] },
   { from: [12, 1], to: [3, 20], ideas: ['Skitur', 'Aking', 'Skøyter', 'Isbading', 'Hyttetur'] },
-  { from: [3, 21], to: [5, 31], ideas: ['Tur', 'Grilling', 'Utepils'] },
-  { from: [6, 1], to: [8, 20], ideas: ['Bading', 'Båttur', 'Grilling', 'Strandtur', 'Utepils'] },
+  { from: [3, 21], to: [5, 31], ideas: ['Tur', 'Grilling', 'Piknik'] },
+  { from: [6, 1], to: [8, 20], ideas: ['Bading', 'Båttur', 'Grilling', 'Strandtur', 'Piknik'] },
   { from: [8, 21], to: [11, 15], ideas: ['Sopptur', 'Høsttur', 'Quiz', 'Spillkveld'] },
 ];
 

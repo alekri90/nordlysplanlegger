@@ -496,6 +496,247 @@ export const PHOTO_SETS: PhotoSet[] = [
       '1763962274119-1a0a0d418520', // audience in a dark theatre
     ],
   },
+  {
+    id: 'bowling',
+    keywords: ['bowling'],
+    photos: [
+      '1650915894778-fad96db48de4', // group bowling
+      '1680479611085-2a075987da25', // friends at the bowling alley
+      '1553190920-a9c7432283e6', // bowling ball rolling
+      '1538511059256-46e76f13f071', // strike
+    ],
+  },
+  {
+    id: 'escapeRoom',
+    keywords: ['escape'],
+    photos: [
+      '1569002925653-ed18f55d7292', // «Escape rooms» neon sign
+      '1686286427707-93ba5ebc93e8', // puzzle room with a ladder
+      '1637094408647-0d81d08f81b5', // two puzzle pieces
+    ],
+  },
+  {
+    id: 'golf',
+    keywords: ['golf'],
+    photos: [
+      '1626298022400-84e2c187be08', // friends on the golf course
+      '1775326424702-4eca92f63cef', // three friends playing golf
+      '1623113807896-3b3a7fc2aec0', // golf by the sea
+      '1593282153762-a41e3cceb06c', // swing at sunset
+    ],
+  },
+  {
+    id: 'goKart',
+    keywords: ['gokart', 'go-kart'],
+    photos: [
+      '1779128773287-923183d53f94', // karts on an outdoor track
+      '1505570554449-69ce7d4fa36b', // two karts racing
+      '1522211041032-a7eb9a3f8c0f', // three karts
+      '1773909722972-1f5e533798b8', // karts on the track
+    ],
+  },
+  {
+    id: 'fishing',
+    keywords: ['fisketur', 'fiske'],
+    photos: [
+      '1688991710832-1a519f491673', // two friends fishing from a pier
+      '1609859682240-6860cf3d99d5', // fishing by a lake
+      '1565930230296-4d04b3c2917a', // catching a fish
+      '1526625361769-ab16cb89b155', // boat at dusk
+    ],
+  },
+  {
+    id: 'paintball',
+    keywords: ['paintball', 'lasertag', 'laser tag'],
+    photos: [
+      '1557543237-519b4f6d3373', // paintball player in a mask
+      '1550024733-e72f7e3ca906', // paintball in the woods
+      '1750548546292-0f9f1db12d50', // laser tag at night
+    ],
+  },
+  {
+    id: 'spa',
+    keywords: ['spaweekend', 'spadag', 'spa og', 'velvære'],
+    photos: [
+      '1630595271375-5073a6c0638b', // relaxing in a robe
+      '1488345979593-09db0f85545f', // infinity pool
+      '1716893917077-5b320c1ecfec', // bath with flowers
+      '1600334089648-b0d9d3028eb2', // hot stone massage
+    ],
+  },
+  {
+    id: 'yoga',
+    keywords: ['yoga'],
+    photos: [
+      '1787647089633-37e49ee2e054', // yoga class, arms raised
+      '1761035005546-62b8018b212a', // stretching in a studio
+      '1544367567-0f2fcb009e0b', // yoga at sunset
+    ],
+  },
+  {
+    id: 'ceramics',
+    keywords: ['keramikk', 'pottemaker'],
+    photos: [
+      '1609881583302-61548332039c', // pottery wheel
+      '1771523350538-29baf74f710c', // hands shaping clay
+      '1781389004999-d1a7e41639c5', // clay pot and tools
+      '1595351298020-038700609878', // potter's workshop
+    ],
+  },
+  {
+    id: 'shopping',
+    keywords: ['shopping'],
+    photos: [
+      '1758520387687-38a92a7ee42f', // friends with shopping bags
+      '1758520387873-eb3a83a5f665', // window shopping
+      '1758520387283-303b0b332e89', // walking in a mall
+      '1758274251589-fb70a3654a1b', // shopping bags on the street
+    ],
+  },
+  {
+    id: 'tapas',
+    keywords: ['tapas'],
+    photos: [
+      '1761110429384-0678d7015545', // small appetizers on bread
+      '1656423521731-9665583f100c', // table of small dishes
+      '1542904990-d60f68e9af4e', // tray of tapas
+    ],
+  },
+  {
+    id: 'pizza',
+    keywords: ['pizza'],
+    photos: [
+      '1600628421055-4d30de868b8f', // homemade pizza
+      '1682655012950-e5fe252779ae', // table full of pizzas
+      '1622455331494-966b1b4eda44', // eating pizza together
+      '1600628421066-f6bda6a7b976', // pizza on a plate
+    ],
+  },
+  {
+    id: 'zoo',
+    keywords: ['dyrepark', 'dyrehage', 'zoo'],
+    photos: [
+      '1592803883394-eeaa36f92a70', // child meeting a giraffe
+      '1503919005314-30d93d07d823', // boy feeding an animal
+      '1534567153574-2b12153a87f0', // giraffes and zebras
+      '1768346617150-a5b8c3baa66e', // giraffes in the park
+    ],
+  },
+  {
+    id: 'picnic',
+    keywords: ['piknik'],
+    photos: [
+      '1625283518288-00362afc8663', // friends laughing on a picnic blanket
+      '1592753054398-9fa298d40e85', // picnic in the park
+      '1636374934002-306af6602a5d', // blanket by the water
+      '1635179850458-333c83d91671', // food on the table outdoors
+    ],
+  },
+  {
+    id: 'dateNight',
+    keywords: ['date night', 'datekveld', 'date'],
+    photos: [
+      '1513279922550-250c2129b13a', // candles over the city
+      '1496602910407-bacda74a0fe4', // couple at golden hour
+      '1541679368093-5c967ac6de11', // holding hands
+      '1556229868-7b2d4b56b909', // couple at sunset on the beach
+    ],
+  },
+  {
+    id: 'restaurant',
+    keywords: ['restaurant'],
+    photos: [
+      '1560090201-8a6a2bdab9ff', // dinner for two
+      '1776362441386-c02107b86576', // restaurant at night
+      '1775471256651-e654fc5b5d84', // dimly lit restaurant
+    ],
+  },
+  {
+    id: 'cooking',
+    keywords: ['matlaging', 'matkurs', 'lage mat'],
+    photos: [
+      '1556911073-38141963c9e0', // cooking together
+      '1556910103-1c02745aae4d', // laughing in the kitchen
+      '1556909114-f6e7ad7d3136', // helping each other cook
+      '1556911261-6bd341186b2f', // kitchen with fresh food
+    ],
+  },
+  {
+    id: 'sunsetWalk',
+    keywords: ['solnedgang'],
+    photos: [
+      '1575388104683-e076ee9ccaa0', // walking along the shore
+      '1426543881949-cbd9a76740a4', // silhouettes at sunset
+      '1640273296013-e4b54eaf52eb', // holding hands at sunset
+      '1641938567172-7cc5f67e5d2a', // walking across a field
+    ],
+  },
+  {
+    id: 'hotel',
+    keywords: ['hotell'],
+    photos: [
+      '1611892440504-42a792e24d32', // hotel room with a garden view
+      '1781572725438-ac8c41476752', // bright hotel room
+      '1618773928121-c32242e63f39', // made bed
+      '1759328257280-28bdb3050be3', // sunlight through the curtains
+    ],
+  },
+  {
+    id: 'teambuilding',
+    keywords: ['teambuilding'],
+    photos: [
+      '1582213782179-e0d53f98f2ca', // hands stacked together
+      '1774599661166-ae302f07dd37', // celebrating outdoors
+      '1600880292089-90a7e086ee0c', // team grip
+    ],
+  },
+  {
+    id: 'teamLunch',
+    keywords: ['felles lunsj', 'lunsj med'],
+    photos: [
+      '1722614170465-50bcfd9fac11', // colleagues around a table
+      '1702468025332-e23ca9075058', // lunch together
+      '1559136646-8d0d1f46a146', // people eating at the table
+    ],
+  },
+  {
+    id: 'kickoff',
+    keywords: ['kickoff', 'kick-off', 'firmafest'],
+    photos: [
+      '1768508951262-42931f7ad924', // big group waving
+      '1768508950790-3bbdfe3973c1', // crowd at an event
+      '1531058020387-3be344556be6', // conference
+      '1540575467063-178a50c2df87', // audience
+    ],
+  },
+  {
+    id: 'workshop',
+    keywords: ['faglig', 'seminar', 'workshop', 'fagdag'],
+    photos: [
+      '1623303647440-967d26b95b47', // workshop around a table
+      '1581091212911-f4efc3f71c48', // working together
+      '1505373877841-8d25f7d46678', // presentation on a big screen
+      '1561489396-888724a1543d', // panel on stage
+    ],
+  },
+  {
+    id: 'gardenParty',
+    keywords: ['hagefest', 'hageselskap'],
+    photos: [
+      '1784916484663-345ff1536cfd', // string lights and bunting in the garden
+      '1782116946534-869dc760b9b7', // guests at a garden party
+      '1517457373958-b7bdd4587205', // laughing at a party outdoors
+    ],
+  },
+  {
+    id: 'forestWalk',
+    keywords: ['skogstur', 'tur i skogen'],
+    photos: [
+      '1606474226448-4aa808468efc', // family on a forest path
+      '1752650144007-fbe5ca331b06', // father and son in the woods
+      '1729809420427-1760e7a457da', // group walking in the woods
+    ],
+  },
 ];
 
 /** The photo set for a title ("Halloweenfest" → Halloween), or null. Earliest, then longest keyword wins. */

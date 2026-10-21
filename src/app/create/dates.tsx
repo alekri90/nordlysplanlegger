@@ -6,6 +6,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { CalendarLegend, MonthCalendar, type DayState } from '@/components/calendar/MonthCalendar';
 import { StepHeader } from '@/components/create/StepHeader';
 import { RepeatEditor, RepeatSection } from '@/components/create/RepeatEditor';
+import { PlaceDetails } from '@/components/create/PlaceDetails';
 import { TimePicker } from '@/components/create/TimePicker';
 import { BottomBar, Button, Chip, PageTitle, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
 import { useStartPoll } from '@/data/hooks';
@@ -124,6 +125,8 @@ export default function CreateDates() {
         <View style={{ marginTop: spacing.xxl }}>
           <TimePicker hint={draft.timeHint} time={draft.startTime} onChange={(timeHint, startTime) => draft.set({ timeHint, startTime })} />
         </View>
+
+        {!draft.existingEventId ? <PlaceDetails style={{ marginTop: spacing.xl }} /> : null}
 
         {!draft.existingEventId ? (
           <RepeatSection

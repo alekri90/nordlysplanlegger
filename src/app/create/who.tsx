@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
+import { PlaceDetails } from '@/components/create/PlaceDetails';
 import { StepHeader } from '@/components/create/StepHeader';
 import { PeoplePicker } from '@/components/people/PeoplePicker';
 import { PersonRow } from '@/components/people/PersonRow';
@@ -263,6 +264,9 @@ export default function CreateWho() {
               </Text>
             </View>
           </Card>
+
+          {/* No date step for «Ikke bestemt ennå», so the optional place lives here. */}
+          {draft.dateMode === 'undecided' && !draft.existingEventId ? <PlaceDetails style={{ marginTop: spacing.xl }} /> : null}
         </ScreenScroll>
         <BottomBar>
           <Button
