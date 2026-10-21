@@ -7,7 +7,7 @@ import { seasonalIdeas } from './ideas.ts';
  * «Trenger du inspirasjon?» — who you're doing something with, then what. Plain config: an activity is
  * written once and listed under as many groups as fit. Its picture comes from the same photo sets and
  * themes as everything else (src/lib/categories.ts), matched on the title; change a picture there.
- * No alcohol or gambling (age rating).
+ * Suggestions never propose drinking or gambling; typing «Fest» or «Utepils» still finds pictures that fit.
  */
 export type InspirationGroup = { id: string; label: string; photo: string; activities: string[] };
 
@@ -46,7 +46,7 @@ export const INSPIRATION_GROUPS: InspirationGroup[] = [
     id: 'colleagues',
     label: 'Med kollegaene',
     photo: '1582213782179-e0d53f98f2ca',
-    activities: ['Sommerfest', 'Julebord', 'Felles lunsj', 'Teambuilding', 'Bowling', 'Felles middag', 'Quizkveld', 'Kickoff', 'Padelturnering', 'Faglig samling'],
+    activities: ['Sommerfest', 'Julebord', 'Afterwork', 'Felles lunsj', 'Teambuilding', 'Bowling', 'Felles middag', 'Quizkveld', 'Kickoff', 'Padelturnering', 'Faglig samling'],
   },
   {
     id: 'holidays',

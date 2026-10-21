@@ -691,6 +691,16 @@ export const PHOTO_SETS: PhotoSet[] = [
     ],
   },
   {
+    id: 'afterwork',
+    keywords: ['afterwork', 'after work'],
+    photos: [
+      '1758691737487-29b4fae83e95', // colleagues mingling after work
+      '1758520144661-73849bde0da1', // office selfie in party hats
+      '1758520144658-c87be518b87e', // dancing in the office
+      '1758599543154-af711da44cbe', // chatting outside the office
+    ],
+  },
+  {
     id: 'teamLunch',
     keywords: ['felles lunsj', 'lunsj med'],
     photos: [
