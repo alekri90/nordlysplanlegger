@@ -48,7 +48,8 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
   const nameOf = (memberId: string) => short.get(memberId) ?? '';
 
   const pending = event.members.filter((m) => !hasResponded(m));
-  const respondents = event.members.filter(hasResponded);
+  const respondents = event.members.filter((m) => hasResponded(m) && m.status !== 'declined');
+  const declined = event.members.filter((m) => m.status === 'declined');
 
   const confirmLock = async () => {
     if (!selected) return;
@@ -138,6 +139,11 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
             </View>
           ))}
         </View>
+        {declined.length ? (
+          <Text variant="footnote" color="textSecondary" style={{ marginTop: spacing.md }}>
+            Kan ikke denne gangen: {declined.map((m) => nameOf(m.id)).join(', ')}
+          </Text>
+        ) : null}
 
         {pending.length ? (
           <Animated.View entering={FadeInDown.duration(300)}>

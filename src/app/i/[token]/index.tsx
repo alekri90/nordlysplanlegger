@@ -67,6 +67,7 @@ function InvitationView({ invite }: { invite: InviteView }) {
   const isOrganizer = !!me && me.id === invite.organizer.id;
   const responded = invite.myResponse && invite.myResponse.status !== 'invited' && invite.myResponse.status !== 'opened';
   const isPoll = e.status === 'polling';
+  const declined = invite.myResponse?.status === 'declined';
   const isDated = !!e.selectedDate && (e.status === 'confirmed' || e.status === 'date_selected');
 
   const tiles: { icon: IconName; label: string }[] = [
@@ -158,14 +159,27 @@ function InvitationView({ invite }: { invite: InviteView }) {
               <>
                 {responded ? (
                   <View style={{ alignSelf: 'center', marginBottom: spacing.sm }}>
-                    <Tag label="Du har svart" tone="success" icon="check" />
+                    <Tag label={declined ? 'Du kan ikke denne gangen' : 'Du har svart'} tone={declined ? 'glass' : 'success'} icon={declined ? 'x' : 'check'} />
                   </View>
                 ) : null}
                 <Button
-                  title={responded ? 'Endre svaret ditt' : 'Hvilke dager kan du ikke?'}
+                  title={declined ? 'Bli med likevel' : responded ? 'Endre svaret ditt' : 'Hvilke dager kan du ikke?'}
                   onPress={() => router.push({ pathname: '/i/[token]/respond', params: { token: invite.token } })}
                   accessibilityHint="Åpner en kalender der du trykker på dagene som ikke passer"
                 />
+                {!declined ? (
+                  <PressableScale
+                    onPress={() => sendRsvp(false)}
+                    disabled={rsvp.isPending}
+                    style={{ alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg }}
+                    accessibilityRole="button"
+                    accessibilityHint={`${firstName(invite.organizer.name)} får beskjed, og arrangementet forsvinner fra Hjem`}
+                  >
+                    <Text variant="callout" style={{ color: 'rgba(255,255,255,0.8)', textDecorationLine: 'underline' }}>
+                      Kan ikke være med denne gangen
+                    </Text>
+                  </PressableScale>
+                ) : null}
               </>
             ) : isDated ? (
               <>

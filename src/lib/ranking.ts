@@ -26,11 +26,13 @@ export function hasResponded(m: Pick<EventMember, 'status' | 'role'>): boolean {
  * Rank candidate dates.
  * Most people who can → fewest who can't → earliest date.
  * The organizer counts as available on all candidate dates unless they marked otherwise.
+ * People who said «kan ikke denne gangen» are left out entirely.
  * Mirrors the SQL view `event_date_scores`.
  */
 export function rankDateOptions(options: DateOption[], members: Pick<EventMember, 'id' | 'role' | 'status' | 'unavailableOptionIds'>[]): DateScore[] {
-  const respondents = members.filter(hasResponded);
-  const invited = members.length;
+  const taking = members.filter((m) => m.status !== 'declined');
+  const respondents = taking.filter(hasResponded);
+  const invited = taking.length;
 
   const scores = options.map<DateScore>((option) => {
     const unavailableMemberIds = respondents.filter((m) => m.unavailableOptionIds.includes(option.id)).map((m) => m.id);

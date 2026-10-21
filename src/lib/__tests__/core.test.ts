@@ -177,6 +177,20 @@ describe('photos for ideas', () => {
   });
 });
 
+describe('rankDateOptions with someone who can\'t come', () => {
+  it('leaves people who declined out of the ranking', () => {
+    const options = [{ id: 'a', date: '2027-04-01' }, { id: 'b', date: '2027-04-08' }];
+    const scores = rankDateOptions(options, [
+      member('org', 'responded', [], 'organizer'),
+      member('x', 'responded', ['a']),
+      member('gone', 'declined', ['b']),
+    ]);
+    assert.equal(scores[0].option.id, 'b', 'the decliner\'s marks don\'t count');
+    assert.equal(scores[0].invited, 2);
+    assert.equal(scores[0].everyoneCan, true, 'everyone who is coming can');
+  });
+});
+
 describe('suggestCategory', () => {
   it('maps titles to categories', () => {
     assert.equal(suggestCategory('Badstu med jentene'), 'sauna');

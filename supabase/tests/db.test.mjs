@@ -731,5 +731,44 @@ console.log('\nUndecided events: «Er du med?»');
   });
 }
 
+console.log('\nSaying no before there is a date');
+{
+  const org = await newUser('avslag@example.com', { display_name: 'Arne Arr', username: 'arnearr' });
+  const a = await newUser('avslag-a@example.com', { display_name: 'Berit B', username: 'beritb' });
+  const b = await newUser('avslag-b@example.com', { display_name: 'Carl C', username: 'carlc' });
+  for (const u of [a, b]) { await as(org); await q(`select send_friend_request($1)`, [u]); await as(u); await q(`select send_friend_request($1)`, [org]); }
+  await as(org);
+  const [{ r }] = await q(`select create_event($1) r`, [{ title: 'Quiz', category: 'quiz', date_mode: 'poll', option_dates: ['2027-04-01', '2027-04-08'], time_hint: 'evening', member_user_ids: [a, b] }]);
+  const ev = r.event_id;
+
+  await check('declining a poll tells the organizer and leaves the ranking', async () => {
+    const [opt1] = await q(`select id from event_date_options where event_id = $1 order by date`, [ev]);
+    const [ma] = await q(`select id from event_members where event_id = $1 and user_id = $2`, [ev, a]);
+    // Berit first marks 1 April as impossible, then says she can't come at all.
+    await as(a);
+    await q(`insert into event_availability (event_member_id, date_option_id) values ($1, $2)`, [ma.id, opt1.id]);
+    await q(`update event_members set status = 'declined', responded_at = now() where id = $1`, [ma.id]);
+    const n = await q(`select title from notifications where user_id = $1 and event_id = $2 and data ->> 'kind' = 'declined'`, [org, ev]);
+    assert.deepEqual(n.map((x) => x.title), ['Berit kan ikke denne gangen']);
+    await as(org);
+    const scores = await q(`select date::text d, invited::int i, unavailable::int u from event_date_scores where event_id = $1 order by date`, [ev]);
+    assert.deepEqual(scores, [{ d: '2027-04-01', i: 2, u: 0 }, { d: '2027-04-08', i: 2, u: 0 }], 'Berit no longer counts, nor do her marks');
+  });
+
+  await check('locking a date does not send «kan ikke denne gangen»', async () => {
+    await as(b);
+    const [mb] = await q(`select id from event_members where event_id = $1 and user_id = $2`, [ev, b]);
+    const [opt2] = await q(`select id from event_date_options where event_id = $1 and date = '2027-04-08'`, [ev]);
+    const [opt1] = await q(`select id from event_date_options where event_id = $1 and date = '2027-04-01'`, [ev]);
+    await q(`insert into event_availability (event_member_id, date_option_id) values ($1, $2)`, [mb.id, opt1.id]);
+    await q(`update event_members set status = 'responded', responded_at = now() where id = $1`, [mb.id]);
+    await as(org);
+    await q(`select lock_event_date($1, $2)`, [ev, opt1.id]);
+    const n = await q(`select title from notifications where user_id = $1 and event_id = $2 and data ->> 'kind' = 'declined'`, [org, ev]);
+    assert.equal(n.length, 1, 'only Berit, not Carl who was marked declined by the lock');
+    void opt2;
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

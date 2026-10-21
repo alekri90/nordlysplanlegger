@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
@@ -5,15 +6,18 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { EventCard } from '@/components/event/EventCard';
 import { GroupBubble } from '@/components/group/GroupBubble';
-import { Button, Card, EmptyState, ErrorState, EventListSkeleton, Icon, IconButton, Screen, SectionHeader, Skeleton, Text } from '@/components/ui';
+import { Button, Card, Divider, EmptyState, ErrorState, EventListSkeleton, Icon, IconButton, PressableScale, Screen, SectionHeader, Skeleton, Text } from '@/components/ui';
 import { useEvents, useGroups, useNotifications } from '@/data/hooks';
 import type { Group, PlannerEvent } from '@/data/types';
+import { thumb } from '@/lib/categories';
 import { daysBetween, today } from '@/lib/dates';
+import { eventDateLine } from '@/lib/eventText';
 import { useCreateDraft } from '@/state/createDraft';
 import { useMe } from '@/state/session';
 import { gutter, radius, spacing, useColors } from '@/theme';
 
 const UPCOMING_LIMIT = 4;
+const PAST_LIMIT = 5;
 
 export default function Home() {
   const colors = useColors();
@@ -23,15 +27,23 @@ export default function Home() {
   const notifications = useNotifications();
   const resetDraft = useCreateDraft((s) => s.reset);
   const prefillFromGroup = useCreateDraft((s) => s.prefillFromGroup);
+  const duplicateEvent = useCreateDraft((s) => s.duplicateEvent);
   const [showAll, setShowAll] = useState(false);
+  const [pastOpen, setPastOpen] = useState(false);
+  const [allPast, setAllPast] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const { invitations, upcoming } = useMemo(() => splitEvents(events.data ?? [], me?.id), [events.data, me?.id]);
+  const { invitations, upcoming, deciding, past } = useMemo(() => splitEvents(events.data ?? [], me?.id), [events.data, me?.id]);
   const nudge = useMemo(() => findNudge(groups.data ?? []), [groups.data]);
   const unread = (notifications.data ?? []).filter((n) => !n.readAt).length;
 
   const startCreate = () => {
     resetDraft();
+    router.push('/create');
+  };
+
+  const doAgain = (e: PlannerEvent) => {
+    duplicateEvent(e, me?.id);
     router.push('/create');
   };
 
@@ -123,10 +135,62 @@ export default function Home() {
                 </View>
               ) : (
                 <Card muted padded={false}>
-                  <EmptyState icon="sun" title="Ingenting planlagt ennå" body="Det er her det starter. Lag noe, så finner vi en dato som passer gjengen." />
+                  <EmptyState
+                    icon="sun"
+                    title={deciding.length ? 'Ingen dato satt ennå' : 'Ingenting planlagt ennå'}
+                    body={deciding.length ? 'Når en dato er låst, dukker arrangementet opp her.' : 'Det er her det starter. Lag noe, så finner vi en dato som passer gjengen.'}
+                  />
                 </Card>
               )}
             </View>
+
+            {deciding.length ? (
+              <View style={{ marginTop: spacing.xxl }}>
+                <SectionHeader title="Dato bestemmes" />
+                <View style={{ gap: spacing.md }}>
+                  {deciding.map((e, i) => (
+                    <Animated.View key={e.id} entering={FadeInDown.delay(180 + i * 60).duration(380)}>
+                      <EventCard event={e} meId={me?.id} onPress={() => router.push(`/event/${e.id}`)} />
+                    </Animated.View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
+            {past.length ? (
+              <View style={{ marginTop: spacing.xxl }}>
+                <PressableScale
+                  onPress={() => setPastOpen((v) => !v)}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: pastOpen }}
+                  accessibilityLabel={`Tidligere arrangementer, ${past.length}`}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs }}
+                >
+                  <Text variant="title3">Tidligere ({past.length})</Text>
+                  <Icon name={pastOpen ? 'chevron-up' : 'chevron-down'} size={20} color="textSecondary" />
+                </PressableScale>
+                {pastOpen ? (
+                  <Card style={{ marginTop: spacing.sm, paddingVertical: spacing.xs }}>
+                    {(allPast ? past : past.slice(0, PAST_LIMIT)).map((e, i) => (
+                      <View key={e.id}>
+                        {i ? <Divider /> : null}
+                        <PastRow event={e} onPress={() => router.push(`/event/${e.id}`)} onAgain={() => doAgain(e)} />
+                      </View>
+                    ))}
+                    {past.length > PAST_LIMIT && !allPast ? (
+                      <>
+                        <Divider />
+                        <PressableScale onPress={() => setAllPast(true)} style={{ paddingVertical: spacing.md, alignItems: 'center' }} accessibilityRole="button">
+                          <Text variant="callout" color="textSecondary">
+                            Vis alle {past.length}
+                          </Text>
+                        </PressableScale>
+                      </>
+                    ) : null}
+                  </Card>
+                ) : null}
+              </View>
+            ) : null}
           </>
         )}
 
@@ -144,24 +208,57 @@ export default function Home() {
   );
 }
 
-const STATUS_ORDER: Record<string, number> = { confirmed: 0, date_selected: 0, polling: 1, draft: 2 };
-
-/** Pending invitations first; then what's coming, with locked dates in date order. */
+/**
+ * Du er invitert (not answered yet) · Neste (date set) · Dato bestemmes (finding a date, I'm in)
+ * · Tidligere (newest first). Anything I said no to leaves Home.
+ */
 function splitEvents(events: PlannerEvent[], meId?: string) {
   const t = today();
   const invitations: PlannerEvent[] = [];
   const upcoming: PlannerEvent[] = [];
+  const deciding: PlannerEvent[] = [];
+  const past: PlannerEvent[] = [];
   for (const e of events) {
-    if (e.status === 'completed' || e.status === 'cancelled') continue;
-    if (e.selectedDate && e.selectedDate < t) continue;
+    if (e.status === 'cancelled') continue;
     const mine = e.members.find((m) => m.userId === meId);
+    if (mine?.role === 'guest' && mine.status === 'declined') continue;
+    if (e.status === 'completed' || (e.selectedDate && e.selectedDate < t)) {
+      past.push(e);
+      continue;
+    }
     const unanswered = mine?.role === 'guest' && (mine.status === 'invited' || mine.status === 'opened');
     if ((e.status === 'polling' || e.status === 'draft') && unanswered) invitations.push(e);
+    else if (e.status === 'polling' || e.status === 'draft') deciding.push(e);
     else upcoming.push(e);
   }
-  upcoming.sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || (a.selectedDate ?? '').localeCompare(b.selectedDate ?? '') || b.createdAt.localeCompare(a.createdAt));
-  return { invitations, upcoming };
+  upcoming.sort((a, b) => (a.selectedDate ?? '').localeCompare(b.selectedDate ?? '') || b.createdAt.localeCompare(a.createdAt));
+  deciding.sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || b.createdAt.localeCompare(a.createdAt));
+  past.sort((a, b) => (b.selectedDate ?? b.createdAt).localeCompare(a.selectedDate ?? a.createdAt));
+  return { invitations, upcoming, deciding, past };
 }
+
+/** A past plan, small: picture, name, date — and «Gjør igjen». */
+function PastRow({ event: e, onPress, onAgain }: { event: PlannerEvent; onPress: () => void; onAgain: () => void }) {
+  const colors = useColors();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm }}>
+      <PressableScale onPress={onPress} scaleTo={0.985} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md }} accessibilityLabel={`${e.title}, ${eventDateLine(e)}`}>
+        <Image source={{ uri: thumb(e.coverImageUrl, 160) }} style={{ width: 44, height: 44, borderRadius: radius.sm, backgroundColor: colors.surfaceMuted }} contentFit="cover" />
+        <View style={{ flex: 1 }}>
+          <Text variant="callout" numberOfLines={1}>
+            {e.title}
+          </Text>
+          <Text variant="footnote" color="textSecondary">
+            {eventDateLine(e)}
+          </Text>
+        </View>
+      </PressableScale>
+      <Button title="Gjør igjen" size="sm" variant="secondary" icon="copy" fullWidth={false} onPress={onAgain} accessibilityLabel={`Gjør ${e.title} igjen`} />
+    </View>
+  );
+}
+
+const STATUS_ORDER: Record<string, number> = { polling: 0, draft: 1 };
 
 /** A group that used to meet but has nothing planned for 6+ weeks. One gentle suggestion at a time. */
 function findNudge(groups: Group[]): { group: Group; weeks: number } | null {

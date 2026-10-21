@@ -49,6 +49,8 @@ type Actions = {
   toggleDate: (date: string) => void;
   prefillFromGroup: (group: Group, me?: string) => void;
   prefillFromEvent: (event: PlannerEvent, me?: string) => void;
+  /** A new plan based on an earlier one (same picture, place, time and people), from step 1. */
+  duplicateEvent: (event: PlannerEvent, me?: string) => void;
 };
 
 const initial = (): CreateDraft => ({
@@ -123,6 +125,22 @@ export const useCreateDraft = create<CreateDraft & Actions>((set, get) => ({
       optionDates: event.selectedDate ? suggestDatesForWeekdays([weekday(event.selectedDate)]) : [],
       existingEventId: event.status === 'draft' ? event.id : null,
       source: 'event',
+    });
+  },
+  duplicateEvent: (event, me) => {
+    set({
+      ...initial(),
+      title: event.title,
+      category: event.category,
+      coverTouched: true,
+      coverImageUrl: event.coverImageUrl,
+      placeName: event.location?.name ?? '',
+      timeHint: event.timeHint,
+      startTime: event.startTime ?? null,
+      groupId: event.groupId ?? null,
+      memberIds: event.members.map((m) => m.userId).filter((id): id is string => !!id && id !== me),
+      guestIds: event.members.filter((m) => !m.userId).map((m) => m.person.id),
+      source: 'new',
     });
   },
 }));
