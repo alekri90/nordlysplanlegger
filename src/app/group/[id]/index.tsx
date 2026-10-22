@@ -19,7 +19,7 @@ import { useCreateDraft } from '@/state/createDraft';
 import { useMe } from '@/state/session';
 import { gutter, spacing, useColors } from '@/theme';
 
-const ROLE_LABEL: Record<GroupMember['role'], string | undefined> = { owner: 'Eier', admin: 'Admin', member: undefined };
+const ROLE_LABEL: Record<GroupMember['role'], string | undefined> = { owner: 'Eier', admin: 'Moderator', member: undefined };
 
 /** A crew that meets again and again. The main action: plan something — everyone pre-selected. */
 export default function GroupScreen() {
@@ -52,7 +52,7 @@ export default function GroupScreen() {
 
   const leaveGroup = () => {
     setMoreOpen(false);
-    confirmDestructive(`Forlate ${g.name}?`, g.myRole === 'owner' ? 'Neste admin blir eier av gjengen.' : 'Du kan bli lagt til igjen senere.', 'Forlat', async () => {
+    confirmDestructive(`Forlate ${g.name}?`, g.myRole === 'owner' ? 'Neste moderator blir eier av gjengen.' : 'Du kan bli lagt til igjen senere.', 'Forlat', async () => {
       try {
         await leave.mutateAsync();
         toast(`Du har forlatt ${g.name}`);
@@ -65,16 +65,20 @@ export default function GroupScreen() {
 
   const memberActions = selected && isAdmin && selected.id !== me?.id && selected.role !== 'owner' ? (
     <>
-      {!selected.isGuest ? (
+      {/* Only the owner chooses moderators. */}
+      {!selected.isGuest && g.myRole === 'owner' ? (
         <ListRow
           icon="shield"
-          title={selected.role === 'admin' ? 'Fjern som admin' : 'Gjør til admin'}
+          title={selected.role === 'admin' ? 'Fjern som moderator' : 'Gjør til moderator'}
+          subtitle={selected.role === 'admin' ? undefined : 'Kan legge til og fjerne folk og endre gjengen'}
           onPress={async () => {
             await setRole.mutateAsync({ memberId: selected.memberId, role: selected.role === 'admin' ? 'member' : 'admin' });
             setSelected(null);
           }}
         />
       ) : null}
+      {/* A moderator can't remove another moderator; the owner can. */}
+      {selected.role !== 'admin' || g.myRole === 'owner' ? (
       <ListRow
         icon="user-minus"
         title={`Fjern fra ${g.name}`}
@@ -87,6 +91,7 @@ export default function GroupScreen() {
           })
         }
       />
+      ) : null}
     </>
   ) : null;
 

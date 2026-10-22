@@ -853,5 +853,30 @@ console.log('\nPlaces, waiting list, co-hosts and fixed guests');
   });
 }
 
+console.log('\nModerators');
+{
+  const owner = await newUser('eier@example.com', { display_name: 'Eva Eier', username: 'evaeier' });
+  const mod = await newUser('mod@example.com', { display_name: 'Mona Mod', username: 'monamod' });
+  const mod2 = await newUser('mod2@example.com', { display_name: 'Mats Mod', username: 'matsmod' });
+  const mem = await newUser('medlem@example.com', { display_name: 'Mia Medlem', username: 'miamedlem' });
+  for (const u of [mod, mod2, mem]) { await as(owner); await q(`select send_friend_request($1)`, [u]); await as(u); await q(`select send_friend_request($1)`, [owner]); }
+  await as(owner);
+  const [{ id: g }] = await q(`select create_group('Klatregjengen', null, null, null, $1) id`, [[mod, mod2, mem]]);
+  const memberId = async (u) => (await q(`select id from group_members where group_id = $1 and user_id = $2`, [g, u]))[0].id;
+
+  await check('only the owner makes moderators; moderators remove members but not each other', async () => {
+    await q(`select set_group_member_role($1, 'admin')`, [await memberId(mod)]);
+    await q(`select set_group_member_role($1, 'admin')`, [await memberId(mod2)]);
+    await as(mod);
+    await assert.rejects(q(`select set_group_member_role($1, 'admin')`, [await memberId(mem)]), /not_group_owner/);
+    await assert.rejects(q(`select remove_group_member($1)`, [await memberId(mod2)]), /not_group_owner/);
+    await q(`select remove_group_member($1)`, [await memberId(mem)]);
+    assert.equal((await q(`select count(*)::int c from group_members where group_id = $1 and user_id = $2`, [g, mem]))[0].c, 0, 'moderator removed a member');
+    await as(owner);
+    await q(`select remove_group_member($1)`, [await memberId(mod2)]);
+    assert.equal((await q(`select count(*)::int c from group_members where group_id = $1 and user_id = $2`, [g, mod2]))[0].c, 0, 'the owner can remove a moderator');
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);
