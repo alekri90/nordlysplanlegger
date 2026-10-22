@@ -55,6 +55,7 @@ type EventRow = {
   locked_at: string | null;
   max_participants: number | null;
   places_taken: number | null;
+  spontaneous: boolean;
   organizer: ProfileRow | null;
   location: { name: string; address: string | null; details_pending: boolean } | null;
   options: { id: string; date: string }[];
@@ -88,7 +89,7 @@ type EventRow = {
 
 const EVENT_SELECT = `
   id, title, category, cover_image_url, status, date_mode, group_id, period_label, time_hint,
-  start_time, selected_date, selected_option_id, description, created_at, locked_at, max_participants, places_taken,
+  start_time, selected_date, selected_option_id, description, created_at, locked_at, max_participants, places_taken, spontaneous,
   organizer:profiles!events_organizer_id_fkey(id, display_name, avatar_url, username),
   location:event_locations(name, address, details_pending),
   options:event_date_options!event_date_options_event_id_fkey(id, date),
@@ -142,6 +143,7 @@ function toEvent(r: EventRow): PlannerEvent {
     })),
     maxParticipants: r.max_participants,
     placesTaken: r.places_taken,
+    spontaneous: r.spontaneous,
     inviteToken: r.invites?.find((i) => !i.revoked_at)?.token ?? '',
     photos: (r.images ?? []).filter((i) => i.kind === 'memory').map((i) => i.url),
     createdAt: r.created_at,
@@ -483,7 +485,7 @@ export const supabaseRepository: Repository = {
   async createEvent(input) {
     const userId = await requireUserId();
     const cover = isLocalUri(input.coverImageUrl) ? await uploadImage('covers', userId, input.coverImageUrl) : input.coverImageUrl;
-    const { data, error } = await getSupabase().rpc('create_event', {
+    const { data, error } = await getSupabase().rpc(input.spontaneous ? 'create_spontaneous_event' : 'create_event', {
       payload: {
         title: input.title.trim(),
         category: input.category,

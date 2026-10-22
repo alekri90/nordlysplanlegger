@@ -22,6 +22,8 @@ const config: ExpoConfig = {
     bundleIdentifier: 'no.nordlys.planlegger',
     supportsTablet: false,
     associatedDomains: [`applinks:${webHost}`],
+    // «Spontant» invitations are time-sensitive: they come through Focus (not critical alerts).
+    entitlements: { 'com.apple.developer.usernotifications.time-sensitive': true },
     infoPlist: {
       // Under the icon on the home screen; the App Store name stays "Nordlys Planlegger".
       CFBundleDisplayName: 'Planlegger',

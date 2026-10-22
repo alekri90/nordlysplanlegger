@@ -178,6 +178,8 @@ export interface PlannerEvent {
   photos: string[];
   createdAt: string;
   lockedAt?: string | null;
+  /** «Spontant»: today or tomorrow, «hvem er gira?». */
+  spontaneous?: boolean;
   /** Places in total; null = no limit. */
   maxParticipants?: number | null;
   /** Places taken (people coming + places kept for the organizer side and fixed guests). */
@@ -309,6 +311,8 @@ export interface CreateEventInput {
   /** Optional, can also be added later. */
   location?: EventLocation | null;
   description?: string | null;
+  /** «Spontant»: the invitation goes out as a time-sensitive notification. */
+  spontaneous?: boolean;
 }
 
 /** An update from the organizer on an event ("Vi møtes ved inngangen"). */

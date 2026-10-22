@@ -346,7 +346,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
       ) : showRsvp ? (
         <BottomBar>
           <Text variant="callout" align="center" color="textSecondary">
-            {mine!.status === 'declined' ? 'Du har sagt at du ikke kan' : 'Kommer du?'}
+            {mine!.status === 'declined' ? 'Du har sagt at du ikke kan' : e.spontaneous ? 'Er du gira?' : 'Kommer du?'}
           </Text>
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             <Button
@@ -356,7 +356,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
               onPress={() => mine!.status === 'declined' || confirmDecline(firstName(e.organizer.name), true, () => rsvp.mutate(false, { onSuccess: () => toast('Svaret ditt er sendt') }))}
             />
             <Button
-              title={full ? 'Sett meg på venteliste' : 'Kommer'}
+              title={full ? 'Sett meg på venteliste' : e.spontaneous ? 'Jeg blir med' : 'Kommer'}
               icon={full ? 'clock' : 'check'}
               variant={mine!.status === 'attending' ? 'ink' : 'primary'}
               style={{ flex: 1 }}

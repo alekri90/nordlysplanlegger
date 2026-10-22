@@ -1,5 +1,5 @@
 import type { InviteView, PlannerEvent, TimeHint } from '@/data/types';
-import { countWeekends, formatDayMonth, formatLong, formatShort, formatTime, weekday } from './dates';
+import { addDays, countWeekends, formatDayMonth, formatLong, formatShort, formatTime, today, weekday } from './dates';
 import { responseProgress } from './ranking';
 
 /** Human copy for an event's time preference. */
@@ -40,6 +40,15 @@ export function eventStatusLine(e: PlannerEvent, meId?: string): { text: string;
   if (e.maxParticipants && (e.placesTaken ?? 0) >= e.maxParticipants && me?.status !== 'attending' && me?.role === 'guest') return { text: 'Fullt – venteliste', tone: 'neutral' };
   const coming = e.members.filter((m) => m.status === 'attending').length;
   return { text: `${coming} ${coming === 1 ? 'person' : 'personer'}`, tone: 'neutral' };
+}
+
+/** Spontaneous plans: «I dag kl. 14:00» / «I morgen kl. 10:00». */
+export function spontaneousWhen(e: Pick<PlannerEvent, 'selectedDate' | 'startTime'>): string | null {
+  if (!e.selectedDate) return null;
+  const t = today();
+  const day = e.selectedDate === t ? 'I dag' : e.selectedDate === addDays(t, 1) ? 'I morgen' : null;
+  if (!day) return null;
+  return e.startTime ? `${day} kl. ${formatTime(e.startTime)}` : day;
 }
 
 /** "12. oktober" / "Dato bestemmes" / "November" */

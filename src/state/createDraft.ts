@@ -36,6 +36,8 @@ export type CreateDraft = {
   groupName: string;
   /** Set when finding a date for an existing, undecided event. */
   existingEventId: string | null;
+  /** «Spontant»: today or tomorrow at a set time. */
+  spontaneous: boolean;
   /** Places in total; null = no limit («Begrens antall plasser»). */
   maxParticipants: number | null;
   /** "Gjenta arrangementet": off unless the user turns it on. */
@@ -77,6 +79,7 @@ const initial = (): CreateDraft => ({
   existingEventId: null,
   repeat: { ...DEFAULT_REPEAT, enabled: false },
   maxParticipants: null,
+  spontaneous: false,
   source: 'new',
 });
 

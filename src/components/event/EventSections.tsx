@@ -35,7 +35,7 @@ export function splitEvents(events: PlannerEvent[], meId?: string) {
       continue;
     }
     const unanswered = mine?.role === 'guest' && (mine.status === 'invited' || mine.status === 'opened');
-    if ((e.status === 'polling' || e.status === 'draft') && unanswered) invitations.push(e);
+    if ((e.status === 'polling' || e.status === 'draft' || e.spontaneous) && unanswered) invitations.push(e);
     else if (e.status === 'polling' || e.status === 'draft') deciding.push(e);
     else upcoming.push(e);
   }

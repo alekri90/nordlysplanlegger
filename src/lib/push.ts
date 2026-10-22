@@ -26,13 +26,7 @@ if (Platform.OS !== 'web') {
 export async function registerForPush(): Promise<boolean> {
   if (Platform.OS === 'web' || !Device.isDevice) return false;
 
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'Arrangementer',
-      importance: Notifications.AndroidImportance.DEFAULT,
-      lightColor: '#FF5F6D',
-    });
-  }
+  await ensureChannels();
 
   const existing = await Notifications.getPermissionsAsync();
   let granted = existing.granted;
@@ -63,9 +57,26 @@ function openFromNotification(response: Notifications.NotificationResponse | nul
 }
 
 /** Opens the right screen when a push notification is tapped (also on cold start). Mount once at the root. */
+/** Android channels: everyday notices, and «Spontant» that pops up (a push to a missing channel isn't shown). */
+export async function ensureChannels() {
+  if (Platform.OS !== 'android') return;
+  await Notifications.setNotificationChannelAsync('default', {
+    name: 'Arrangementer',
+    importance: Notifications.AndroidImportance.DEFAULT,
+    lightColor: '#FF5F6D',
+  });
+  await Notifications.setNotificationChannelAsync('spontant', {
+    name: 'Spontant – hvem er gira?',
+    description: 'Når noen vil finne på noe i dag eller i morgen',
+    importance: Notifications.AndroidImportance.HIGH,
+    lightColor: '#FF5F6D',
+  });
+}
+
 export function useNotificationRouting() {
   useEffect(() => {
     if (Platform.OS === 'web') return;
+    ensureChannels().catch(() => {});
     Notifications.getLastNotificationResponseAsync()
       .then((r) => {
         openFromNotification(r);

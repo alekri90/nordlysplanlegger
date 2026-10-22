@@ -488,6 +488,7 @@ export const demoRepository: Repository = {
       coverImageUrl: input.coverImageUrl,
       status: fixed ? 'confirmed' : input.dateMode === 'poll' ? 'polling' : 'draft',
       dateMode: input.dateMode,
+      spontaneous: !!input.spontaneous,
       organizer: { id: me.id, name: me.name, avatarUrl: me.avatarUrl, username: me.username },
       groupId,
       periodLabel: input.periodLabel ?? periodLabelFor(input.optionDates),

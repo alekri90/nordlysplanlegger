@@ -92,6 +92,7 @@ export default function CreateWho() {
         saveAsGroupName: !draft.groupId && draft.saveAsGroup && draft.groupName.trim() ? draft.groupName.trim() : null,
         location: draft.placeName.trim() ? { name: draft.placeName.trim() } : null,
         description: draft.details.trim() || null,
+        spontaneous: draft.spontaneous,
       });
       // The limit is set right after, before a series copies it.
       if (draft.maxParticipants) await repo.updateEvent(result.eventId, { maxParticipants: draft.maxParticipants });
@@ -281,7 +282,7 @@ export default function CreateWho() {
         <BottomBar>
           <Button
             variant="ink"
-            title={count ? `Send invitasjon · ${count + 1} personer` : 'Lag invitasjonslenke'}
+            title={draft.spontaneous ? (count ? `Spør hvem som er gira · ${count}` : 'Lag lenke – hvem er gira?') : count ? `Send invitasjon · ${count + 1} personer` : 'Lag invitasjonslenke'}
             icon="send"
             loading={createEvent.isPending}
             onPress={send}

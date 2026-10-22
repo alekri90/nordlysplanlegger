@@ -68,13 +68,16 @@ Deno.serve(async (req) => {
   const { data: tokens } = await supabase.from('push_tokens').select('token').eq('user_id', n.user_id);
   if (!tokens?.length) return new Response('no tokens', { status: 200 });
 
+  const spontaneous = (n.data as { spontaneous?: boolean } | null)?.spontaneous === true;
   const messages = tokens.map(({ token }) => ({
     to: token,
     title: n.title,
     body: n.body ?? undefined,
     sound: 'default',
     data: { ...(n.data ?? {}), notificationId: n.id },
-    channelId: 'default',
+    channelId: spontaneous ? 'spontant' : 'default',
+    // «Hvem er gira?» can't wait: through Focus on iPhone, heads-up on Android.
+    ...(spontaneous && { priority: 'high', interruptionLevel: 'time-sensitive' }),
   }));
 
   const headers: Record<string, string> = { 'content-type': 'application/json', accept: 'application/json' };

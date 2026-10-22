@@ -8,10 +8,11 @@ import type { DateMode } from '@/data/types';
 import { useCreateDraft } from '@/state/createDraft';
 import { radius, shadows, spacing, useColors } from '@/theme';
 
-const OPTIONS: { mode: DateMode; title: string; body: string; icon: IconName; route: '/create/dates' | '/create/fixed' | '/create/who'; recommended?: boolean }[] = [
-  { mode: 'poll', title: 'Finn en dato', body: 'Velg noen mulige dager. Gjengen trykker på dagene de ikke kan.', icon: 'users', route: '/create/dates', recommended: true },
-  { mode: 'fixed', title: 'Fast dato', body: 'Du vet allerede når det skjer.', icon: 'calendar', route: '/create/fixed' },
-  { mode: 'undecided', title: 'Ikke bestemt ennå', body: 'Inviter nå, finn dato senere.', icon: 'clock', route: '/create/who' },
+const OPTIONS: { id: string; mode: DateMode; title: string; body: string; icon: IconName; route: '/create/dates' | '/create/fixed' | '/create/who' | '/create/spontaneous'; recommended?: boolean }[] = [
+  { id: 'poll', mode: 'poll', title: 'Finn en dato', body: 'Velg noen mulige dager. Gjengen trykker på dagene de ikke kan.', icon: 'users', route: '/create/dates', recommended: true },
+  { id: 'fixed', mode: 'fixed', title: 'Fast dato', body: 'Du vet allerede når det skjer.', icon: 'calendar', route: '/create/fixed' },
+  { id: 'undecided', mode: 'undecided', title: 'Ikke bestemt ennå', body: 'Inviter nå, finn dato senere.', icon: 'clock', route: '/create/who' },
+  { id: 'spontaneous', mode: 'fixed', title: 'Spontant', body: 'I dag eller i morgen – hvem er gira?', icon: 'zap', route: '/create/spontaneous' },
 ];
 
 /** Step 2 — when? One tap moves on; no extra "Fortsett". */
@@ -26,10 +27,10 @@ export default function CreateWhen() {
         <PageTitle title="Når passer det?" />
         <View style={{ gap: spacing.md }}>
           {OPTIONS.map((o, i) => (
-            <Animated.View key={o.mode} entering={FadeInDown.delay(i * 70).duration(320)}>
+            <Animated.View key={o.id} entering={FadeInDown.delay(i * 70).duration(320)}>
               <PressableScale
                 onPress={() => {
-                  set({ dateMode: o.mode });
+                  set({ dateMode: o.mode, spontaneous: o.id === 'spontaneous' });
                   router.push(o.route);
                 }}
                 scaleTo={0.98}

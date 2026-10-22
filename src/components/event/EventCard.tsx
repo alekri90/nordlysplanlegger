@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { AvatarStack, Icon, PressableScale, Tag, Text } from '@/components/ui';
 import type { PlannerEvent } from '@/data/types';
 import { thumb } from '@/lib/categories';
-import { eventDateLine, eventStatusLine } from '@/lib/eventText';
+import { eventDateLine, eventStatusLine, spontaneousWhen } from '@/lib/eventText';
 import { repeatTag } from '@/lib/recurrence';
 import { radius, shadows, spacing } from '@/theme';
 
@@ -21,7 +21,7 @@ type Props = {
 export function EventCard({ event, meId, onPress, invite }: Props) {
   const status = eventStatusLine(event, meId);
   const attending = event.members.filter((m) => m.status === 'attending' || m.role === 'organizer').map((m) => m.person);
-  const dateLine = eventDateLine(event);
+  const dateLine = (event.spontaneous && spontaneousWhen(event)) || eventDateLine(event);
 
   return (
     <PressableScale
@@ -58,9 +58,9 @@ export function EventCard({ event, meId, onPress, invite }: Props) {
           </View>
         )}
       </View>
-      {invite ? (
+      {invite || event.spontaneous ? (
         <View style={{ position: 'absolute', top: spacing.md, left: spacing.md }}>
-          <Tag label="Svar nå" tone="primary" icon="bell" />
+          <Tag label={event.spontaneous ? (invite ? 'Spontant · svar nå' : 'Spontant') : 'Svar nå'} tone="primary" icon={event.spontaneous ? 'zap' : 'bell'} />
         </View>
       ) : null}
     </PressableScale>

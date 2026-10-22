@@ -878,5 +878,29 @@ console.log('\nModerators');
   });
 }
 
+console.log('\nSpontaneous plans');
+{
+  const org = await newUser('spontan@example.com', { display_name: 'Sander Spontan', username: 'sanderspontan' });
+  const friend = await newUser('gira@example.com', { display_name: 'Gina Gira', username: 'ginagira' });
+  await as(org); await q(`select send_friend_request($1)`, [friend]); await as(friend); await q(`select send_friend_request($1)`, [org]);
+
+  await check('a spontaneous plan is today or tomorrow, flagged, and its invitation says so', async () => {
+    await as(org);
+    const [{ d }] = await q(`select ((now() at time zone 'Europe/Oslo')::date)::text d`);
+    const [{ r }] = await q(`select create_spontaneous_event($1) r`, [{ title: 'Dyreparken', category: 'family', date_mode: 'fixed', fixed_date: d, time_hint: 'exact', start_time: '14:00', member_user_ids: [friend] }]);
+    const [e] = await q(`select spontaneous, status::text s from events where id = $1`, [r.event_id]);
+    assert.equal(e.spontaneous, true);
+    const [n] = await q(`select title, body, data ->> 'kind' k from notifications where user_id = $1 and event_id = $2`, [friend, r.event_id]);
+    assert.equal(n.k, 'spontaneous');
+    assert.equal(n.title, 'Sander: Dyreparken i dag kl. 14:00');
+    assert.equal(n.body, 'Er du gira? Trykk for å svare.');
+    // An ordinary event afterwards is not affected.
+    const [{ r: plain }] = await q(`select create_event($1) r`, [{ title: 'Middag', category: 'dinner', date_mode: 'fixed', fixed_date: '2027-09-01', time_hint: 'evening', member_user_ids: [friend] }]);
+    const [p] = await q(`select title, data ->> 'kind' k from notifications where user_id = $1 and event_id = $2`, [friend, plain.event_id]);
+    assert.equal(p.k, null);
+    await assert.rejects(q(`select create_spontaneous_event($1)`, [{ title: 'Senere', category: 'hangout', date_mode: 'fixed', fixed_date: '2030-01-01', time_hint: 'any', member_user_ids: [] }]), /today_or_tomorrow/);
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);
