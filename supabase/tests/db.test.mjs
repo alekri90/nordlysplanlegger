@@ -770,5 +770,88 @@ console.log('\nSaying no before there is a date');
   });
 }
 
+console.log('\nPlaces, waiting list, co-hosts and fixed guests');
+{
+  const org = await newUser('plass@example.com', { display_name: 'Pia Plass', username: 'piaplass' });
+  const [a, b, c, d] = [];
+  const people = [];
+  for (const [i, n] of ['Anna', 'Bjørn', 'Cecilie', 'Didrik'].entries()) people.push(await newUser(`plass-${i}@example.com`, { display_name: `${n} P`, username: `plass${i}x` }));
+  void a; void b; void c; void d;
+  for (const u of people) { await as(org); await q(`select send_friend_request($1)`, [u]); await as(u); await q(`select send_friend_request($1)`, [org]); }
+  const [anna, bjorn, cecilie, didrik] = people;
+  const statusOf = async (ev, u) => (await q(`select status::text s from event_members where event_id = $1 and user_id = $2`, [ev, u]))[0].s;
+  const answer = async (ev, u, s) => { await as(u); await q(`update event_members set status = $3, responded_at = now() where event_id = $1 and user_id = $2`, [ev, u, s]); };
+
+  await as(org);
+  const [{ r }] = await q(`select create_event($1) r`, [{ title: 'Middag', category: 'dinner', date_mode: 'fixed', fixed_date: '2027-05-07', time_hint: 'evening', member_user_ids: people }]);
+  const ev = r.event_id;
+  await q(`update events set max_participants = 3 where id = $1`, [ev]);
+
+  await check('a full event puts «Kommer» on the waiting list; a free place goes to the first in line', async () => {
+    await answer(ev, anna, 'attending');
+    await answer(ev, bjorn, 'attending');
+    await answer(ev, cecilie, 'attending');
+    await answer(ev, didrik, 'attending');
+    assert.equal(await statusOf(ev, anna), 'attending');
+    assert.equal(await statusOf(ev, bjorn), 'attending', 'organizer + 2 = 3');
+    assert.equal(await statusOf(ev, cecilie), 'waitlisted');
+    assert.equal(await statusOf(ev, didrik), 'waitlisted');
+    const [{ t }] = await q(`select places_taken(e) t from events e where id = $1`, [ev]);
+    assert.equal(t, 3);
+    await answer(ev, anna, 'declined');
+    assert.equal(await statusOf(ev, cecilie), 'attending', 'Cecilie was first in line');
+    assert.equal(await statusOf(ev, didrik), 'waitlisted');
+    const n = await q(`select title from notifications where user_id = $1 and event_id = $2 and data ->> 'kind' = 'waitlist_promoted'`, [cecilie, ev]);
+    assert.deepEqual(n.map((x) => x.title), ['Du har fått plass! 🎉']);
+    await as(org);
+    await q(`update events set max_participants = 4 where id = $1`, [ev]);
+    assert.equal(await statusOf(ev, didrik), 'attending', 'more places → the waiting list moves up');
+  });
+
+  await check('only the organizer makes co-hosts; a co-host can lock the date', async () => {
+    await as(anna);
+    await assert.rejects(q(`update event_members set is_cohost = true where event_id = $1 and user_id = $2`, [ev, anna]), 'no self-promotion');
+    await as(org);
+    const [{ r: p }] = await q(`select create_event($1) r`, [{ title: 'Quiz', category: 'quiz', date_mode: 'poll', option_dates: ['2027-06-01', '2027-06-08'], time_hint: 'evening', member_user_ids: people }]);
+    await q(`update event_members set is_cohost = true where event_id = $1 and user_id = $2`, [p.event_id, anna]);
+    await q(`update events set max_participants = 3 where id = $1`, [p.event_id]);
+    // Didrik answers first, then Bjørn, then Cecilie.
+    for (const u of [didrik, bjorn, cecilie]) { await answer(p.event_id, u, 'responded'); await q(`select pg_sleep(0.01)`); }
+    await as(anna);
+    const [opt] = await q(`select id from event_date_options where event_id = $1 order by date limit 1`, [p.event_id]);
+    await q(`select lock_event_date($1, $2)`, [p.event_id, opt.id]);
+    // Organizer + co-host Anna have places; one place left → Didrik (first). Bjørn and Cecilie wait.
+    assert.equal(await statusOf(p.event_id, didrik), 'attending');
+    assert.equal(await statusOf(p.event_id, bjorn), 'waitlisted');
+    assert.equal(await statusOf(p.event_id, cecilie), 'waitlisted');
+  });
+
+  await check('fixed guests always have a place on every round, and others can\'t see it', async () => {
+    await as(org);
+    const [{ r: s0 }] = await q(`select create_event($1) r`, [{ title: 'Poker', category: 'games', date_mode: 'fixed', fixed_date: '2027-07-02', time_hint: 'evening', member_user_ids: [anna, bjorn, cecilie] }]);
+    const [{ s }] = await q(`select create_event_series($1, $2) s`, [s0.event_id, { unit: 'week', count: 1, date_mode: 'fixed' }]);
+    await q(`select set_series_people($1, $2, $3, 2)`, [s, [], [didrik]]);
+    assert.equal(await statusOf(s0.event_id, didrik), 'invited', 'the fixed guest is invited');
+    await answer(s0.event_id, anna, 'attending');
+    await answer(s0.event_id, bjorn, 'attending');
+    assert.equal(await statusOf(s0.event_id, anna), 'waitlisted', 'organizer + the place kept for Didrik = 2');
+    await answer(s0.event_id, didrik, 'attending');
+    assert.equal(await statusOf(s0.event_id, didrik), 'attending', 'a fixed guest is never put on the waiting list');
+    await db.exec('set role authenticated');
+    await as(bjorn);
+    assert.equal((await q(`select count(*)::int n from event_reserved_seats where event_id = $1`, [s0.event_id]))[0].n, 0, 'hidden from others');
+    assert.equal((await q(`select count(*)::int n from event_series_reserved where series_id = $1`, [s]))[0].n, 0, 'the series list too');
+    await as(didrik);
+    assert.equal((await q(`select count(*)::int n from event_reserved_seats where event_id = $1`, [s0.event_id]))[0].n, 1);
+    await db.exec('reset role');
+    await as(null);
+    await q(`select run_event_series('2027-07-03 10:00+00')`);
+    const [next] = await q(`select id, max_participants from events where series_id = $1 and id <> $2`, [s, s0.event_id]);
+    assert.equal(next.max_participants, 2, 'the limit follows the next round');
+    await as(org);
+    assert.equal((await q(`select count(*)::int n from event_reserved_seats where event_id = $1 and user_id = $2`, [next.id, didrik]))[0].n, 1, 'and the fixed place');
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);
