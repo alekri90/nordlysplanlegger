@@ -11,6 +11,7 @@ import { shadows, spacing, useColors } from '@/theme';
 
 const TABS: Record<string, { label: string; icon: IconName }> = {
   index: { label: 'Hjem', icon: 'home' },
+  calendar: { label: 'Kalender', icon: 'calendar' },
   groups: { label: 'Gjenger', icon: 'users' },
   profile: { label: 'Profil', icon: 'user' },
 };
@@ -21,13 +22,14 @@ export default function TabsLayout() {
   return (
     <Tabs screenOptions={{ headerShown: false, animation: 'fade' }} tabBar={(props) => <TabBar {...props} />}>
       <Tabs.Screen name="index" />
+      <Tabs.Screen name="calendar" />
       <Tabs.Screen name="groups" />
       <Tabs.Screen name="profile" />
     </Tabs>
   );
 }
 
-/** Hjem · [ + ] · Gjenger · Profil — the create button is always one thumb away. */
+/** Hjem · Kalender · [ + ] · Gjenger · Profil — the create button is always one thumb away. */
 function TabBar({ state, navigation }: BottomTabBarProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -75,6 +77,7 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
       ]}
     >
       {item(0)}
+      {item(1)}
       <View style={{ flex: 1, alignItems: 'center' }}>
         <PressableScale
           onPress={() => {
@@ -97,8 +100,8 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
           </LinearGradient>
         </PressableScale>
       </View>
-      {item(1)}
       {item(2)}
+      {item(3)}
     </View>
   );
 }

@@ -16,8 +16,9 @@ import { fonts, motion, radius, spacing, useColors } from '@/theme';
  * - `unavailable`  guest marked "kan ikke"
  * - `selected`     the chosen single date (fixed date)
  * - `best`         best date in results
+ * - `event`        something planned that day (Kalender)
  */
-export type DayState = 'disabled' | 'idle' | 'candidate' | 'unavailable' | 'selected' | 'best';
+export type DayState = 'disabled' | 'idle' | 'candidate' | 'unavailable' | 'selected' | 'best' | 'event';
 
 const STATE_LABEL: Record<DayState, string> = {
   disabled: 'ikke tilgjengelig',
@@ -26,6 +27,7 @@ const STATE_LABEL: Record<DayState, string> = {
   unavailable: 'kan ikke',
   selected: 'valgt',
   best: 'beste dato',
+  event: 'har noe planlagt',
 };
 
 type Props = {
@@ -57,6 +59,7 @@ const Day = memo(function Day({ date, state, onPress, hint }: { date: string; st
     unavailable: { bg: colors.primary, fg: '#FFFFFF', border: 'transparent' },
     selected: { bg: colors.ink, fg: colors.textOnInk, border: 'transparent' },
     best: { bg: colors.success, fg: '#FFFFFF', border: 'transparent' },
+    event: { bg: colors.primarySoft, fg: colors.primaryOnSoft, border: 'transparent' },
   }[state];
 
   const interactive = !!onPress && state !== 'disabled';
