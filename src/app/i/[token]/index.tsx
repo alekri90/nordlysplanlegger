@@ -190,7 +190,7 @@ function InvitationView({ invite }: { invite: InviteView }) {
             ) : isDated ? (
               <>
                 <Text variant="headline" align="center" style={{ color: '#fff', marginBottom: spacing.sm }}>
-                  {invite.myResponse?.status === 'attending' ? 'Du kommer 🎉' : invite.myResponse?.status === 'declined' ? 'Du har sagt at du ikke kan' : 'Kommer du?'}
+                  {invite.myResponse?.status === 'attending' ? 'Du kommer 🎉' : invite.myResponse?.status === 'waitlisted' ? 'Du står på venteliste' : invite.myResponse?.status === 'declined' ? 'Du har sagt at du ikke kan' : 'Kommer du?'}
                 </Text>
                 <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                   <Button title="Kan ikke" variant="secondary" style={{ flex: 1 }} onPress={declineRsvp} disabled={rsvp.isPending} />

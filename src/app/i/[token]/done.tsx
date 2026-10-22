@@ -34,10 +34,16 @@ export default function Done() {
   }, [scale]);
   const pop = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
-  const title = attending === '0' ? 'Takk for beskjed' : name ? `Takk, ${firstName(name)}!` : 'Takk for svaret!';
+  // Said «Kommer», but it was full: on the waiting list.
+  const waitlisted = attending === '1' && invite.data?.myResponse?.status === 'waitlisted';
+  const title = waitlisted ? 'Det er fullt' : attending === '0' ? 'Takk for beskjed' : name ? `Takk, ${firstName(name)}!` : 'Takk for svaret!';
   // No date yet: «Jeg er med» / «Ikke denne gangen».
   const undecided = invite.data?.event.status === 'draft';
-  const body = undecided
+  const body = waitlisted
+    ? signedIn
+      ? 'Du står på venteliste. Du får beskjed i appen hvis det blir ledig plass.'
+      : 'Du står på venteliste. Åpne lenken igjen senere for å se om du har fått plass.'
+    : undecided
     ? attending === '1'
       ? signedIn
         ? `${organizer} vet at du er med. Du får beskjed i appen når det er foreslått datoer.`

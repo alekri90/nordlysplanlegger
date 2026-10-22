@@ -6,7 +6,8 @@ import type { RepeatConfig } from '@/lib/recurrence';
  */
 
 export type EventStatus = 'draft' | 'polling' | 'date_selected' | 'confirmed' | 'completed' | 'cancelled';
-export type InviteStatus = 'invited' | 'opened' | 'responded' | 'attending' | 'declined';
+/** `waitlisted`: wants to come, but the event is full — moves up automatically when a place frees. */
+export type InviteStatus = 'invited' | 'opened' | 'responded' | 'attending' | 'declined' | 'waitlisted';
 export type DateMode = 'fixed' | 'poll' | 'undecided';
 /** `evening` = "Etter kl. 18". `exact` uses `startTime`. */
 export type TimeHint = 'any' | 'daytime' | 'evening' | 'exact';
@@ -137,6 +138,10 @@ export interface EventMember {
   /** Options this member has marked as "kan ikke". */
   unavailableOptionIds: string[];
   respondedAt?: string | null;
+  /** Medarrangør: can do what the organizer does. */
+  isCohost?: boolean;
+  /** Place in the waiting list (earliest first). */
+  waitlistedAt?: string | null;
 }
 
 export interface EventLocation {
@@ -173,6 +178,10 @@ export interface PlannerEvent {
   photos: string[];
   createdAt: string;
   lockedAt?: string | null;
+  /** Places in total; null = no limit. */
+  maxParticipants?: number | null;
+  /** Places taken (people coming + places kept for the organizer side and fixed guests). */
+  placesTaken?: number | null;
   /** Set when this is one time of a recurring event. */
   series?: EventSeriesInfo | null;
 }
@@ -362,6 +371,15 @@ export interface EventPatch {
   timeHint?: TimeHint;
   location?: EventLocation | null;
   coverImageUrl?: string;
+  /** null removes the limit. */
+  maxParticipants?: number | null;
+}
+
+/** Who always has a place on a recurring event, and how many can come. */
+export interface SeriesPeople {
+  cohostIds: string[];
+  reservedIds: string[];
+  maxParticipants: number | null;
 }
 
 /** Native sponsored content — model prepared, not shown in MVP. */

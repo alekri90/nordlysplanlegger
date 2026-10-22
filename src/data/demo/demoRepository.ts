@@ -193,6 +193,27 @@ const isMemberOf = (e: PlannerEvent) => e.organizer.id === meId() || e.members.s
 // Events & groups helpers
 // ---------------------------------------------------------------------------
 
+/** Demo copy of the server's rule: people coming, plus the organizer side who always have a place. */
+function demoPlacesTaken(e: PlannerEvent): number | null {
+  if (!e.maxParticipants) return null;
+  return e.members.filter((m) => m.status !== 'declined' && (m.status === 'attending' || m.role === 'organizer' || m.isCohost)).length;
+}
+
+/** A place came free: the first on the waiting list gets it. */
+function demoPromote(e: PlannerEvent) {
+  if (!e.maxParticipants) return;
+  for (;;) {
+    if ((demoPlacesTaken(e) ?? 0) >= e.maxParticipants) break;
+    const next = e.members.filter((m) => m.status === 'waitlisted').sort((a, b) => (a.waitlistedAt ?? '').localeCompare(b.waitlistedAt ?? ''))[0];
+    if (!next) break;
+    next.status = 'attending';
+    next.waitlistedAt = null;
+  }
+  e.placesTaken = demoPlacesTaken(e);
+}
+
+const seriesPeople = new Map<string, import('../types').SeriesPeople>();
+
 function findEvent(id: string) {
   const e = state.events.find((x) => x.id === id);
   if (!e) throw new Error('Fant ikke arrangementet');
@@ -509,7 +530,10 @@ export const demoRepository: Repository = {
       ...(patch.timeHint !== undefined && { timeHint: patch.timeHint }),
       ...(patch.location !== undefined && { location: patch.location }),
       ...(patch.coverImageUrl !== undefined && { coverImageUrl: patch.coverImageUrl }),
+      ...(patch.maxParticipants !== undefined && { maxParticipants: patch.maxParticipants }),
     });
+    demoPromote(e);
+    e.placesTaken = demoPlacesTaken(e);
   },
 
   async lockDate(eventId, optionId) {
@@ -544,10 +568,16 @@ export const demoRepository: Repository = {
 
   async setRsvp(eventId, attending) {
     await wait();
-    const m = findEvent(eventId).members.find((x) => x.userId === meId());
+    const e = findEvent(eventId);
+    const m = e.members.find((x) => x.userId === meId());
     if (m) {
-      m.status = attending ? 'attending' : 'declined';
+      const wasComing = m.status === 'attending';
+      const full = !!e.maxParticipants && (e.status === 'confirmed' || e.status === 'date_selected') && (demoPlacesTaken(e) ?? 0) >= e.maxParticipants;
+      m.status = attending ? (full && !wasComing && m.role !== 'organizer' && !m.isCohost ? 'waitlisted' : 'attending') : 'declined';
+      m.waitlistedAt = m.status === 'waitlisted' ? now() : null;
       m.respondedAt = now();
+      if (wasComing && !attending) demoPromote(e);
+      e.placesTaken = demoPlacesTaken(e);
     }
   },
 
@@ -564,6 +594,22 @@ export const demoRepository: Repository = {
     // Demo: the series is shown on the event; new rounds are made by the server job in production.
     e.series = { ...config, id: uid('series'), status: 'active' };
     return e.series.id;
+  },
+
+  async setSeriesPeople(seriesId, people) {
+    await wait(200);
+    seriesPeople.set(seriesId, people);
+    for (const e of state.events) {
+      if (e.series?.id !== seriesId) continue;
+      e.maxParticipants = people.maxParticipants;
+      for (const m of e.members) m.isCohost = !!m.userId && people.cohostIds.includes(m.userId);
+      e.placesTaken = demoPlacesTaken(e);
+    }
+  },
+
+  async getSeriesPeople(seriesId) {
+    await wait(100);
+    return seriesPeople.get(seriesId) ?? { cohostIds: [], reservedIds: [], maxParticipants: null };
   },
 
   async setSeriesCover(seriesId, coverImageUrl, eventId) {

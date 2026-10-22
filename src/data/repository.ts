@@ -9,6 +9,7 @@ import type {
   EventMessage,
   EventSeriesInfo,
   EventPatch,
+  SeriesPeople,
   FriendRequest,
   FriendshipInfo,
   FriendshipState,
@@ -86,6 +87,10 @@ export interface Repository {
   updateEventSeries(seriesId: string, patch: Partial<RepeatConfig> & { status?: EventSeriesInfo['status'] }): Promise<void>;
   /** New main picture for the series: this round and the coming ones that don't have their own. */
   setSeriesCover(seriesId: string, coverImageUrl: string, eventId: string): Promise<void>;
+  /** Organizer only: co-hosts, fixed guests (always a place, private) and the limit for every round. */
+  setSeriesPeople(seriesId: string, people: SeriesPeople): Promise<void>;
+  /** Organizer only. */
+  getSeriesPeople(seriesId: string): Promise<SeriesPeople>;
   /** Newest first. */
   listEventMessages(eventId: string): Promise<EventMessage[]>;
   /** Organizer only; everyone else with an account is notified. */

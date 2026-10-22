@@ -44,11 +44,14 @@ function Group({ title, members, names, dim, onPress }: { title: string; members
 export function GuestList({ members, onPressMember, interest }: Props) {
   const coming = members.filter((m) => m.status === 'attending' || (m.role === 'organizer' && m.status !== 'declined'));
   const notComing = members.filter((m) => m.status === 'declined');
-  const waiting = members.filter((m) => !coming.includes(m) && !notComing.includes(m));
+  // In line for a place, first first.
+  const waitlist = members.filter((m) => m.status === 'waitlisted').sort((a, b) => (a.waitlistedAt ?? '').localeCompare(b.waitlistedAt ?? ''));
+  const waiting = members.filter((m) => !coming.includes(m) && !notComing.includes(m) && !waitlist.includes(m));
   const names = shortNames(members.map((m) => ({ id: m.id, name: m.person.name })));
   return (
     <View>
       <Group title={interest ? 'Er med' : 'Kommer'} members={coming} names={names} onPress={onPressMember} />
+      <Group title="Venteliste" members={waitlist} names={names} onPress={onPressMember} />
       <Group title={interest ? 'Ikke denne gangen' : 'Kan ikke'} members={notComing} names={names} dim onPress={onPressMember} />
       <Group title="Har ikke svart" members={waiting} names={names} dim onPress={onPressMember} />
     </View>

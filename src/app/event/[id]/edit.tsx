@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { CoverPicker } from '@/components/create/CoverPicker';
+import { PlacesSetting } from '@/components/event/PlacesSetting';
 import { TimePicker } from '@/components/create/TimePicker';
 import { BottomBar, Button, Card, Header, Input, KeyboardAware, ListRow, PageSkeleton, Screen, ScreenScroll, Text, Toggle, useToast } from '@/components/ui';
 import { useEvent, useSetSeriesCover, useUpdateEvent } from '@/data/hooks';
@@ -27,6 +28,7 @@ function EditForm({ event: e }: { event: PlannerEvent }) {
   const coverChanged = cover !== e.coverImageUrl;
   const inSeries = !!e.series && e.series.status !== 'ended';
   const [coverScope, setCoverScope] = useState<'this' | 'series'>('this');
+  const [maxParticipants, setMaxParticipants] = useState<number | null>(e.maxParticipants ?? null);
 
   const [title, setTitle] = useState(e.title);
   const [place, setPlace] = useState(e.location?.name ?? '');
@@ -44,6 +46,7 @@ function EditForm({ event: e }: { event: PlannerEvent }) {
         startTime: time.time,
         location: place.trim() ? { name: place.trim(), address: address.trim() || null, detailsPending: pending } : null,
         ...(coverChanged && !(inSeries && coverScope === 'series') && { coverImageUrl: cover }),
+        ...(maxParticipants !== (e.maxParticipants ?? null) && { maxParticipants }),
       });
       if (coverChanged && inSeries && coverScope === 'series') await setSeriesCover.mutateAsync({ seriesId: e.series!.id, coverImageUrl: cover, eventId: e.id });
       toast({ message: 'Lagret', tone: 'success' });
@@ -88,6 +91,9 @@ function EditForm({ event: e }: { event: PlannerEvent }) {
                 <ListRow title="Detaljer kommer" subtitle="Vis at stedet ikke er helt bestemt" trailing={<Toggle value={pending} onValueChange={setPending} accessibilityLabel="Detaljer kommer" />} />
               </Card>
             ) : null}
+            <Card style={{ paddingVertical: spacing.xs }}>
+              <PlacesSetting value={maxParticipants} onChange={setMaxParticipants} />
+            </Card>
             {e.selectedDate ? <TimePicker hint={time.hint} time={time.time} allowHints={false} onChange={(hint, t) => setTime({ hint, time: t })} /> : null}
             <View>
               <Text variant="title3" style={{ marginBottom: spacing.md }}>

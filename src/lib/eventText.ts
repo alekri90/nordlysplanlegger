@@ -36,6 +36,8 @@ export function eventStatusLine(e: PlannerEvent, meId?: string): { text: string;
     const inCount = e.members.filter((m) => m.role === 'guest' && m.status === 'attending').length;
     return { text: inCount ? `${inCount} er med · Finn dato` : 'Finn dato', tone: 'primary' };
   }
+  if (me?.status === 'waitlisted') return { text: 'Du står på venteliste', tone: 'neutral' };
+  if (e.maxParticipants && (e.placesTaken ?? 0) >= e.maxParticipants && me?.status !== 'attending' && me?.role === 'guest') return { text: 'Fullt – venteliste', tone: 'neutral' };
   const coming = e.members.filter((m) => m.status === 'attending').length;
   return { text: `${coming} ${coming === 1 ? 'person' : 'personer'}`, tone: 'neutral' };
 }

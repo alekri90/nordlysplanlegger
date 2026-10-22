@@ -53,6 +53,8 @@ type EventRow = {
   description: string | null;
   created_at: string;
   locked_at: string | null;
+  max_participants: number | null;
+  places_taken: number | null;
   organizer: ProfileRow | null;
   location: { name: string; address: string | null; details_pending: boolean } | null;
   options: { id: string; date: string }[];
@@ -64,6 +66,8 @@ type EventRow = {
     role: EventMember['role'];
     status: EventMember['status'];
     responded_at: string | null;
+    is_cohost: boolean;
+    waitlisted_at: string | null;
     profile: ProfileRow | null;
     availability: { date_option_id: string; status: string }[];
   }[];
@@ -84,11 +88,11 @@ type EventRow = {
 
 const EVENT_SELECT = `
   id, title, category, cover_image_url, status, date_mode, group_id, period_label, time_hint,
-  start_time, selected_date, selected_option_id, description, created_at, locked_at,
+  start_time, selected_date, selected_option_id, description, created_at, locked_at, max_participants, places_taken,
   organizer:profiles!events_organizer_id_fkey(id, display_name, avatar_url, username),
   location:event_locations(name, address, details_pending),
   options:event_date_options!event_date_options_event_id_fkey(id, date),
-  members:event_members(id, user_id, guest_id, display_name, role, status, responded_at,
+  members:event_members(id, user_id, guest_id, display_name, role, status, responded_at, is_cohost, waitlisted_at,
     profile:profiles(id, display_name, avatar_url, username),
     availability:event_availability(date_option_id, status)),
   invites:event_invites(token, revoked_at),
@@ -133,7 +137,11 @@ function toEvent(r: EventRow): PlannerEvent {
       status: m.status,
       unavailableOptionIds: (m.availability ?? []).filter((a) => a.status === 'unavailable').map((a) => a.date_option_id),
       respondedAt: m.responded_at,
+      isCohost: m.is_cohost,
+      waitlistedAt: m.waitlisted_at,
     })),
+    maxParticipants: r.max_participants,
+    placesTaken: r.places_taken,
     inviteToken: r.invites?.find((i) => !i.revoked_at)?.token ?? '',
     photos: (r.images ?? []).filter((i) => i.kind === 'memory').map((i) => i.url),
     createdAt: r.created_at,
@@ -511,6 +519,7 @@ export const supabaseRepository: Repository = {
     if (patch.description !== undefined) update.description = patch.description;
     if (patch.startTime !== undefined) update.start_time = patch.startTime;
     if (patch.timeHint !== undefined) update.time_hint = patch.timeHint;
+    if (patch.maxParticipants !== undefined) update.max_participants = patch.maxParticipants;
     if (patch.coverImageUrl !== undefined) {
       update.cover_image_url = isLocalUri(patch.coverImageUrl) ? await uploadImage('covers', await requireUserId(), patch.coverImageUrl) : patch.coverImageUrl;
     }
@@ -572,6 +581,31 @@ export const supabaseRepository: Repository = {
     const { data, error } = await getSupabase().rpc('create_event_series', { p_event_id: eventId, config: seriesPatchJson(config) });
     fail(error);
     return data as string;
+  },
+
+  async setSeriesPeople(seriesId, people) {
+    const { error } = await getSupabase().rpc('set_series_people', {
+      p_series_id: seriesId,
+      p_cohost_ids: people.cohostIds,
+      p_reserved_ids: people.reservedIds,
+      p_max: people.maxParticipants,
+    });
+    fail(error);
+  },
+
+  async getSeriesPeople(seriesId) {
+    const sb = getSupabase();
+    const [series, reserved] = await Promise.all([
+      sb.from('event_series').select('cohost_ids, max_participants').eq('id', seriesId).single(),
+      sb.from('event_series_reserved').select('user_id').eq('series_id', seriesId),
+    ]);
+    fail(series.error);
+    fail(reserved.error);
+    return {
+      cohostIds: (series.data?.cohost_ids as string[] | null) ?? [],
+      reservedIds: (reserved.data ?? []).map((r) => r.user_id as string),
+      maxParticipants: (series.data?.max_participants as number | null) ?? null,
+    };
   },
 
   async setSeriesCover(seriesId, coverImageUrl, eventId) {

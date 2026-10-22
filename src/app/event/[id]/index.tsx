@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Platform, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
@@ -12,10 +12,12 @@ import { EventHero } from '@/components/event/EventHero';
 import { EventMessages } from '@/components/event/EventMessages';
 import { GuestList } from '@/components/event/GuestList';
 import { ResultsView } from '@/components/event/ResultsView';
+import { SeriesPeopleEditor } from '@/components/event/SeriesPeopleEditor';
 import { ShareSheet } from '@/components/event/ShareSheet';
 import { BottomBar, Button, Card, EmptyState, ErrorState, Icon, IconButton, ListRow, PageSkeleton, Screen, Segmented, Sheet, Text, useToast, type IconName } from '@/components/ui';
-import { useAddEventPhotos, useCancelEvent, useEvent, useSetRsvp, useUpdateEventSeries } from '@/data/hooks';
-import type { EventSeriesInfo, Person, PlannerEvent } from '@/data/types';
+import { repo } from '@/data';
+import { queryClient, useAddEventPhotos, useCancelEvent, useEvent, useSetRsvp, useUpdateEventSeries } from '@/data/hooks';
+import type { EventSeriesInfo, Person, PlannerEvent, SeriesPeople } from '@/data/types';
 import { confirmDestructive, PersonSheet } from '@/components/people/PersonSheet';
 import { ReportForm } from '@/components/people/ReportSheet';
 import { CATEGORIES, thumb } from '@/lib/categories';
@@ -52,15 +54,17 @@ export default function EventScreen() {
   }
 
   const e = event.data;
-  const isOrganizer = e.organizer.id === me?.id;
+  const isOwner = e.organizer.id === me?.id;
+  // Medarrangører see and do what the organizer does.
+  const isOrganizer = isOwner || !!e.members.find((m) => m.userId === me?.id)?.isCohost;
   if (e.status === 'polling' && isOrganizer) return <ResultsView event={e} />;
   if (e.status === 'polling' && e.inviteToken) return <Redirect href={`/i/${e.inviteToken}`} />;
-  return <EventDetail event={e} isOrganizer={isOrganizer} meId={me?.id} />;
+  return <EventDetail event={e} isOrganizer={isOrganizer} isOwner={isOwner} meId={me?.id} />;
 }
 
 type Tab = 'guests' | 'details' | 'photos';
 
-function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isOrganizer: boolean; meId?: string }) {
+function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerEvent; isOrganizer: boolean; isOwner: boolean; meId?: string }) {
   const colors = useColors();
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('guests');
@@ -69,6 +73,17 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
   const [reporting, setReporting] = useState(false);
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [repeatDraft, setRepeatDraft] = useState<EventSeriesInfo | null>(null);
+  // Co-hosts, fixed guests and the limit — loaded when the organizer opens the repeat settings.
+  const [seriesPeople, setSeriesPeople] = useState<SeriesPeople | null>(null);
+  const [savingPeople, setSavingPeople] = useState(false);
+  useEffect(() => {
+    if (!repeatOpen || !e.series || !isOwner) return;
+    let alive = true;
+    repo.getSeriesPeople(e.series.id).then((p) => alive && setSeriesPeople(p)).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [repeatOpen, e.series, isOwner]);
   const updateSeries = useUpdateEventSeries();
   const [person, setPerson] = useState<Person | null>(null);
   const rsvp = useSetRsvp(e.id);
@@ -126,6 +141,14 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
   };
 
   const showRsvp = !isOrganizer && !!mine && (e.status === 'confirmed' || e.status === 'date_selected');
+  const waitlist = e.members.filter((m) => m.status === 'waitlisted').sort((a, b) => (a.waitlistedAt ?? '').localeCompare(b.waitlistedAt ?? ''));
+  const full = !!e.maxParticipants && (e.placesTaken ?? 0) >= e.maxParticipants;
+  const placesLine = e.maxParticipants
+    ? full
+      ? `Fullt${waitlist.length ? ` · ${waitlist.length} på venteliste` : ''}`
+      : `${e.placesTaken ?? 0} av ${e.maxParticipants} plasser tatt`
+    : null;
+  const myQueue = mine?.status === 'waitlisted' ? waitlist.findIndex((m) => m.id === mine.id) + 1 : 0;
   const showInterest = !isOrganizer && !!mine && mine.role === 'guest' && e.status === 'draft';
   const interested = e.members.filter((m) => m.role === 'guest' && m.status === 'attending').length;
   const notInterested = e.members.filter((m) => m.role === 'guest' && m.status === 'declined').length;
@@ -151,6 +174,7 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
             <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
               <InfoLine icon="calendar" text={time ? `${when} · ${time}` : when} />
               {place ? <InfoLine icon="map-pin" text={place} /> : null}
+              {placesLine ? <InfoLine icon="users" text={placesLine} /> : null}
               {e.series && e.series.status !== 'ended' ? (
                 <InfoLine icon="repeat" text={`${repeatSummary(e.series, e.selectedDate)}${e.series.status === 'paused' ? ' · på pause' : ''}`} />
               ) : null}
@@ -278,6 +302,24 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
             />
           </View>
         </BottomBar>
+      ) : showRsvp && mine!.status === 'waitlisted' ? (
+        <BottomBar>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <Icon name="clock" size={22} color="textSecondary" />
+            <View style={{ flex: 1 }}>
+              <Text variant="headline">Du står på venteliste{myQueue ? ` (nr. ${myQueue})` : ''}</Text>
+              <Text variant="footnote" color="textSecondary">
+                Du får beskjed hvis det blir ledig plass.
+              </Text>
+            </View>
+            <Button
+              title="Meld av"
+              variant="secondary"
+              size="sm"
+              onPress={() => confirmDecline(firstName(e.organizer.name), true, () => rsvp.mutate(false, { onSuccess: () => toast('Du er meldt av ventelisten') }))}
+            />
+          </View>
+        </BottomBar>
       ) : showRsvp && mine!.status === 'attending' ? (
         // Answered yes: a quiet confirmation, and a way out that tells the organizer.
         <BottomBar>
@@ -314,11 +356,15 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
               onPress={() => mine!.status === 'declined' || confirmDecline(firstName(e.organizer.name), true, () => rsvp.mutate(false, { onSuccess: () => toast('Svaret ditt er sendt') }))}
             />
             <Button
-              title="Kommer"
-              icon="check"
+              title={full ? 'Sett meg på venteliste' : 'Kommer'}
+              icon={full ? 'clock' : 'check'}
               variant={mine!.status === 'attending' ? 'ink' : 'primary'}
               style={{ flex: 1 }}
-              onPress={() => rsvp.mutate(true, { onSuccess: () => toast({ message: 'Så gøy! Vi sees.', tone: 'success' }) })}
+              onPress={() =>
+                rsvp.mutate(true, {
+                  onSuccess: () => toast(full ? { message: 'Du står på ventelisten – du får beskjed om det blir plass', icon: 'clock' } : { message: 'Så gøy! Vi sees.', tone: 'success' }),
+                })
+              }
             />
           </View>
         </BottomBar>
@@ -329,15 +375,25 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
       {e.series ? (
         <Sheet visible={repeatOpen} onClose={() => setRepeatOpen(false)} title="Endre gjentakelse">
           <RepeatEditor value={repeatDraft ?? e.series} poll={e.series.dateMode === 'poll_each'} firstDate={e.selectedDate} onChange={(patch) => setRepeatDraft({ ...(repeatDraft ?? e.series!), ...patch })} />
+          {seriesPeople ? <SeriesPeopleEditor members={e.members} value={seriesPeople} onChange={setSeriesPeople} /> : null}
           <Button
             title="Lagre"
             variant="ink"
-            loading={updateSeries.isPending}
+            loading={updateSeries.isPending || savingPeople}
             style={{ marginTop: spacing.lg }}
             onPress={async () => {
               if (repeatDraft) {
                 const { id: _id, status: _status, ...patch } = repeatDraft;
                 await updateSeries.mutateAsync({ seriesId: e.series!.id, patch });
+              }
+              if (seriesPeople) {
+                setSavingPeople(true);
+                try {
+                  await repo.setSeriesPeople(e.series!.id, seriesPeople);
+                  await queryClient.invalidateQueries();
+                } finally {
+                  setSavingPeople(false);
+                }
               }
               setRepeatOpen(false);
               setRepeatDraft(null);
@@ -354,7 +410,7 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
             {e.selectedDate && !isPast ? <ListRow icon="calendar" title="Legg i kalender" onPress={() => { setMoreOpen(false); calendar(); }} /> : null}
             <ListRow icon="share-2" title="Del invitasjonen" onPress={() => { setMoreOpen(false); setShareOpen(true); }} />
             {isOrganizer && e.groupId ? <ListRow icon="users" title="Gå til gjengen" onPress={() => { setMoreOpen(false); router.push(`/group/${e.groupId}`); }} /> : null}
-            {isOrganizer && e.series && e.series.status !== 'ended' ? (
+            {isOwner && e.series && e.series.status !== 'ended' ? (
               <>
                 <ListRow icon="repeat" title="Endre gjentakelse" onPress={() => { setMoreOpen(false); setRepeatOpen(true); }} />
                 <ListRow
@@ -382,7 +438,7 @@ function EventDetail({ event: e, isOrganizer, meId }: { event: PlannerEvent; isO
               </>
             ) : null}
             {!isOrganizer ? <ListRow icon="flag" title="Rapporter arrangementet" subtitle="Også bilder som er delt her" onPress={() => setReporting(true)} /> : null}
-            {isOrganizer && !isPast ? <ListRow icon="x-circle" title="Avlys arrangementet" destructive onPress={confirmCancel} /> : null}
+            {isOwner && !isPast ? <ListRow icon="x-circle" title="Avlys arrangementet" destructive onPress={confirmCancel} /> : null}
           </>
         )}
       </Sheet>

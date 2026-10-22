@@ -16,7 +16,7 @@ export interface DateScore {
   everyoneCan: boolean;
 }
 
-const RESPONDED: EventMember['status'][] = ['responded', 'attending', 'declined'];
+const RESPONDED: EventMember['status'][] = ['responded', 'attending', 'declined', 'waitlisted'];
 
 export function hasResponded(m: Pick<EventMember, 'status' | 'role'>): boolean {
   return m.role === 'organizer' || RESPONDED.includes(m.status);

@@ -4,6 +4,8 @@ import { View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 import { PlaceDetails } from '@/components/create/PlaceDetails';
+import { PlacesSetting } from '@/components/event/PlacesSetting';
+import { repo } from '@/data';
 import { StepHeader } from '@/components/create/StepHeader';
 import { PeoplePicker } from '@/components/people/PeoplePicker';
 import { PersonRow } from '@/components/people/PersonRow';
@@ -91,6 +93,8 @@ export default function CreateWho() {
         location: draft.placeName.trim() ? { name: draft.placeName.trim() } : null,
         description: draft.details.trim() || null,
       });
+      // The limit is set right after, before a series copies it.
+      if (draft.maxParticipants) await repo.updateEvent(result.eventId, { maxParticipants: draft.maxParticipants });
       if (draft.repeat.enabled && draft.dateMode !== 'undecided') {
         const { enabled: _on, ...config } = draft.repeat;
         try {
@@ -251,6 +255,12 @@ export default function CreateWho() {
                 ) : null}
               </Card>
             </Animated.View>
+          ) : null}
+
+          {!draft.existingEventId ? (
+            <Card style={{ marginTop: spacing.xl, paddingVertical: spacing.xs }}>
+              <PlacesSetting value={draft.maxParticipants} onChange={(maxParticipants) => draft.set({ maxParticipants })} />
+            </Card>
           ) : null}
 
           <Card muted style={{ marginTop: spacing.xl, flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
