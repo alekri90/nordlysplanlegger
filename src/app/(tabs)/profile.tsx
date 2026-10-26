@@ -1,37 +1,26 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Alert, Platform, ScrollView, View } from 'react-native';
 
 import { ShareProfileSheet } from '@/components/people/ShareProfileSheet';
 import { AppearanceSetting } from '@/components/settings/AppearanceSetting';
 import { Avatar, Button, Card, Divider, ListRow, PressableScale, Screen, Tag, Text } from '@/components/ui';
 import { repo } from '@/data';
-import { queryClient, useEvents, useFriendRequests, useFriends, useFriendsRealtime, useGroups } from '@/data/hooks';
+import { queryClient, useFriendRequests, useFriends, useFriendsRealtime, useGroups } from '@/data/hooks';
 import { isDemoMode } from '@/lib/config';
-import { today } from '@/lib/dates';
-import { eventDateLine } from '@/lib/eventText';
 import { useMe, usePlan } from '@/state/session';
 import { gutter, radius, spacing, useColors } from '@/theme';
 
 export default function Profile() {
   const me = useMe();
   const { isPlus } = usePlan();
-  const events = useEvents();
   const groups = useGroups();
   const friends = useFriends();
   const requests = useFriendRequests();
   useFriendsRealtime();
   const [shareOpen, setShareOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-
-  const upcoming = useMemo(() => {
-    const t = today();
-    return (events.data ?? [])
-      .filter((e) => ['polling', 'confirmed', 'date_selected', 'draft'].includes(e.status) && (!e.selectedDate || e.selectedDate >= t))
-      .sort((a, b) => (a.selectedDate ?? '9999').localeCompare(b.selectedDate ?? '9999'))
-      .slice(0, 3);
-  }, [events.data]);
 
   const signOut = async () => {
     const run = async () => {
@@ -81,22 +70,6 @@ export default function Profile() {
           <Button title="Rediger profil" variant="secondary" size="md" style={{ flex: 1 }} onPress={() => router.push('/settings/profile')} />
           <Button title="Min QR" variant="secondary" size="md" icon="maximize" style={{ flex: 1 }} onPress={() => setShareOpen(true)} />
         </View>
-
-        {upcoming.length ? (
-          <View style={{ marginTop: spacing.xxl }}>
-            <Text variant="title3" style={{ marginBottom: spacing.md }}>
-              Kommende
-            </Text>
-            <Card style={{ paddingVertical: spacing.xs }}>
-              {upcoming.map((e, i) => (
-                <View key={e.id}>
-                  {i ? <Divider /> : null}
-                  <ListRow icon="calendar" title={e.title} subtitle={eventDateLine(e)} chevron onPress={() => router.push(`/event/${e.id}`)} />
-                </View>
-              ))}
-            </Card>
-          </View>
-        ) : null}
 
         <Card style={{ marginTop: spacing.xxl, paddingVertical: spacing.xs }}>
           <ListRow
