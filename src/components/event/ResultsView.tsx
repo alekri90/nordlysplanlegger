@@ -6,7 +6,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { TimePicker } from '@/components/create/TimePicker';
 import { Avatar, BottomBar, Button, Card, Confetti, Header, Icon, IconButton, PressableScale, Screen, ScreenScroll, Sheet, Text, useToast } from '@/components/ui';
 import { useEventRealtime, useLockDate, useUpdateEvent } from '@/data/hooks';
-import type { PlannerEvent, TimeHint } from '@/data/types';
+import type { EventMember, PlannerEvent, TimeHint } from '@/data/types';
 import { formatDayMonth, formatLong } from '@/lib/dates';
 import { firstName } from '@/lib/eventText';
 import { haptics } from '@/lib/haptics';
@@ -16,7 +16,8 @@ import { hasResponded, rankDateOptions, responseProgress } from '@/lib/ranking';
 import { spacing } from '@/theme';
 import { DateResultRow } from './DateResultRow';
 import { EventMessages } from './EventMessages';
-import { PendingCard } from './PendingCard';
+import { MemberSheet } from './MemberSheet';
+import { RemindButton } from './RemindButton';
 import { ShareSheet } from './ShareSheet';
 
 const VISIBLE = 5;
@@ -42,6 +43,7 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
   const scores = useMemo(() => rankDateOptions(event.options, event.members), [event.options, event.members]);
   const progress = responseProgress(event.members);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [member, setMember] = useState<EventMember | null>(null);
   const best = scores[0];
   const selected = scores.find((s) => s.option.id === selectedId) ?? best;
   const everyoneCan = best?.everyoneCan ?? false;
@@ -119,9 +121,10 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
           </Card>
         )}
 
-        <Text variant="title3" style={{ marginTop: spacing.xxl, marginBottom: spacing.md }}>
-          Svar fra gjestene
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, marginTop: spacing.xxl, marginBottom: spacing.md }}>
+          <Text variant="title3">Svar fra gjestene</Text>
+          <RemindButton event={event} onShareLinks={() => setShareOpen(true)} />
+        </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
           {respondents.map((m) => (
             <View key={m.id} style={{ alignItems: 'center', width: 56, gap: 4 }}>
@@ -132,12 +135,12 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
             </View>
           ))}
           {pending.map((m) => (
-            <View key={m.id} style={{ alignItems: 'center', width: 56, gap: 4, opacity: 0.45 }} accessibilityLabel={`${m.person.name} har ikke svart`}>
+            <PressableScale key={m.id} onPress={() => setMember(m)} style={{ alignItems: 'center', width: 56, gap: 4, opacity: 0.45 }} accessibilityLabel={`${m.person.name} har ikke svart`}>
               <Avatar name={m.person.name} uri={m.person.avatarUrl} size={48} />
               <Text variant="caption" numberOfLines={1}>
                 {nameOf(m.id)}
               </Text>
-            </View>
+            </PressableScale>
           ))}
         </View>
         {declined.length ? (
@@ -145,8 +148,6 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
             Kan ikke denne gangen: {declined.map((m) => nameOf(m.id)).join(', ')}
           </Text>
         ) : null}
-
-        <PendingCard event={event} onShareLinks={() => setShareOpen(true)} style={{ marginTop: spacing.lg }} />
 
         <EventMessages eventId={event.id} isOrganizer style={{ marginTop: spacing.xl }} />
       </ScreenScroll>
@@ -162,6 +163,7 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
         />
       </BottomBar>
 
+      <MemberSheet member={member} canRemove onClose={() => setMember(null)} />
       <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} title={event.title} token={event.inviteToken} organizerName={firstName(event.organizer.name)} />
 
       <Sheet

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { Avatar, PressableScale, Text } from '@/components/ui';
@@ -10,15 +11,20 @@ type Props = {
   onPressMember?: (m: EventMember) => void;
   /** No date yet: the answers are «Er med» / «Ikke denne gangen». */
   interest?: boolean;
+  /** Beside «Har ikke svart», e.g. «Minn på». */
+  pendingAction?: ReactNode;
 };
 
-function Group({ title, members, names, dim, onPress }: { title: string; members: EventMember[]; names: Map<string, string>; dim?: boolean; onPress?: (m: EventMember) => void }) {
+function Group({ title, members, names, dim, onPress, action }: { title: string; members: EventMember[]; names: Map<string, string>; dim?: boolean; onPress?: (m: EventMember) => void; action?: ReactNode }) {
   if (!members.length) return null;
   return (
     <View style={{ marginBottom: spacing.xl }}>
-      <Text variant="headline" style={{ marginBottom: spacing.md }}>
-        {title} ({members.length})
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, marginBottom: spacing.md }}>
+        <Text variant="headline">
+          {title} ({members.length})
+        </Text>
+        {action}
+      </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
         {members.map((m) => (
           <PressableScale
@@ -41,7 +47,7 @@ function Group({ title, members, names, dim, onPress }: { title: string; members
 }
 
 /** Kommer · Kan ikke · Har ikke svart — status is in the heading text, never only colour. Tap someone for actions. */
-export function GuestList({ members, onPressMember, interest }: Props) {
+export function GuestList({ members, onPressMember, interest, pendingAction }: Props) {
   const coming = members.filter((m) => m.status === 'attending' || (m.role === 'organizer' && m.status !== 'declined'));
   const notComing = members.filter((m) => m.status === 'declined');
   // In line for a place, first first.
@@ -53,7 +59,7 @@ export function GuestList({ members, onPressMember, interest }: Props) {
       <Group title={interest ? 'Er med' : 'Kommer'} members={coming} names={names} onPress={onPressMember} />
       <Group title="Venteliste" members={waitlist} names={names} onPress={onPressMember} />
       <Group title={interest ? 'Ikke denne gangen' : 'Kan ikke'} members={notComing} names={names} dim onPress={onPressMember} />
-      <Group title="Har ikke svart" members={waiting} names={names} dim onPress={onPressMember} />
+      <Group title="Har ikke svart" members={waiting} names={names} dim onPress={onPressMember} action={pendingAction} />
     </View>
   );
 }

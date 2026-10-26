@@ -11,15 +11,16 @@ import { confirmDecline } from '@/components/event/confirmDecline';
 import { EventHero } from '@/components/event/EventHero';
 import { EventMessages } from '@/components/event/EventMessages';
 import { GuestList } from '@/components/event/GuestList';
-import { PendingCard } from '@/components/event/PendingCard';
+import { MemberSheet } from '@/components/event/MemberSheet';
+import { RemindButton } from '@/components/event/RemindButton';
 import { ResultsView } from '@/components/event/ResultsView';
 import { SeriesPeopleEditor } from '@/components/event/SeriesPeopleEditor';
 import { ShareSheet } from '@/components/event/ShareSheet';
 import { BottomBar, Button, Card, EmptyState, ErrorState, Icon, IconButton, ListRow, PageSkeleton, Screen, Segmented, Sheet, Text, useToast, type IconName } from '@/components/ui';
 import { repo } from '@/data';
-import { queryClient, useAddEventPhotos, useCancelEvent, useEvent, useRemoveEventMember, useSetRsvp, useUpdateEvent, useUpdateEventSeries } from '@/data/hooks';
-import type { EventMember, EventSeriesInfo, Person, PlannerEvent, SeriesPeople } from '@/data/types';
-import { confirmDestructive, PersonSheet } from '@/components/people/PersonSheet';
+import { queryClient, useAddEventPhotos, useCancelEvent, useEvent, useSetRsvp, useUpdateEvent, useUpdateEventSeries } from '@/data/hooks';
+import type { EventMember, EventSeriesInfo, PlannerEvent, SeriesPeople } from '@/data/types';
+import { confirmDestructive } from '@/components/people/PersonSheet';
 import { ReportForm } from '@/components/people/ReportSheet';
 import { CATEGORIES, thumb } from '@/lib/categories';
 import { formatLong, formatTime, today } from '@/lib/dates';
@@ -86,9 +87,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
     };
   }, [repeatOpen, e.series, isOwner]);
   const updateSeries = useUpdateEventSeries();
-  const [person, setPerson] = useState<Person | null>(null);
   const [personMember, setPersonMember] = useState<EventMember | null>(null);
-  const removeMember = useRemoveEventMember();
   const updateEvent = useUpdateEvent(e.id);
   // «Medarrangører og faste plasser» on a single event.
   const [rolesOpen, setRolesOpen] = useState(false);
@@ -252,18 +251,17 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
           </View>
 
           <View style={{ paddingTop: spacing.xl }}>
-            {tab === 'guests' ? <>
-                {isOrganizer ? <PendingCard event={e} onShareLinks={() => setShareOpen(true)} style={{ marginBottom: spacing.lg }} /> : null}
+            {tab === 'guests' ? (
                 <GuestList
                   members={e.members}
                   interest={e.status === 'draft'}
+                  pendingAction={isOrganizer ? <RemindButton event={e} onShareLinks={() => setShareOpen(true)} /> : undefined}
                   onPressMember={(m) => {
                     if (m.userId === meId) return;
                     setPersonMember(m);
-                    setPerson(m.person);
                   }}
                 />
-              </> : null}
+              ) : null}
             {tab === 'details' ? (
               <View style={{ gap: spacing.lg }}>
                 {e.description ? <Text variant="body">{e.description}</Text> : <Text variant="body" color="textSecondary">Ingen detaljer ennå.</Text>}
@@ -398,31 +396,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
       ) : null}
 
       <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} title={e.title} token={e.inviteToken} organizerName={firstName(e.organizer.name)} />
-      <PersonSheet
-        person={person}
-        onClose={() => {
-          setPerson(null);
-          setPersonMember(null);
-        }}
-        extra={
-          isOrganizer && personMember && personMember.role === 'guest' ? (
-            <ListRow
-              icon="user-minus"
-              title="Fjern fra arrangementet"
-              subtitle="De får ikke beskjed"
-              destructive
-              onPress={() =>
-                confirmDestructive(`Fjerne ${firstName(personMember.person.name)}?`, 'Invitasjonen slutter å virke. Du kan invitere dem igjen senere.', 'Fjern', async () => {
-                  await removeMember.mutateAsync(personMember.id);
-                  toast(`${firstName(personMember.person.name)} er fjernet`);
-                  setPerson(null);
-                  setPersonMember(null);
-                })
-              }
-            />
-          ) : undefined
-        }
-      />
+      <MemberSheet member={personMember} canRemove={isOrganizer} onClose={() => setPersonMember(null)} />
       {isOwner && !e.series ? (
         <Sheet visible={rolesOpen} onClose={() => setRolesOpen(false)} title="Medarrangører og plasser">
           {roles ? <SeriesPeopleEditor members={e.members} value={roles} onChange={setRoles} recurring={false} /> : null}
