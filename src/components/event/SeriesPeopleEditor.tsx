@@ -11,7 +11,7 @@ import { PlacesSetting } from './PlacesSetting';
  * faste gjester (always a place — nobody else can see it) and the limit, for every round.
  * Only people with an account can have a role.
  */
-export function SeriesPeopleEditor({ members, value, onChange }: { members: EventMember[]; value: SeriesPeople; onChange: (v: SeriesPeople) => void }) {
+export function SeriesPeopleEditor({ members, value, onChange, recurring = true }: { members: EventMember[]; value: SeriesPeople; onChange: (v: SeriesPeople) => void; recurring?: boolean }) {
   const people = members.filter((m) => m.role === 'guest' && m.userId);
   const toggle = (key: 'cohostIds' | 'reservedIds', id: string) => {
     const other = key === 'cohostIds' ? 'reservedIds' : 'cohostIds';
@@ -34,7 +34,7 @@ export function SeriesPeopleEditor({ members, value, onChange }: { members: Even
               </View>
             ))}
           </Section>
-          <Section title="Faste gjester" body="Har alltid plass, hver gang. Det er bare du som ser hvem det er.">
+          <Section title="Faste gjester" body={recurring ? 'Har alltid plass, hver gang. Det er bare du som ser hvem det er.' : 'Har alltid plass. Det er bare du som ser hvem det er.'}>
             {people.map((m, i) => (
               <View key={m.id}>
                 {i ? <Divider /> : null}

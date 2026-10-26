@@ -379,6 +379,12 @@ export interface EventPatch {
   maxParticipants?: number | null;
 }
 
+/** Co-hosts and fixed places on a single (not recurring) event. Organizer only. */
+export interface EventPeople {
+  cohostIds: string[];
+  reservedIds: string[];
+}
+
 /** Who always has a place on a recurring event, and how many can come. */
 export interface SeriesPeople {
   cohostIds: string[];

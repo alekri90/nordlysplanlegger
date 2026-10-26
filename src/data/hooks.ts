@@ -237,6 +237,16 @@ export function useSetSeriesCover() {
   });
 }
 
+export function useRemindPending(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: () => repo.remindPending(eventId), onSuccess: () => qc.invalidateQueries({ queryKey: keys.event(eventId) }) });
+}
+
+export function useRemoveEventMember() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (memberId: string) => repo.removeEventMember(memberId), onSuccess: () => invalidateAll(qc) });
+}
+
 export function useUpdateEventSeries() {
   const qc = useQueryClient();
   return useMutation({

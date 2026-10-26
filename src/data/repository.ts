@@ -10,6 +10,7 @@ import type {
   EventSeriesInfo,
   EventPatch,
   SeriesPeople,
+  EventPeople,
   FriendRequest,
   FriendshipInfo,
   FriendshipState,
@@ -91,6 +92,13 @@ export interface Repository {
   setSeriesPeople(seriesId: string, people: SeriesPeople): Promise<void>;
   /** Organizer only. */
   getSeriesPeople(seriesId: string): Promise<SeriesPeople>;
+  /** «Minn på»: notifies everyone with an account who hasn't answered (not more than every 12 h). */
+  remindPending(eventId: string): Promise<{ sent: number; withoutAccount: number }>;
+  /** Organizer side: take someone off the guest list, quietly. */
+  removeEventMember(memberId: string): Promise<void>;
+  /** Organizer only, single events (recurring ones use the series). */
+  getEventPeople(eventId: string): Promise<EventPeople>;
+  setEventPeople(eventId: string, people: EventPeople): Promise<void>;
   /** Newest first. */
   listEventMessages(eventId: string): Promise<EventMessage[]>;
   /** Organizer only; everyone else with an account is notified. */

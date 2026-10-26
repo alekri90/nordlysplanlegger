@@ -11,13 +11,14 @@ import { confirmDecline } from '@/components/event/confirmDecline';
 import { EventHero } from '@/components/event/EventHero';
 import { EventMessages } from '@/components/event/EventMessages';
 import { GuestList } from '@/components/event/GuestList';
+import { PendingCard } from '@/components/event/PendingCard';
 import { ResultsView } from '@/components/event/ResultsView';
 import { SeriesPeopleEditor } from '@/components/event/SeriesPeopleEditor';
 import { ShareSheet } from '@/components/event/ShareSheet';
 import { BottomBar, Button, Card, EmptyState, ErrorState, Icon, IconButton, ListRow, PageSkeleton, Screen, Segmented, Sheet, Text, useToast, type IconName } from '@/components/ui';
 import { repo } from '@/data';
-import { queryClient, useAddEventPhotos, useCancelEvent, useEvent, useSetRsvp, useUpdateEventSeries } from '@/data/hooks';
-import type { EventSeriesInfo, Person, PlannerEvent, SeriesPeople } from '@/data/types';
+import { queryClient, useAddEventPhotos, useCancelEvent, useEvent, useRemoveEventMember, useSetRsvp, useUpdateEvent, useUpdateEventSeries } from '@/data/hooks';
+import type { EventMember, EventSeriesInfo, Person, PlannerEvent, SeriesPeople } from '@/data/types';
 import { confirmDestructive, PersonSheet } from '@/components/people/PersonSheet';
 import { ReportForm } from '@/components/people/ReportSheet';
 import { CATEGORIES, thumb } from '@/lib/categories';
@@ -86,6 +87,21 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
   }, [repeatOpen, e.series, isOwner]);
   const updateSeries = useUpdateEventSeries();
   const [person, setPerson] = useState<Person | null>(null);
+  const [personMember, setPersonMember] = useState<EventMember | null>(null);
+  const removeMember = useRemoveEventMember();
+  const updateEvent = useUpdateEvent(e.id);
+  // «Medarrangører og faste plasser» on a single event.
+  const [rolesOpen, setRolesOpen] = useState(false);
+  const [roles, setRoles] = useState<SeriesPeople | null>(null);
+  const [savingRoles, setSavingRoles] = useState(false);
+  useEffect(() => {
+    if (!rolesOpen || !isOwner) return;
+    let alive = true;
+    repo.getEventPeople(e.id).then((p) => alive && setRoles({ ...p, maxParticipants: e.maxParticipants ?? null })).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [rolesOpen, isOwner, e.id, e.maxParticipants]);
   const rsvp = useSetRsvp(e.id);
   const cancel = useCancelEvent(e.id);
   const addPhotosMutation = useAddEventPhotos(e.id);
@@ -236,7 +252,18 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
           </View>
 
           <View style={{ paddingTop: spacing.xl }}>
-            {tab === 'guests' ? <GuestList members={e.members} interest={e.status === 'draft'} onPressMember={(m) => m.userId !== meId && setPerson(m.person)} /> : null}
+            {tab === 'guests' ? <>
+                {isOrganizer ? <PendingCard event={e} onShareLinks={() => setShareOpen(true)} style={{ marginBottom: spacing.lg }} /> : null}
+                <GuestList
+                  members={e.members}
+                  interest={e.status === 'draft'}
+                  onPressMember={(m) => {
+                    if (m.userId === meId) return;
+                    setPersonMember(m);
+                    setPerson(m.person);
+                  }}
+                />
+              </> : null}
             {tab === 'details' ? (
               <View style={{ gap: spacing.lg }}>
                 {e.description ? <Text variant="body">{e.description}</Text> : <Text variant="body" color="textSecondary">Ingen detaljer ennå.</Text>}
@@ -371,7 +398,58 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
       ) : null}
 
       <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} title={e.title} token={e.inviteToken} organizerName={firstName(e.organizer.name)} />
-      <PersonSheet person={person} onClose={() => setPerson(null)} />
+      <PersonSheet
+        person={person}
+        onClose={() => {
+          setPerson(null);
+          setPersonMember(null);
+        }}
+        extra={
+          isOrganizer && personMember && personMember.role === 'guest' ? (
+            <ListRow
+              icon="user-minus"
+              title="Fjern fra arrangementet"
+              subtitle="De får ikke beskjed"
+              destructive
+              onPress={() =>
+                confirmDestructive(`Fjerne ${firstName(personMember.person.name)}?`, 'Invitasjonen slutter å virke. Du kan invitere dem igjen senere.', 'Fjern', async () => {
+                  await removeMember.mutateAsync(personMember.id);
+                  toast(`${firstName(personMember.person.name)} er fjernet`);
+                  setPerson(null);
+                  setPersonMember(null);
+                })
+              }
+            />
+          ) : undefined
+        }
+      />
+      {isOwner && !e.series ? (
+        <Sheet visible={rolesOpen} onClose={() => setRolesOpen(false)} title="Medarrangører og plasser">
+          {roles ? <SeriesPeopleEditor members={e.members} value={roles} onChange={setRoles} recurring={false} /> : null}
+          <Button
+            title="Lagre"
+            variant="ink"
+            loading={savingRoles}
+            style={{ marginTop: spacing.lg }}
+            onPress={async () => {
+              if (roles) {
+                setSavingRoles(true);
+                try {
+                  await repo.setEventPeople(e.id, { cohostIds: roles.cohostIds, reservedIds: roles.reservedIds });
+                  if (roles.maxParticipants !== (e.maxParticipants ?? null)) await updateEvent.mutateAsync({ maxParticipants: roles.maxParticipants });
+                  await queryClient.invalidateQueries();
+                  toast({ message: 'Lagret', tone: 'success' });
+                  setRolesOpen(false);
+                } catch {
+                  toast({ message: 'Kunne ikke lagre', tone: 'error' });
+                } finally {
+                  setSavingRoles(false);
+                }
+              }
+            }}
+          />
+        </Sheet>
+      ) : null}
       {e.series ? (
         <Sheet visible={repeatOpen} onClose={() => setRepeatOpen(false)} title="Endre gjentakelse">
           <RepeatEditor value={repeatDraft ?? e.series} poll={e.series.dateMode === 'poll_each'} firstDate={e.selectedDate} onChange={(patch) => setRepeatDraft({ ...(repeatDraft ?? e.series!), ...patch })} />
@@ -438,6 +516,9 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
               </>
             ) : null}
             {!isOrganizer ? <ListRow icon="flag" title="Rapporter arrangementet" subtitle="Også bilder som er delt her" onPress={() => setReporting(true)} /> : null}
+            {isOwner && !e.series && !isPast && e.status !== 'cancelled' ? (
+              <ListRow icon="users" title="Medarrangører og plasser" subtitle="Hvem som har alltid plass, og hvor mange" onPress={() => { setMoreOpen(false); setRolesOpen(true); }} />
+            ) : null}
             {isOwner && !isPast ? <ListRow icon="x-circle" title="Avlys arrangementet" destructive onPress={confirmCancel} /> : null}
           </>
         )}

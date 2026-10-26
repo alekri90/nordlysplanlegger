@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { TimePicker } from '@/components/create/TimePicker';
 import { Avatar, BottomBar, Button, Card, Confetti, Header, Icon, IconButton, PressableScale, Screen, ScreenScroll, Sheet, Text, useToast } from '@/components/ui';
@@ -16,6 +16,7 @@ import { hasResponded, rankDateOptions, responseProgress } from '@/lib/ranking';
 import { spacing } from '@/theme';
 import { DateResultRow } from './DateResultRow';
 import { EventMessages } from './EventMessages';
+import { PendingCard } from './PendingCard';
 import { ShareSheet } from './ShareSheet';
 
 const VISIBLE = 5;
@@ -145,17 +146,7 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
           </Text>
         ) : null}
 
-        {pending.length ? (
-          <Animated.View entering={FadeInDown.duration(300)}>
-            <Card muted style={{ marginTop: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-              <Text variant="footnote" color="textSecondary" style={{ flex: 1 }}>
-                Venter på {pending.slice(0, 3).map((m) => nameOf(m.id)).join(', ')}
-                {pending.length > 3 ? ` og ${pending.length - 3} til` : ''}
-              </Text>
-              <Button title="Minn på" size="sm" variant="secondary" icon="send" onPress={() => setShareOpen(true)} />
-            </Card>
-          </Animated.View>
-        ) : null}
+        <PendingCard event={event} onShareLinks={() => setShareOpen(true)} style={{ marginTop: spacing.lg }} />
 
         <EventMessages eventId={event.id} isOrganizer style={{ marginTop: spacing.xl }} />
       </ScreenScroll>

@@ -610,6 +610,37 @@ export const supabaseRepository: Repository = {
     };
   },
 
+  async remindPending(eventId) {
+    const { data, error } = await getSupabase().rpc('remind_pending', { p_event_id: eventId });
+    fail(error);
+    const r = data as { sent: number; without_account: number };
+    return { sent: r.sent, withoutAccount: r.without_account };
+  },
+
+  async removeEventMember(memberId) {
+    const { error } = await getSupabase().rpc('remove_event_member', { p_member_id: memberId });
+    fail(error);
+  },
+
+  async getEventPeople(eventId) {
+    const sb = getSupabase();
+    const [members, reserved] = await Promise.all([
+      sb.from('event_members').select('user_id').eq('event_id', eventId).eq('is_cohost', true),
+      sb.from('event_reserved_seats').select('user_id').eq('event_id', eventId),
+    ]);
+    fail(members.error);
+    fail(reserved.error);
+    return {
+      cohostIds: (members.data ?? []).map((m) => m.user_id as string).filter(Boolean),
+      reservedIds: (reserved.data ?? []).map((r) => r.user_id as string),
+    };
+  },
+
+  async setEventPeople(eventId, people) {
+    const { error } = await getSupabase().rpc('set_event_people', { p_event_id: eventId, p_cohost_ids: people.cohostIds, p_reserved_ids: people.reservedIds });
+    fail(error);
+  },
+
   async setSeriesCover(seriesId, coverImageUrl, eventId) {
     const url = isLocalUri(coverImageUrl) ? await uploadImage('covers', await requireUserId(), coverImageUrl) : coverImageUrl;
     const { error } = await getSupabase().rpc('set_series_cover', { p_series_id: seriesId, p_url: url, p_event_id: eventId });

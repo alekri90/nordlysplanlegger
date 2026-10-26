@@ -213,6 +213,7 @@ function demoPromote(e: PlannerEvent) {
 }
 
 const seriesPeople = new Map<string, import('../types').SeriesPeople>();
+const eventReserved = new Map<string, string[]>();
 
 function findEvent(id: string) {
   const e = state.events.find((x) => x.id === id);
@@ -611,6 +612,37 @@ export const demoRepository: Repository = {
   async getSeriesPeople(seriesId) {
     await wait(100);
     return seriesPeople.get(seriesId) ?? { cohostIds: [], reservedIds: [], maxParticipants: null };
+  },
+
+  async remindPending(eventId) {
+    await wait(300);
+    const pending = findEvent(eventId).members.filter((m) => m.role === 'guest' && (m.status === 'invited' || m.status === 'opened'));
+    return { sent: pending.filter((m) => m.userId).length, withoutAccount: pending.filter((m) => !m.userId).length };
+  },
+
+  async removeEventMember(memberId) {
+    await wait(200);
+    for (const e of state.events) {
+      const was = e.members.find((m) => m.id === memberId);
+      if (!was) continue;
+      e.members = e.members.filter((m) => m.id !== memberId);
+      if (was.status === 'attending') demoPromote(e);
+      e.placesTaken = demoPlacesTaken(e);
+    }
+  },
+
+  async getEventPeople(eventId) {
+    await wait(100);
+    const e = findEvent(eventId);
+    return { cohostIds: e.members.filter((m) => m.isCohost && m.userId).map((m) => m.userId!), reservedIds: eventReserved.get(eventId) ?? [] };
+  },
+
+  async setEventPeople(eventId, people) {
+    await wait(200);
+    const e = findEvent(eventId);
+    for (const m of e.members) m.isCohost = !!m.userId && people.cohostIds.includes(m.userId);
+    eventReserved.set(eventId, people.reservedIds);
+    e.placesTaken = demoPlacesTaken(e);
   },
 
   async setSeriesCover(seriesId, coverImageUrl, eventId) {

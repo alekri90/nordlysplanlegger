@@ -902,5 +902,65 @@ console.log('\nSpontaneous plans');
   });
 }
 
+console.log('\nReminding, removing, roles on single events');
+{
+  const org = await newUser('minn@example.com', { display_name: 'Mira Minn', username: 'miraminn' });
+  const [slow, quick, other] = [
+    await newUser('treg@example.com', { display_name: 'Tore Treg', username: 'toretreg' }),
+    await newUser('rask@example.com', { display_name: 'Rita Rask', username: 'ritarask' }),
+    await newUser('annen@example.com', { display_name: 'Ola Annen', username: 'olaannen' }),
+  ];
+  for (const u of [slow, quick, other]) { await as(org); await q(`select send_friend_request($1)`, [u]); await as(u); await q(`select send_friend_request($1)`, [org]); }
+  await as(org);
+  const [{ r }] = await q(`select create_event($1) r`, [{ title: 'Grilling', category: 'dinner', date_mode: 'fixed', fixed_date: '2027-08-14', time_hint: 'evening', member_user_ids: [slow, quick, other], guest_names: ['Gjesten'] }]);
+  const ev = r.event_id;
+  await as(quick);
+  await q(`update event_members set status = 'attending', responded_at = now() where event_id = $1 and user_id = $2`, [ev, quick]);
+
+  await check('«Minn på» reaches those who haven\'t answered, once per 12 hours', async () => {
+    await as(org);
+    const [{ x }] = await q(`select remind_pending($1) x`, [ev]);
+    assert.deepEqual(x, { sent: 2, without_account: 1 });
+    const n = await q(`select user_id, title, body from notifications where event_id = $1 and data ->> 'kind' = 'manual_reminder' order by user_id`, [ev]);
+    assert.deepEqual(new Set(n.map((m) => m.user_id)), new Set([slow, other]));
+    assert.equal(n[0].title, 'Mira venter på svaret ditt');
+    assert.equal(n[0].body, 'Grilling – kommer du?');
+    const [{ x: again }] = await q(`select remind_pending($1) x`, [ev]);
+    assert.equal(again.sent, 0, 'not again so soon');
+    await as(quick);
+    await assert.rejects(q(`select remind_pending($1)`, [ev]), /not_organizer/);
+  });
+
+  await check('the organizer removes someone who doesn\'t answer; their link and notices go', async () => {
+    await as(org);
+    const [m] = await q(`select id from event_members where event_id = $1 and user_id = $2`, [ev, slow]);
+    await q(`select remove_event_member($1)`, [m.id]);
+    assert.equal((await q(`select count(*)::int n from event_members where event_id = $1 and user_id = $2`, [ev, slow]))[0].n, 0);
+    assert.equal((await q(`select count(*)::int n from notifications where event_id = $1 and user_id = $2`, [ev, slow]))[0].n, 0);
+    const [g] = await q(`select id, guest_id from event_members where event_id = $1 and user_id is null and role = 'guest'`, [ev]);
+    await q(`select remove_event_member($1)`, [g.id]);
+    assert.equal((await q(`select count(*)::int n from event_invites where event_id = $1 and guest_profile_id = $2`, [ev, g.guest_id]))[0].n, 0, 'personal link gone');
+    const [o] = await q(`select id from event_members where event_id = $1 and role = 'organizer'`, [ev]);
+    await assert.rejects(q(`select remove_event_member($1)`, [o.id]), /cannot_remove_organizer/);
+    await as(quick);
+    const [om] = await q(`select id from event_members where event_id = $1 and user_id = $2`, [ev, other]);
+    await assert.rejects(q(`select remove_event_member($1)`, [om.id]), /not_organizer/);
+  });
+
+  await check('co-hosts and fixed places on a single event', async () => {
+    await as(org);
+    await q(`update events set max_participants = 2 where id = $1`, [ev]);
+    await q(`select set_event_people($1, $2, $3)`, [ev, [other], []]);
+    assert.equal((await q(`select is_cohost from event_members where event_id = $1 and user_id = $2`, [ev, other]))[0].is_cohost, true);
+    await q(`select set_event_people($1, $2, $3)`, [ev, [], [other]]);
+    assert.equal((await q(`select count(*)::int n from event_reserved_seats where event_id = $1 and user_id = $2`, [ev, other]))[0].n, 1);
+    // Organizer + Rita (coming) = 2 = full, but Ola has a fixed place.
+    await as(other);
+    await q(`update event_members set status = 'attending', responded_at = now() where event_id = $1 and user_id = $2`, [ev, other]);
+    assert.equal((await q(`select status::text s from event_members where event_id = $1 and user_id = $2`, [ev, other]))[0].s, 'attending');
+    await assert.rejects(q(`select set_event_people($1, $2, $3)`, [ev, [other], []]), /not_organizer/);
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);
