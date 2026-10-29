@@ -43,7 +43,7 @@ export default function CalendarTab() {
 
   const planOn = (date: string) => {
     resetDraft();
-    setDraft({ dateMode: 'fixed', fixedDate: date });
+    setDraft({ dateMode: 'fixed', fixedDate: date, datePreset: true });
     router.push('/create');
   };
 

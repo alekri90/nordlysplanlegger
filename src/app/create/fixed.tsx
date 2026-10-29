@@ -7,7 +7,7 @@ import { StepHeader } from '@/components/create/StepHeader';
 import { RepeatEditor, RepeatSection } from '@/components/create/RepeatEditor';
 import { PlaceDetails } from '@/components/create/PlaceDetails';
 import { TimePicker } from '@/components/create/TimePicker';
-import { BottomBar, Button, PageTitle, Screen, ScreenScroll } from '@/components/ui';
+import { BottomBar, Button, Card, Icon, PageTitle, PressableScale, Screen, ScreenScroll, Text } from '@/components/ui';
 import { addMonths, formatLong, monthKey, today } from '@/lib/dates';
 import { useCreateDraft } from '@/state/createDraft';
 import { spacing } from '@/theme';
@@ -24,15 +24,35 @@ export default function CreateFixed() {
     <Screen>
       <StepHeader step={2} />
       <ScreenScroll bottomInset={140}>
-        <PageTitle title="Hvilken dag?" />
-        <MonthCalendar
-          month={month}
-          getState={getState}
-          onPressDay={(d) => draft.set({ fixedDate: d })}
-          onPrev={month > monthKey(t) ? () => setMonth(addMonths(month, -1)) : undefined}
-          onNext={() => setMonth(addMonths(month, 1))}
-          dayHint="Trykk for å velge dagen"
-        />
+        {draft.datePreset && draft.fixedDate ? (
+          <>
+            <PageTitle title="Når på dagen?" />
+            {/* The day is already chosen in the calendar; it can still be changed. */}
+            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <Icon name="calendar" size={18} color="primary" />
+              <Text variant="headline" style={{ flex: 1 }}>
+                {formatLong(draft.fixedDate)}
+              </Text>
+              <PressableScale onPress={() => draft.set({ datePreset: false })} hitSlop={8} accessibilityRole="button">
+                <Text variant="footnote" color="primary">
+                  Bytt dag
+                </Text>
+              </PressableScale>
+            </Card>
+          </>
+        ) : (
+          <>
+            <PageTitle title="Hvilken dag?" />
+            <MonthCalendar
+              month={month}
+              getState={getState}
+              onPressDay={(d) => draft.set({ fixedDate: d })}
+              onPrev={month > monthKey(t) ? () => setMonth(addMonths(month, -1)) : undefined}
+              onNext={() => setMonth(addMonths(month, 1))}
+              dayHint="Trykk for å velge dagen"
+            />
+          </>
+        )}
         <View style={{ marginTop: spacing.xxl }}>
           <TimePicker
             hint={draft.timeHint === 'exact' ? 'exact' : 'any'}

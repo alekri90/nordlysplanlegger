@@ -11,7 +11,7 @@ import { BottomBar, Button, Divider, Icon, Input, KeyboardAware, PageTitle, Pres
 import { useEvents } from '@/data/hooks';
 import type { PlannerEvent } from '@/data/types';
 import { coverOptionsFor, defaultCoverFor, thumb } from '@/lib/categories';
-import { today } from '@/lib/dates';
+import { formatLong, today } from '@/lib/dates';
 import { eventDateLine } from '@/lib/eventText';
 import { useCreateDraft } from '@/state/createDraft';
 import { useMe } from '@/state/session';
@@ -97,7 +97,11 @@ export default function CreateWhat() {
           </Animated.View>
         </ScreenScroll>
         <BottomBar>
-          <Button title="Velg dato og tid" disabled={!valid} onPress={() => router.push('/create/when')} />
+          {draft.datePreset && draft.fixedDate ? (
+            <Button title={`Velg klokkeslett · ${formatLong(draft.fixedDate)}`} disabled={!valid} onPress={() => router.push('/create/fixed')} />
+          ) : (
+            <Button title="Velg dato og tid" disabled={!valid} onPress={() => router.push('/create/when')} />
+          )}
         </BottomBar>
       </KeyboardAware>
 

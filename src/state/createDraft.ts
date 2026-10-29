@@ -23,6 +23,8 @@ export type CreateDraft = {
   period: Period;
   optionDates: string[];
   fixedDate: string | null;
+  /** The day was chosen before starting (from the calendar): skip «Når passer det?», only the time is left. */
+  datePreset: boolean;
   timeHint: TimeHint;
   startTime: string | null;
   groupId: string | null;
@@ -68,6 +70,7 @@ const initial = (): CreateDraft => ({
   period: { kind: 'month', month: suggestedMonth() },
   optionDates: [],
   fixedDate: null,
+  datePreset: false,
   timeHint: 'evening',
   startTime: null,
   groupId: null,
