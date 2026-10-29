@@ -70,7 +70,14 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
   return (
     <Screen>
       <Confetti active={everyoneCan} count={30} />
-      <Header right={<IconButton icon="share" accessibilityLabel="Del invitasjonen" onPress={() => setShareOpen(true)} />} />
+      <Header
+        right={
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <IconButton icon="user-plus" accessibilityLabel="Inviter flere" onPress={() => router.push(`/event/${event.id}/invite`)} />
+            <IconButton icon="share" accessibilityLabel="Del invitasjonen" onPress={() => setShareOpen(true)} />
+          </View>
+        }
+      />
       <ScreenScroll bottomInset={140}>
         <Animated.View entering={FadeIn.duration(260)} style={{ marginBottom: spacing.xl }}>
           <Text variant="overline" color="textSecondary">

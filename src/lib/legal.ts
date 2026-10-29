@@ -31,13 +31,15 @@ export const PRIVACY: LegalSection[] = [
       'Gjester uten profil: navnet du skriver inn og svarene dine. Telefonen din husker en tilfeldig nøkkel slik at du kan endre svaret senere – vi kobler aldri svar til en profil basert på navn.',
       'Venner og gjenger: hvem du er venn med, venneforespørsler og hvilke gjenger du er med i.',
       'Varsler: en anonym push-nøkkel for telefonen din og hvilke varsler du vil ha.',
+      'Mobilnummer (valgfritt): hvis du legger det inn på profilen, lagrer vi det slik at folk som har nummeret ditt i kontaktene sine kan finne deg. Det vises aldri for andre, og du kan slå det av under Personvern eller slette det.',
+      'Kontaktlisten: hvis du trykker «Finn venner fra kontaktene», leser appen telefonnumrene i kontaktlisten din og sjekker dem mot mobilnumrene på profilene. Vi lagrer ikke kontaktlisten, navn eller numre fra den – du får bare se hvem som allerede bruker appen.',
       'Blokkeringer og rapporter: hvem du har blokkert, og rapporter du sender om personer, arrangementer eller gjenger. Den som blir rapportert eller blokkert får ikke vite hvem det var.',
     ],
   },
   {
     title: 'Hvem som ser hva',
     paragraphs: [
-      'Visningsnavn, brukernavn og profilbilde kan sees av andre etter innstillingen du velger under Personvern: alle, venners venner eller ingen. E-postadressen din vises aldri.',
+      'Visningsnavn, brukernavn og profilbilde kan sees av andre etter innstillingen du velger under Personvern: alle, venners venner eller ingen. E-postadressen og mobilnummeret ditt vises aldri.',
       'Svarene dine på et arrangement, og bilder som deles der, kan sees av arrangøren og de andre som er invitert til det samme arrangementet.',
     ],
   },

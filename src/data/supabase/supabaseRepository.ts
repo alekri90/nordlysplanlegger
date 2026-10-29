@@ -617,6 +617,13 @@ export const supabaseRepository: Repository = {
     return { sent: r.sent, withoutAccount: r.without_account };
   },
 
+  async addEventMembers(eventId, userIds) {
+    if (!userIds.length) return 0;
+    const { data, error } = await getSupabase().rpc('add_event_members', { p_event_id: eventId, p_user_ids: userIds });
+    fail(error);
+    return data as number;
+  },
+
   async removeEventMember(memberId) {
     const { error } = await getSupabase().rpc('remove_event_member', { p_member_id: memberId });
     fail(error);
@@ -882,6 +889,33 @@ export const supabaseRepository: Repository = {
     return (data as Row[]).map((r) => ({ ...fromPersonRow(r), username: r.username, friendship: r.friendship, mutualFriends: r.mutual_friends, mutualGroups: r.mutual_groups }));
   },
 
+  async matchContacts(phones) {
+    if (!phones.length) return [];
+    const { data, error } = await getSupabase().rpc('match_contacts', { p_phones: phones.slice(0, 3000) });
+    fail(error);
+    type Row = PersonRow & { friendship: FriendshipState; mutual_friends: number; mutual_groups: number };
+    return (data as Row[]).map((r) => ({ ...fromPersonRow(r), username: r.username, friendship: r.friendship, mutualFriends: r.mutual_friends, mutualGroups: r.mutual_groups }));
+  },
+
+  async getMyPhone() {
+    const sb = getSupabase();
+    const userId = (await sb.auth.getUser()).data.user?.id;
+    if (!userId) return { phone: null, discoverable: true };
+    const { data, error } = await sb.from('profile_phones').select('phone, discoverable').eq('user_id', userId).maybeSingle();
+    fail(error);
+    return { phone: data?.phone ?? null, discoverable: data?.discoverable ?? true };
+  },
+
+  async setMyPhone({ phone, discoverable }) {
+    const sb = getSupabase();
+    const userId = (await sb.auth.getUser()).data.user?.id;
+    if (!userId) throw new Error('Du må være logget inn');
+    const { error } = phone
+      ? await sb.from('profile_phones').upsert({ user_id: userId, phone, discoverable, updated_at: new Date().toISOString() })
+      : await sb.from('profile_phones').delete().eq('user_id', userId);
+    fail(error);
+  },
+
   async peopleYouMayKnow() {
     const { data, error } = await getSupabase().rpc('people_you_may_know', { p_limit: 10 });
     fail(error);
@@ -1045,7 +1079,7 @@ export const supabaseRepository: Repository = {
 
   async exportMyData() {
     const me = await this.getMe();
-    const [events, groups, notifications] = await Promise.all([this.listEvents(), this.listGroups(), this.listNotifications()]);
-    return JSON.stringify({ exportedAt: new Date().toISOString(), profile: me, events, groups, notifications }, null, 2);
+    const [events, groups, notifications, phone] = await Promise.all([this.listEvents(), this.listGroups(), this.listNotifications(), this.getMyPhone()]);
+    return JSON.stringify({ exportedAt: new Date().toISOString(), profile: me, phone, events, groups, notifications }, null, 2);
   },
 };

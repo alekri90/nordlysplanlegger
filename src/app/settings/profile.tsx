@@ -5,7 +5,8 @@ import { View } from 'react-native';
 
 import { UsernameField } from '@/components/people/UsernameField';
 import { Avatar, BottomBar, Button, Header, Icon, Input, KeyboardAware, PressableScale, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
-import { useUpdateProfile } from '@/data/hooks';
+import { useMyPhone, useSetMyPhone, useUpdateProfile } from '@/data/hooks';
+import { formatPhone, normalizePhone } from '@/lib/phone';
 import { useMe, useSession } from '@/state/session';
 import { spacing, useColors } from '@/theme';
 
@@ -21,6 +22,13 @@ export default function EditProfile() {
   const [usernameValid, setUsernameValid] = useState(true);
   const [avatar, setAvatar] = useState<string | null | undefined>(undefined);
   const onValid = useCallback((v: boolean) => setUsernameValid(v), []);
+  const myPhone = useMyPhone();
+  const savePhone = useSetMyPhone();
+  // null until edited: show the saved number.
+  const [phoneDraft, setPhone] = useState<string | null>(null);
+  const phone = phoneDraft ?? (myPhone.data?.phone ? formatPhone(myPhone.data.phone) : '');
+  const phoneE164 = phone.trim() ? normalizePhone(phone) : null;
+  const phoneValid = !phone.trim() || !!phoneE164;
 
   const pick = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 });
@@ -36,6 +44,7 @@ export default function EditProfile() {
         ...(avatar !== undefined ? { avatarUri: avatar } : {}),
       });
       setProfile(profile);
+      if (phoneE164 !== (myPhone.data?.phone ?? null)) await savePhone.mutateAsync({ phone: phoneE164, discoverable: myPhone.data?.discoverable ?? true });
       toast({ message: 'Profilen er oppdatert', tone: 'success' });
       router.back();
     } catch (e) {
@@ -83,10 +92,25 @@ export default function EditProfile() {
                 {bio.length}/160
               </Text>
             </View>
+            <View>
+              <Input
+                label="Mobilnummer (valgfritt)"
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="912 34 567"
+                keyboardType="phone-pad"
+                textContentType="telephoneNumber"
+                autoComplete="tel"
+                maxLength={20}
+              />
+              <Text variant="footnote" color={phoneValid ? 'textTertiary' : 'danger'} style={{ marginTop: spacing.xs, marginLeft: 4 }}>
+                {phoneValid ? 'Så venner som har nummeret ditt finner deg. Vises aldri for andre.' : 'Skriv et norsk nummer, eller med landskode (+46 …)'}
+              </Text>
+            </View>
           </View>
         </ScreenScroll>
         <BottomBar>
-          <Button variant="ink" title="Lagre" disabled={!name.trim() || !usernameValid} loading={update.isPending} onPress={save} />
+          <Button variant="ink" title="Lagre" disabled={!name.trim() || !usernameValid || !phoneValid} loading={update.isPending || savePhone.isPending} onPress={save} />
         </BottomBar>
       </KeyboardAware>
     </Screen>

@@ -231,7 +231,11 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
 
           <View style={{ flexDirection: 'row', marginTop: spacing.xl }}>
             {e.selectedDate && !isPast ? <ActionButton icon="calendar" label="Kalender" onPress={calendar} /> : null}
-            <ActionButton icon="share-2" label="Del" onPress={() => setShareOpen(true)} />
+            {isOrganizer && !isPast && e.status !== 'cancelled' ? (
+              <ActionButton icon="user-plus" label="Inviter" onPress={() => router.push(`/event/${e.id}/invite`)} />
+            ) : (
+              <ActionButton icon="share-2" label="Del" onPress={() => setShareOpen(true)} />
+            )}
             {isOrganizer ? <ActionButton icon="edit-2" label="Rediger" onPress={() => router.push(`/event/${e.id}/edit`)} /> : null}
             <ActionButton icon="more-horizontal" label="Mer" onPress={() => setMoreOpen(true)} />
           </View>

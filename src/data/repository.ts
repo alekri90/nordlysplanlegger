@@ -11,6 +11,7 @@ import type {
   EventPatch,
   SeriesPeople,
   EventPeople,
+  MyPhone,
   FriendRequest,
   FriendshipInfo,
   FriendshipState,
@@ -96,6 +97,8 @@ export interface Repository {
   remindPending(eventId: string): Promise<{ sent: number; withoutAccount: number }>;
   /** Organizer side: take someone off the guest list, quietly. */
   removeEventMember(memberId: string): Promise<void>;
+  /** Organizer side: invite friends to an event that already exists. Returns how many were added. */
+  addEventMembers(eventId: string, userIds: string[]): Promise<number>;
   /** Organizer only, single events (recurring ones use the series). */
   getEventPeople(eventId: string): Promise<EventPeople>;
   setEventPeople(eventId: string, people: EventPeople): Promise<void>;
@@ -123,6 +126,11 @@ export interface Repository {
   listFriendRequests(): Promise<FriendRequest[]>;
   searchPeople(query: string): Promise<PersonResult[]>;
   peopleYouMayKnow(): Promise<PersonResult[]>;
+  /** Which of these numbers (E.164) belong to someone in the app. The numbers are not stored. */
+  matchContacts(phones: string[]): Promise<PersonResult[]>;
+  getMyPhone(): Promise<MyPhone>;
+  /** `phone: null` removes it. */
+  setMyPhone(value: MyPhone): Promise<void>;
   getPublicProfile(by: { username: string } | { userId: string }): Promise<PublicProfile | null>;
   sendFriendRequest(userId: string): Promise<FriendshipState>;
   respondFriendRequest(requestId: string, accept: boolean): Promise<void>;

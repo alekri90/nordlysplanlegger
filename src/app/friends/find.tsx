@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import { ContactFriends } from '@/components/people/ContactFriends';
 import { FriendButton } from '@/components/people/FriendButton';
 import { PersonRow } from '@/components/people/PersonRow';
 import { ShareProfileSheet } from '@/components/people/ShareProfileSheet';
@@ -71,6 +72,8 @@ export default function FindFriends() {
                   <Icon name="chevron-right" size={18} color="textTertiary" />
                 </Card>
               </PressableScale>
+
+              <ContactFriends row={(p) => row(p, detail(p))} />
 
               {pymk.data?.length ? (
                 <View style={{ marginTop: spacing.xxl }}>

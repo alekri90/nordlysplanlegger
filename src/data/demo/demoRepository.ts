@@ -214,6 +214,7 @@ function demoPromote(e: PlannerEvent) {
 
 const seriesPeople = new Map<string, import('../types').SeriesPeople>();
 const eventReserved = new Map<string, string[]>();
+let demoPhone: import('../types').MyPhone = { phone: null, discoverable: true };
 
 function findEvent(id: string) {
   const e = state.events.find((x) => x.id === id);
@@ -620,6 +621,20 @@ export const demoRepository: Repository = {
     return { sent: pending.filter((m) => m.userId).length, withoutAccount: pending.filter((m) => !m.userId).length };
   },
 
+  async addEventMembers(eventId, userIds) {
+    await wait(300);
+    const e = findEvent(eventId);
+    const dir = directory();
+    let added = 0;
+    for (const id of new Set(userIds)) {
+      const p = dir.get(id);
+      if (!p || id === meId() || !canAddPerson(id) || e.members.some((m) => m.userId === id)) continue;
+      e.members.push({ id: uid('m'), person: { id: p.id, name: p.name, avatarUrl: p.avatarUrl, username: p.username }, userId: p.id, role: 'guest', status: 'invited', unavailableOptionIds: [] });
+      added++;
+    }
+    return added;
+  },
+
   async removeEventMember(memberId) {
     await wait(200);
     for (const e of state.events) {
@@ -898,6 +913,24 @@ export const demoRepository: Repository = {
           a.name.localeCompare(b.name, 'nb'),
       );
     return clone(results.slice(0, 20));
+  },
+
+  async matchContacts(phones) {
+    await wait(300);
+    // Demo: a few people «are» in your contacts.
+    if (!phones.length) return [];
+    const dir = directory();
+    return clone(['u-thea', ...STRANGERS.slice(0, 2).map((p) => p.id)].map((id) => dir.get(id)).filter((p): p is DirectoryEntry => !!p).map(toResult));
+  },
+
+  async getMyPhone() {
+    await wait(100);
+    return { ...demoPhone };
+  },
+
+  async setMyPhone(value) {
+    await wait(200);
+    demoPhone = { ...value };
   },
 
   async peopleYouMayKnow() {

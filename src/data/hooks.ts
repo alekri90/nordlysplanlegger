@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useIsSignedIn } from '@/state/session';
 import { repo } from './index';
 import type { GuestResponseInput, ProfilePatch } from './repository';
-import type { AddMembersInput, CreateEventInput, CreateGroupInput, EventPatch, GroupPatch, GroupRole, NotificationPreferences, ReportInput } from './types';
+import type { AddMembersInput, CreateEventInput, CreateGroupInput, EventPatch, GroupPatch, GroupRole, MyPhone, NotificationPreferences, ReportInput } from './types';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -240,6 +240,21 @@ export function useSetSeriesCover() {
 export function useRemindPending(eventId: string) {
   const qc = useQueryClient();
   return useMutation({ mutationFn: () => repo.remindPending(eventId), onSuccess: () => qc.invalidateQueries({ queryKey: keys.event(eventId) }) });
+}
+
+export function useAddEventMembers(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (userIds: string[]) => repo.addEventMembers(eventId, userIds), onSuccess: () => invalidateAll(qc) });
+}
+
+export function useMyPhone() {
+  const signedIn = useIsSignedIn();
+  return useQuery({ queryKey: ['myPhone'], queryFn: () => repo.getMyPhone(), enabled: signedIn });
+}
+
+export function useSetMyPhone() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (value: MyPhone) => repo.setMyPhone(value), onSuccess: (_d, value) => qc.setQueryData(['myPhone'], value) });
 }
 
 export function useRemoveEventMember() {

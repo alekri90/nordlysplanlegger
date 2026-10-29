@@ -89,6 +89,7 @@ function AppStack() {
         <Stack.Screen name="create" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="event/[id]/locked" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="event/[id]/edit" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="event/[id]/invite" options={{ presentation: 'modal' }} />
         <Stack.Screen name="group/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="group/[id]/add-members" options={{ presentation: 'modal' }} />
         <Stack.Screen name="group/[id]/edit" options={{ presentation: 'modal' }} />

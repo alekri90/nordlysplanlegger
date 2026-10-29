@@ -102,7 +102,7 @@ export default function Locked() {
           <ActionButton icon="edit-2" label="Endre" onPress={() => router.push(`/event/${id}/edit`)} />
         </Animated.View>
 
-        <Button title="Inviter flere" variant="outline" icon="user-plus" onPress={() => setShareOpen(true)} style={{ marginTop: spacing.xl }} />
+        <Button title="Inviter flere" variant="outline" icon="user-plus" onPress={() => router.push(`/event/${id}/invite`)} style={{ marginTop: spacing.xl }} />
 
         <View style={{ marginTop: spacing.xxl }}>
           <SponsoredSlot placement="post_lock_venue" category={e.category} />

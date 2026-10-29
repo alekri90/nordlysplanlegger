@@ -962,5 +962,59 @@ console.log('\nReminding, removing, roles on single events');
   });
 }
 
+console.log('\nInviting friends later, and contacts');
+{
+  const org = await newUser('vert@example.com', { display_name: 'Vera Vert', username: 'veravert' });
+  const pal = await newUser('kompis@example.com', { display_name: 'Kai Kompis', username: 'kaikompis' });
+  const stranger = await newUser('fremmed@example.com', { display_name: 'Frode Fremmed', username: 'frodefremmed' });
+  const host = await newUser('medvert@example.com', { display_name: 'Mona Medvert', username: 'monamedvert' });
+  for (const u of [pal, host]) { await as(org); await q(`select send_friend_request($1)`, [u]); await as(u); await q(`select send_friend_request($1)`, [org]); }
+  await as(org);
+  const [{ r }] = await q(`select create_event($1) r`, [{ title: 'Quiz', category: 'games', date_mode: 'fixed', fixed_date: '2027-10-01', time_hint: 'evening', member_user_ids: [host] }]);
+  const ev = r.event_id;
+
+  await check('the organizer invites a friend afterwards; strangers and those already there are skipped', async () => {
+    await as(org);
+    const [{ n }] = await q(`select add_event_members($1, $2) n`, [ev, [pal, stranger, host]]);
+    assert.equal(n, 1);
+    const [m] = await q(`select status::text s, invited_via from event_members where event_id = $1 and user_id = $2`, [ev, pal]);
+    assert.equal(m.s, 'invited');
+    const [note] = await q(`select title from notifications where user_id = $1 and event_id = $2 and type = 'invited'`, [pal, ev]);
+    assert.equal(note.title, 'Vera inviterte deg til Quiz');
+    assert.equal((await q(`select count(*)::int n from event_members where event_id = $1 and user_id = $2`, [ev, stranger]))[0].n, 0);
+  });
+
+  await check('a guest can\'t invite, a co-host can', async () => {
+    await as(pal);
+    await assert.rejects(q(`select add_event_members($1, $2)`, [ev, [host]]), /not_organizer/);
+    await as(org);
+    await q(`select set_event_people($1, $2, $3)`, [ev, [host], []]);
+    const bea = await newUser('bea@example.com', { display_name: 'Bea Bekjent', username: 'beabekjent' });
+    await as(host); await q(`select send_friend_request($1)`, [bea]); await as(bea); await q(`select send_friend_request($1)`, [host]);
+    await as(host);
+    const [{ n }] = await q(`select add_event_members($1, $2) n`, [ev, [bea]]);
+    assert.equal(n, 1);
+  });
+
+  await check('phone numbers are private and only match when discoverable', async () => {
+    await as(pal);
+    await q(`insert into profile_phones (user_id, phone) values ($1, '+4791234567')`, [pal]);
+    await assert.rejects(q(`insert into profile_phones (user_id, phone) values ($1, '91234567')`, [stranger]));
+    await as(stranger);
+    await q(`insert into profile_phones (user_id, phone, discoverable) values ($1, '+4799999999', false)`, [stranger]);
+    await as(org);
+    const hits = await q(`select id, friendship from match_contacts($1)`, [['+4791234567', '+4799999999', '+4700000000']]);
+    assert.deepEqual(hits.map((h) => h.id), [pal]);
+    assert.equal(hits[0].friendship, 'friends');
+    // Nobody else can read the number.
+    await db.exec('set role authenticated');
+    try {
+      assert.equal((await q(`select count(*)::int n from profile_phones`))[0].n, 0);
+    } finally {
+      await db.exec('reset role');
+    }
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

@@ -46,6 +46,8 @@ const config: ExpoConfig = {
     package: 'no.nordlys.planlegger',
     // Firebase (FCM) for Android push. Public identifiers; the FCM service account key is stored on EAS.
     googleServicesFile: './google-services.json',
+    // We only read phone numbers to find friends; never write to the address book.
+    blockedPermissions: ['android.permission.WRITE_CONTACTS'],
     adaptiveIcon: {
       backgroundColor: '#FFF4EE',
       foregroundImage: './assets/android-icon-foreground.png',
@@ -102,6 +104,12 @@ const config: ExpoConfig = {
         calendarPermission: 'Lar deg legge arrangementer rett i kalenderen din.',
         writeOnlyCalendarPermission: 'Lar deg legge arrangementer rett i kalenderen din.',
         writeOnlyAccess: true,
+      },
+    ],
+    [
+      'expo-contacts',
+      {
+        contactsPermission: 'Lar deg finne venner som allerede bruker appen. Bare telefonnumrene sjekkes – ingenting lagres.',
       },
     ],
     [

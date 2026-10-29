@@ -3,9 +3,10 @@ import { useState } from 'react';
 import { Alert, Platform, Share, View } from 'react-native';
 
 import { PersonRow } from '@/components/people/PersonRow';
-import { Button, Card, Divider, Header, ListRow, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
+import { Button, Card, Divider, Header, ListRow, Screen, ScreenScroll, Text, Toggle, useToast } from '@/components/ui';
 import { repo } from '@/data';
-import { queryClient, useBlocked, useUnblockUser, useUpdateProfile } from '@/data/hooks';
+import { queryClient, useBlocked, useMyPhone, useSetMyPhone, useUnblockUser, useUpdateProfile } from '@/data/hooks';
+import { formatPhone } from '@/lib/phone';
 import type { Discoverability } from '@/data/types';
 import { useMe, useSession } from '@/state/session';
 import { spacing } from '@/theme';
@@ -24,6 +25,8 @@ export default function Privacy() {
   const [busy, setBusy] = useState(false);
   const blocked = useBlocked();
   const unblock = useUnblockUser();
+  const myPhone = useMyPhone();
+  const setPhone = useSetMyPhone();
 
   const exportData = async () => {
     try {
@@ -85,6 +88,30 @@ export default function Privacy() {
               />
             </View>
           ))}
+        </Card>
+        <Card style={{ marginTop: spacing.lg, paddingVertical: spacing.xs }}>
+          {myPhone.data?.phone ? (
+            <ListRow
+              icon="phone"
+              title="Finn meg via mobilnummeret"
+              subtitle={`Folk som har ${formatPhone(myPhone.data.phone)} i kontaktene sine`}
+              trailing={
+                <Toggle
+                  value={myPhone.data.discoverable}
+                  accessibilityLabel="Finn meg via mobilnummeret"
+                  onValueChange={async (discoverable) => {
+                    try {
+                      await setPhone.mutateAsync({ phone: myPhone.data!.phone, discoverable });
+                    } catch {
+                      toast({ message: 'Kunne ikke lagre', tone: 'error' });
+                    }
+                  }}
+                />
+              }
+            />
+          ) : (
+            <ListRow icon="phone" title="Mobilnummer" subtitle="Legg det til, så finner venner deg fra kontaktene sine" chevron onPress={() => router.push('/settings/profile')} />
+          )}
         </Card>
         <Card muted style={{ gap: spacing.sm, marginTop: spacing.lg }}>
           <Text variant="headline">Det andre ser</Text>

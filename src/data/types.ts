@@ -64,6 +64,13 @@ export interface Profile extends Person {
   tier: Tier;
 }
 
+/** Your own phone number. Private: only used so people who have it in their contacts can find you. */
+export interface MyPhone {
+  /** E.164, e.g. +4791234567. */
+  phone: string | null;
+  discoverable: boolean;
+}
+
 /** A person in search results or suggestions. */
 export interface PersonResult extends Person {
   username: string;
