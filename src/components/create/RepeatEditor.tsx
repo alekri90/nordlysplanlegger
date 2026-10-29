@@ -182,7 +182,7 @@ export function RepeatSection({ enabled, onToggle, children }: { enabled: boolea
       <ListRow
         icon="repeat"
         title="Gjenta arrangementet"
-        subtitle={enabled ? undefined : 'Nordlys ordner neste gang selv'}
+        subtitle={enabled ? undefined : 'Planleggeren ordner neste gang selv'}
         trailing={<Toggle value={enabled} onValueChange={onToggle} accessibilityLabel="Gjenta arrangementet" />}
       />
       {enabled ? <View style={{ paddingTop: spacing.sm, paddingBottom: spacing.sm }}>{children}</View> : null}

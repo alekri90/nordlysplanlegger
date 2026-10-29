@@ -39,7 +39,7 @@ Play Console → appen → **Vekst → Butikkoppføring → Hovedoppføring**. S
 >
 > LAGET FOR GJENGEN
 > • Lagre faste gjenger, så inviterer du alle med ett trykk
-> • Gjenta arrangementet – hver uke, annenhver uke eller hver måned. Nordlys lager neste gang selv og finner datoen sammen med gjengen
+> • Gjenta arrangementet – hver uke, annenhver uke eller hver måned. Planleggeren lager neste gang selv og finner datoen sammen med gjengen
 > • Send beskjeder til alle som er invitert, og få påminnelser før det skjer
 > • Inviter nye inn i gjengen med en lenke
 > • Legg til venner med brukernavn eller QR-kode

@@ -628,8 +628,9 @@ console.log('\nRecurring events');
     await as(null);
 
     await q(`select run_event_series('2026-10-30 09:30+00')`); // 10:30 Oslo, 6 days before the 5th
-    const warn = await q(`select title from notifications where user_id = $1 and event_id = $2 and data ->> 'kind' = 'autolock_warning'`, [host, list[1].id]);
+    const warn = await q(`select title, body from notifications where user_id = $1 and event_id = $2 and data ->> 'kind' = 'autolock_warning'`, [host, list[1].id]);
     assert.equal(warn.length, 1);
+    assert.equal(warn[0].body, 'Planleggeren velger dagen flest kan. Vil du velge selv, gjør det i dag.');
     assert.equal((await occ(s))[1].status, 'polling');
 
     await q(`select run_event_series('2026-10-31 09:30+00')`); // 5 days before → Nordlys locks
