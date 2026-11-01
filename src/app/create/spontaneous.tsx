@@ -4,6 +4,7 @@ import { View } from 'react-native';
 
 import { PlaceDetails } from '@/components/create/PlaceDetails';
 import { StepHeader } from '@/components/create/StepHeader';
+import { CalendarConflict } from '@/components/event/CalendarConflict';
 import { BottomBar, Button, Chip, PageTitle, Screen, ScreenScroll, Text } from '@/components/ui';
 import { addDays, today } from '@/lib/dates';
 import { spontaneousTimes, timesByPartOfDay } from '@/lib/spontaneous';
@@ -51,6 +52,7 @@ export default function CreateSpontaneous() {
         <PlaceDetails style={{ marginTop: spacing.xl }} />
       </ScreenScroll>
       <BottomBar>
+        <CalendarConflict when={time ? { date: day === 'today' ? t : addDays(t, 1), startTime: time, timeHint: 'exact' } : null} />
         <Button title={time ? `Hvem er gira? · ${day === 'today' ? 'i dag' : 'i morgen'} ${time}` : 'Velg et tidspunkt'} disabled={!time} onPress={() => router.push('/create/who')} />
       </BottomBar>
     </Screen>

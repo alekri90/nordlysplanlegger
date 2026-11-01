@@ -7,8 +7,11 @@ import { StepHeader } from '@/components/create/StepHeader';
 import { RepeatEditor, RepeatSection } from '@/components/create/RepeatEditor';
 import { PlaceDetails } from '@/components/create/PlaceDetails';
 import { TimePicker } from '@/components/create/TimePicker';
+import { ConflictNote } from '@/components/event/CalendarConflict';
 import { BottomBar, Button, Card, Icon, PageTitle, PressableScale, Screen, ScreenScroll, Text } from '@/components/ui';
-import { addMonths, formatLong, monthKey, today } from '@/lib/dates';
+import { useBusyItems } from '@/lib/calendarBusy';
+import { conflictsFor } from '@/lib/calendarConflicts';
+import { addMonths, formatLong, monthDates, monthKey, today } from '@/lib/dates';
 import { useCreateDraft } from '@/state/createDraft';
 import { spacing } from '@/theme';
 
@@ -17,6 +20,11 @@ export default function CreateFixed() {
   const draft = useCreateDraft();
   const t = today();
   const [month, setMonth] = useState(draft.fixedDate ? monthKey(draft.fixedDate) : monthKey(t));
+
+  const days = monthDates(draft.datePreset && draft.fixedDate ? monthKey(draft.fixedDate) : month);
+  const busy = useBusyItems(days[0], days[days.length - 1]);
+  const moment = (date: string) => ({ date, startTime: draft.timeHint === 'exact' ? draft.startTime : null });
+  const isBusy = (d: string) => d > t && conflictsFor(busy, moment(d)).length > 0;
 
   const getState = (d: string): DayState => (d === draft.fixedDate ? 'selected' : d > t ? 'idle' : 'disabled');
 
@@ -47,6 +55,7 @@ export default function CreateFixed() {
               month={month}
               getState={getState}
               onPressDay={(d) => draft.set({ fixedDate: d })}
+              isBusy={isBusy}
               onPrev={month > monthKey(t) ? () => setMonth(addMonths(month, -1)) : undefined}
               onNext={() => setMonth(addMonths(month, 1))}
               dayHint="Trykk for å velge dagen"
@@ -61,6 +70,7 @@ export default function CreateFixed() {
             onChange={(timeHint, startTime) => draft.set({ timeHint, startTime })}
           />
         </View>
+        <ConflictNote busy={busy} when={draft.fixedDate ? moment(draft.fixedDate) : null} style={{ marginTop: spacing.lg }} />
 
         <PlaceDetails style={{ marginTop: spacing.xl }} />
 

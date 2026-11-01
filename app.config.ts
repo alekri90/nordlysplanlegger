@@ -103,8 +103,8 @@ const config: ExpoConfig = {
     [
       'expo-calendar',
       {
-        // Full access: keeping the calendar in step means finding, changing and removing our own entries.
-        calendarPermission: 'Legger arrangementene dine i kalenderen du velger, og endrer eller fjerner dem når planene endres. Ingenting fra kalenderen sendes til oss.',
+        // Full access: keeping the calendar in step means finding our own entries, and «Vis kollisjoner» reads the rest.
+        calendarPermission: 'Legger arrangementene dine i kalenderen du velger og holder dem oppdatert. Slår du på «Vis kollisjoner», ser appen også om du allerede er opptatt. Ingenting fra kalenderen sendes til oss.',
       },
     ],
     [

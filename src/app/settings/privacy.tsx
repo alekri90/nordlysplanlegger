@@ -116,7 +116,7 @@ export default function Privacy() {
         <Card muted style={{ gap: spacing.sm, marginTop: spacing.lg }}>
           <Text variant="headline">Det andre ser</Text>
           <Text variant="subhead" color="textSecondary">
-            Profilbilde, visningsnavn og @brukernavn – og hva dere har felles. Aldri e-post, telefonnummer, arrangementer eller gjenger dere ikke deler. Vi leser aldri kalenderen din.
+            Profilbilde, visningsnavn og @brukernavn – og hva dere har felles. Aldri e-post, telefonnummer, arrangementer eller gjenger dere ikke deler. Ingen andre ser kalenderen din.
           </Text>
         </Card>
         <Text variant="title3" style={{ marginTop: spacing.xxl, marginBottom: spacing.xs }}>

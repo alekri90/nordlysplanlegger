@@ -38,9 +38,11 @@ type Props = {
   onNext?: () => void;
   /** Accessibility hint for tappable days, e.g. "Trykk for å markere at du ikke kan". */
   dayHint?: string;
+  /** Days with something in the phone's calendar get a small dot. */
+  isBusy?: (date: string) => boolean;
 };
 
-const Day = memo(function Day({ date, state, onPress, hint }: { date: string; state: DayState; onPress?: (d: string) => void; hint?: string }) {
+const Day = memo(function Day({ date, state, busy, onPress, hint }: { date: string; state: DayState; busy?: boolean; onPress?: (d: string) => void; hint?: string }) {
   const colors = useColors();
   const scale = useSharedValue(1);
   const isToday = date === today();
@@ -73,7 +75,7 @@ const Day = memo(function Day({ date, state, onPress, hint }: { date: string; st
         onPress?.(date);
       }}
       accessibilityRole="button"
-      accessibilityLabel={`${formatLong(date)}, ${STATE_LABEL[state]}`}
+      accessibilityLabel={`${formatLong(date)}, ${STATE_LABEL[state]}${busy ? ', noe i kalenderen' : ''}`}
       accessibilityHint={interactive ? hint : undefined}
       accessibilityState={{ disabled: !interactive, selected: state === 'unavailable' || state === 'selected' || state === 'candidate' }}
       style={{ flex: 1, aspectRatio: 1, padding: 3, maxHeight: 54 }}
@@ -113,13 +115,14 @@ const Day = memo(function Day({ date, state, onPress, hint }: { date: string; st
             <Icon name="check" size={10} tint="#FFFFFF" />
           </View>
         ) : null}
+        {busy ? <View style={{ position: 'absolute', bottom: 5, width: 5, height: 5, borderRadius: 3, backgroundColor: look.fg }} /> : null}
       </Animated.View>
     </Pressable>
   );
 });
 
 /** Monday-first month grid. Simple on purpose: tap a day, see its state change. */
-export function MonthCalendar({ month, getState, onPressDay, onPrev, onNext, dayHint }: Props) {
+export function MonthCalendar({ month, getState, onPressDay, onPrev, onNext, dayHint, isBusy }: Props) {
   const dates = monthDates(month);
   const leading = weekday(dates[0]);
   const cells: (string | null)[] = [...Array(leading).fill(null), ...dates];
@@ -146,7 +149,7 @@ export function MonthCalendar({ month, getState, onPressDay, onPrev, onNext, day
         <View key={wi} style={{ flexDirection: 'row' }}>
           {week.map((date, di) =>
             date ? (
-              <Day key={date} date={date} state={getState(date)} onPress={onPressDay} hint={dayHint} />
+              <Day key={date} date={date} state={getState(date)} busy={isBusy?.(date)} onPress={onPressDay} hint={dayHint} />
             ) : (
               <View key={`e${di}`} style={{ flex: 1, aspectRatio: 1, maxHeight: 54 }} />
             ),
@@ -158,9 +161,9 @@ export function MonthCalendar({ month, getState, onPressDay, onPrev, onNext, day
 }
 
 /** Small legend row so status is never communicated by colour alone. */
-export function CalendarLegend({ items }: { items: { state: DayState; label: string }[] }) {
+export function CalendarLegend({ items }: { items: { state: DayState | 'busy'; label: string }[] }) {
   const colors = useColors();
-  const swatch: Partial<Record<DayState, string>> = {
+  const swatch: Partial<Record<DayState | 'busy', string>> = {
     candidate: colors.primarySoft,
     unavailable: colors.primary,
     selected: colors.ink,
@@ -172,6 +175,7 @@ export function CalendarLegend({ items }: { items: { state: DayState; label: str
         <View key={i.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <View style={{ width: 14, height: 14, borderRadius: 4, backgroundColor: swatch[i.state] ?? colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}>
             {i.state === 'unavailable' ? <Icon name="x" size={9} tint="#fff" /> : null}
+            {i.state === 'busy' ? <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: colors.text }} /> : null}
           </View>
           <Text variant="caption" color="textSecondary">
             {i.label}

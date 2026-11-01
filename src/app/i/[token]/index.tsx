@@ -8,6 +8,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppLogo } from '@/components/brand/AppLogo';
+import { CalendarConflict } from '@/components/event/CalendarConflict';
 import { confirmDecline } from '@/components/event/confirmDecline';
 import { EventMessages } from '@/components/event/EventMessages';
 import { Avatar, AvatarStack, Button, EmptyState, Icon, IconButton, Input, PressableScale, Sheet, Skeleton, Tag, Text, useToast, type IconName } from '@/components/ui';
@@ -189,6 +190,7 @@ function InvitationView({ invite }: { invite: InviteView }) {
               </>
             ) : isDated ? (
               <>
+                {!responded ? <CalendarConflict onDark when={{ date: e.selectedDate!, startTime: e.startTime, timeHint: e.timeHint, eventId: e.id }} style={{ marginBottom: spacing.sm }} /> : null}
                 <Text variant="headline" align="center" style={{ color: '#fff', marginBottom: spacing.sm }}>
                   {invite.myResponse?.status === 'attending' ? 'Du kommer 🎉' : invite.myResponse?.status === 'waitlisted' ? 'Du står på venteliste' : invite.myResponse?.status === 'declined' ? 'Du har sagt at du ikke kan' : 'Kommer du?'}
                 </Text>

@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { RepeatEditor } from '@/components/create/RepeatEditor';
 import { ActionButton } from '@/components/event/ActionButton';
+import { CalendarConflict } from '@/components/event/CalendarConflict';
 import { confirmDecline } from '@/components/event/confirmDecline';
 import { EventHero } from '@/components/event/EventHero';
 import { EventMessages } from '@/components/event/EventMessages';
@@ -366,6 +367,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
         </BottomBar>
       ) : showRsvp ? (
         <BottomBar>
+          {mine!.status !== 'declined' ? <CalendarConflict when={{ date: e.selectedDate!, startTime: e.startTime, timeHint: e.timeHint, eventId: e.id }} /> : null}
           <Text variant="callout" align="center" color="textSecondary">
             {mine!.status === 'declined' ? 'Du har sagt at du ikke kan' : e.spontaneous ? 'Er du gira?' : 'Kommer du?'}
           </Text>

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Platform, View } from 'react-native';
 
-import { Button, Card, Divider, Header, ListRow, Screen, ScreenScroll, Skeleton, Text, useToast } from '@/components/ui';
-import { calendarAccess, listWritableCalendars, removeSyncedEntries, requestCalendarAccess, type CalendarAccess, type CalendarChoice } from '@/lib/calendarSync';
+import { Button, Card, Divider, Header, ListRow, Screen, ScreenScroll, Skeleton, Text, Toggle, useToast } from '@/components/ui';
+import { calendarAccess, listAllCalendars, listWritableCalendars, removeSyncedEntries, requestCalendarAccess, type CalendarAccess, type CalendarChoice } from '@/lib/calendarSync';
 import { useCalendarSyncState } from '@/state/calendarSync';
 import { useMe } from '@/state/session';
 import { spacing } from '@/theme';
@@ -18,19 +18,26 @@ function confirm(title: string, message: string, action: string, run: () => void
   ]);
 }
 
-/** Profil → Kalendersynk: pick the calendar. The first time, the phone asks for access. */
+/** Profil → Kalendersynk: pick the calendar, and whether to hear about collisions. The first time, the phone asks for access. */
 export default function CalendarSettings() {
   const me = useMe();
   const toast = useToast();
   const calendarId = useCalendarSyncState((s) => s.calendarId);
   const choose = useCalendarSyncState((s) => s.choose);
+  const conflicts = useCalendarSyncState((s) => s.conflicts);
+  const setConflicts = useCalendarSyncState((s) => s.setConflicts);
+  const skipped = useCalendarSyncState((s) => s.skippedCalendars);
+  const toggleSkipped = useCalendarSyncState((s) => s.toggleSkipped);
   const [access, setAccess] = useState<CalendarAccess | null>(null);
   const [calendars, setCalendars] = useState<CalendarChoice[] | null>(null);
+  const [allCalendars, setAllCalendars] = useState<CalendarChoice[]>([]);
   const [busy, setBusy] = useState(false);
 
   const show = useCallback((next: CalendarAccess) => {
     setAccess(next);
-    if (next === 'granted') listWritableCalendars().then(setCalendars).catch(() => setCalendars([]));
+    if (next !== 'granted') return;
+    listWritableCalendars().then(setCalendars).catch(() => setCalendars([]));
+    listAllCalendars().then(setAllCalendars).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -80,10 +87,10 @@ export default function CalendarSettings() {
           <Card muted style={{ gap: spacing.md }}>
             <Text variant="callout">{access === 'denied' ? 'Appen har ikke tilgang til kalenderen.' : 'Appen trenger tilgang til kalenderen din.'}</Text>
             <Text variant="footnote" color="textSecondary">
-              Den leser bare listen over kalendere og sine egne oppføringer. Ingenting fra kalenderen sendes til oss.
+              Alt skjer på telefonen. Ingenting fra kalenderen sendes til oss.
             </Text>
             <Button
-              title={access === 'denied' ? 'Åpne innstillinger' : 'Velg kalender'}
+              title={access === 'denied' ? 'Åpne innstillinger' : 'Gi tilgang'}
               size="sm"
               variant="ink"
               onPress={async () => {
@@ -122,6 +129,32 @@ export default function CalendarSettings() {
             <Text variant="callout">Fant ingen kalender appen kan skrive til.</Text>
           </Card>
         )}
+
+        {access === 'granted' && allCalendars.length ? (
+          <View style={{ marginTop: spacing.xxl }}>
+            <Text variant="title3" style={{ marginBottom: spacing.md }}>
+              Kollisjoner
+            </Text>
+            <Card style={{ paddingVertical: spacing.xs }}>
+              <ListRow
+                title="Vis kollisjoner"
+                subtitle="Sier fra når du allerede har noe i kalenderen"
+                trailing={<Toggle value={conflicts} onValueChange={setConflicts} accessibilityLabel="Vis kollisjoner" />}
+              />
+              {conflicts
+                ? allCalendars.map((c) => (
+                    <View key={c.id}>
+                      <Divider />
+                      <ListRow title={c.title} subtitle={c.source || undefined} radio selected={!skipped.includes(c.id)} onPress={() => toggleSkipped(c.id)} />
+                    </View>
+                  ))
+                : null}
+            </Card>
+            <Text variant="footnote" color="textSecondary" style={{ marginTop: spacing.sm }}>
+              Appen leser kalenderne bare her på telefonen, og bare du ser hva som kolliderer.
+            </Text>
+          </View>
+        ) : null}
       </ScreenScroll>
     </Screen>
   );

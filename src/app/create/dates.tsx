@@ -8,9 +8,12 @@ import { StepHeader } from '@/components/create/StepHeader';
 import { RepeatEditor, RepeatSection } from '@/components/create/RepeatEditor';
 import { PlaceDetails } from '@/components/create/PlaceDetails';
 import { TimePicker } from '@/components/create/TimePicker';
+import { ConflictNote } from '@/components/event/CalendarConflict';
 import { BottomBar, Button, Chip, PageTitle, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
 import { useStartPoll } from '@/data/hooks';
-import { addMonths, monthKey, monthName, today, weekday } from '@/lib/dates';
+import { useBusyItems } from '@/lib/calendarBusy';
+import { conflictsFor } from '@/lib/calendarConflicts';
+import { addMonths, monthDates, monthKey, monthName, today, weekday } from '@/lib/dates';
 import { haptics } from '@/lib/haptics';
 import { applyQuickPick, periodDates, periodMonths, QUICK_PICKS, suggestedMonth, type Period, type QuickPick } from '@/lib/period';
 import { useCreateDraft } from '@/state/createDraft';
@@ -39,6 +42,11 @@ export default function CreateDates() {
   const months = draft.period.kind === 'custom' ? [customMonth] : periodMonths(draft.period);
   const chosen = useMemo(() => new Set(draft.optionDates), [draft.optionDates]);
   const [activePick, setActivePick] = useState<QuickPick | null>(null);
+
+  const busy = useBusyItems(months.length ? `${months[0]}-01` : null, months.length ? monthDates(months[months.length - 1]).at(-1) : null);
+  const [lastDay, setLastDay] = useState<string | null>(null);
+  const moment = (date: string) => ({ date, startTime: draft.startTime, timeHint: draft.timeHint, eventId: draft.existingEventId });
+  const isBusy = (date: string) => selectable.has(date) && conflictsFor(busy, moment(date)).length > 0;
 
   const getState = (date: string): DayState => (chosen.has(date) ? 'candidate' : selectable.has(date) ? 'idle' : 'disabled');
 
@@ -102,8 +110,10 @@ export default function CreateDates() {
                 getState={getState}
                 onPressDay={(d) => {
                   setActivePick(null);
+                  setLastDay(d);
                   draft.toggleDate(d);
                 }}
+                isBusy={isBusy}
                 onPrev={draft.period.kind === 'custom' && customMonth > monthKey(today()) ? () => setCustomMonth(addMonths(customMonth, -1)) : undefined}
                 onNext={draft.period.kind === 'custom' ? () => setCustomMonth(addMonths(customMonth, 1)) : undefined}
                 dayHint="Trykk for å legge til eller fjerne som mulig dag"
@@ -111,7 +121,8 @@ export default function CreateDates() {
             </Animated.View>
           ))}
         </View>
-        <CalendarLegend items={[{ state: 'candidate', label: 'Mulig dag' }]} />
+        <CalendarLegend items={[{ state: 'candidate', label: 'Mulig dag' }, ...(busy.length ? [{ state: 'busy' as const, label: 'Noe i kalenderen' }] : [])]} />
+        <ConflictNote busy={busy} when={lastDay && chosen.has(lastDay) ? moment(lastDay) : null} showDay style={{ marginTop: spacing.md }} />
 
         <Text variant="title3" style={{ marginTop: spacing.xxl, marginBottom: spacing.md }}>
           Hurtigvalg

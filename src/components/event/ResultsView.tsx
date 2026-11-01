@@ -14,6 +14,7 @@ import { repeatSummary } from '@/lib/recurrence';
 import { shortNames } from '@/lib/names';
 import { hasResponded, rankDateOptions, responseProgress } from '@/lib/ranking';
 import { spacing } from '@/theme';
+import { CalendarConflict } from './CalendarConflict';
 import { DateResultRow } from './DateResultRow';
 import { EventMessages } from './EventMessages';
 import { MemberSheet } from './MemberSheet';
@@ -178,6 +179,7 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
         subtitle={`Alle ${progress.invited} får beskjed med en gang.${pending.length ? ` ${pending.length} har ikke svart ennå.` : ''}`}
       >
         <TimePicker hint={time.hint} time={time.time} allowHints={false} onChange={(hint, t) => setTime({ hint, time: t })} />
+        <CalendarConflict when={selected ? { date: selected.option.date, startTime: time.time, timeHint: time.hint, eventId: event.id } : null} style={{ marginTop: spacing.lg }} />
         <Button variant="ink" title="Lås datoen" icon="lock" loading={lock.isPending || update.isPending} onPress={confirmLock} style={{ marginTop: spacing.xl }} />
         <Button variant="ghost" title="Ikke ennå" onPress={() => setConfirmOpen(false)} style={{ marginTop: spacing.xs }} />
       </Sheet>

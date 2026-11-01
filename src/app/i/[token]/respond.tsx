@@ -4,9 +4,12 @@ import { View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { CalendarLegend, MonthCalendar, type DayState } from '@/components/calendar/MonthCalendar';
+import { ConflictNote } from '@/components/event/CalendarConflict';
 import { BottomBar, Button, Header, Input, PageSkeleton, PageTitle, PressableScale, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
 import { useInvite, useSubmitAvailability } from '@/data/hooks';
 import type { InviteView } from '@/data/types';
+import { useBusyItems } from '@/lib/calendarBusy';
+import { conflictsFor } from '@/lib/calendarConflicts';
 import { monthKey } from '@/lib/dates';
 import { getGuestName } from '@/lib/guestIdentity';
 import { haptics } from '@/lib/haptics';
@@ -43,6 +46,12 @@ function RespondForm({ invite }: { invite: InviteView }) {
   const byDate = useMemo(() => new Map(options.map((o) => [o.date, o.id])), [options]);
   const months = useMemo(() => [...new Set(options.map((o) => monthKey(o.date)))].sort(), [options]);
 
+  const dates = useMemo(() => options.map((o) => o.date).sort(), [options]);
+  const busy = useBusyItems(dates[0], dates[dates.length - 1]);
+  const [lastDay, setLastDay] = useState<string | null>(null);
+  const moment = (date: string) => ({ date, startTime: invite.event.startTime, timeHint: invite.event.timeHint, eventId: invite.event.id });
+  const isBusy = (date: string) => byDate.has(date) && conflictsFor(busy, moment(date)).length > 0;
+
   const needsName = !me && !invite.myResponse && !knownName;
   const responderName = me?.name ?? invite.myResponse?.name ?? knownName ?? name.trim();
 
@@ -55,6 +64,7 @@ function RespondForm({ invite }: { invite: InviteView }) {
   const toggle = (date: string) => {
     const id = byDate.get(date);
     if (!id) return;
+    setLastDay(date);
     setUnavailable((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -84,15 +94,17 @@ function RespondForm({ invite }: { invite: InviteView }) {
         <PageTitle title="Hvilke dager kan du ikke?" subtitle="Trykk på dagene som ikke passer for deg." />
         <View style={{ gap: spacing.xxl }}>
           {months.map((m) => (
-            <MonthCalendar key={m} month={m} getState={getState} onPressDay={toggle} dayHint="Trykk for å markere at du ikke kan denne dagen" />
+            <MonthCalendar key={m} month={m} getState={getState} onPressDay={toggle} isBusy={isBusy} dayHint="Trykk for å markere at du ikke kan denne dagen" />
           ))}
         </View>
         <CalendarLegend
           items={[
             { state: 'candidate', label: 'Mulig dag' },
             { state: 'unavailable', label: 'Kan ikke' },
+            ...(dates.some(isBusy) ? [{ state: 'busy' as const, label: 'Noe i kalenderen' }] : []),
           ]}
         />
+        <ConflictNote busy={busy} when={lastDay ? moment(lastDay) : null} showDay style={{ marginTop: spacing.md }} />
         <PressableScale
           onPress={() => setUnavailable(allMarked ? new Set() : new Set(options.map((o) => o.id)))}
           style={{ alignSelf: 'center', padding: spacing.md, marginTop: spacing.sm }}

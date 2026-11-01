@@ -45,6 +45,13 @@ export async function listWritableCalendars(): Promise<CalendarChoice[]> {
   return calendars.filter((c) => c.allowsModifications).map((c) => ({ id: c.id, title: c.title ?? 'Kalender', source: c.source?.name ?? '' }));
 }
 
+/** All of them, for «Vis kollisjoner»: a calendar you only subscribe to can still make you busy. */
+export async function listAllCalendars(): Promise<CalendarChoice[]> {
+  if (Platform.OS === 'web') return DEMO_CALENDARS;
+  const calendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
+  return calendars.map((c) => ({ id: c.id, title: c.title ?? 'Kalender', source: c.source?.name ?? '' }));
+}
+
 function eventDetails(e: CalendarEntry) {
   const allDay = !e.startTime;
   const android = Platform.OS === 'android';

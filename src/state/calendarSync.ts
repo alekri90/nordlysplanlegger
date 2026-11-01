@@ -3,23 +3,25 @@ import { create } from 'zustand';
 
 import type { SyncedEntries } from '@/lib/calendarPlan';
 
-type Saved = { calendarId: string | null; calendarTitle: string | null; synced: SyncedEntries };
+type Saved = { calendarId: string | null; calendarTitle: string | null; synced: SyncedEntries; conflicts: boolean; skippedCalendars: string[] };
 
 type State = Saved & {
   userId: string | null;
   load: (userId: string | null) => Promise<void>;
   choose: (calendarId: string | null, calendarTitle: string | null) => void;
   setSynced: (update: (synced: SyncedEntries) => SyncedEntries) => void;
+  setConflicts: (conflicts: boolean) => void;
+  toggleSkipped: (calendarId: string) => void;
 };
 
-const EMPTY: Saved = { calendarId: null, calendarTitle: null, synced: {} };
+const EMPTY: Saved = { calendarId: null, calendarTitle: null, synced: {}, conflicts: false, skippedCalendars: [] };
 const keyFor = (userId: string) => `nordlys.calendarSync.${userId}`;
 
 /** Remembered on this phone, per person: the calendar is the phone's, not the account's. */
 export const useCalendarSyncState = create<State>((set, get) => {
   const save = () => {
-    const { userId, calendarId, calendarTitle, synced } = get();
-    if (userId) AsyncStorage.setItem(keyFor(userId), JSON.stringify({ calendarId, calendarTitle, synced })).catch(() => {});
+    const { userId, calendarId, calendarTitle, synced, conflicts, skippedCalendars } = get();
+    if (userId) AsyncStorage.setItem(keyFor(userId), JSON.stringify({ calendarId, calendarTitle, synced, conflicts, skippedCalendars })).catch(() => {});
   };
   return {
     ...EMPTY,
@@ -35,6 +37,15 @@ export const useCalendarSyncState = create<State>((set, get) => {
     },
     setSynced: (update) => {
       set({ synced: update(get().synced) });
+      save();
+    },
+    setConflicts: (conflicts) => {
+      set({ conflicts });
+      save();
+    },
+    toggleSkipped: (calendarId) => {
+      const skipped = get().skippedCalendars;
+      set({ skippedCalendars: skipped.includes(calendarId) ? skipped.filter((id) => id !== calendarId) : [...skipped, calendarId] });
       save();
     },
   };
