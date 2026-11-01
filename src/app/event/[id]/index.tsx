@@ -449,7 +449,6 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
           <ReportForm target={{ eventId: e.id }} onDone={() => { setMoreOpen(false); setReporting(false); }} />
         ) : (
           <>
-            {canAddToCalendar ? <ListRow icon="calendar" title="Legg i kalender" onPress={() => { setMoreOpen(false); calendar(); }} /> : null}
             {isOrganizer && e.groupId ? <ListRow icon="users" title="Gå til gjengen" onPress={() => { setMoreOpen(false); router.push(`/group/${e.groupId}`); }} /> : null}
             {isOwner && e.series && e.series.status !== 'ended' ? (
               <>
