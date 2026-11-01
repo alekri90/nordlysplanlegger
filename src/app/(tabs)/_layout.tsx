@@ -86,7 +86,7 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
           }}
           haptic="medium"
           scaleTo={0.9}
-          accessibilityLabel="Lag noe"
+          accessibilityLabel="Planlegg noe"
           accessibilityHint="Lag et nytt arrangement"
           style={[{ width: 58, height: 58, borderRadius: 29, marginTop: -26 }, shadows.primary]}
         >

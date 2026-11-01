@@ -59,6 +59,7 @@ export default function Home() {
             </Text>
             <IconButton icon="bell" accessibilityLabel="Varsler" badge={unread || false} onPress={() => router.push('/notifications')} />
           </View>
+          <Button title="Planlegg noe" icon="plus" onPress={startCreate} style={{ marginTop: spacing.xl }} accessibilityHint="Lag et arrangement og finn en dato" />
         </Animated.View>
 
         {permission === 'denied' && !pushHidden ? (
@@ -140,9 +141,7 @@ export default function Home() {
                   <EmptyState
                     icon="sun"
                     title={deciding.length ? 'Ingen dato satt ennå' : 'Ingenting planlagt ennå'}
-                    body={deciding.length ? 'Når en dato er låst, dukker arrangementet opp her.' : 'Det er her det starter. Lag noe, så finner vi en dato som passer gjengen.'}
-                    action={deciding.length ? undefined : 'Lag noe'}
-                    onAction={deciding.length ? undefined : startCreate}
+                    body={deciding.length ? 'Når en dato er låst, dukker arrangementet opp her.' : 'Det er her det starter. Planlegg noe, så finner vi en dato som passer gjengen.'}
                   />
                 </Card>
               )}
