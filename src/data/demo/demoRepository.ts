@@ -635,6 +635,17 @@ export const demoRepository: Repository = {
     return added;
   },
 
+  async addEventGuests(eventId, names) {
+    await wait(200);
+    const e = findEvent(eventId);
+    return names.map((name) => addGuestToEvent(e, uid('guest'), name.trim().slice(0, 60)));
+  },
+
+  async markEventOpened(eventId) {
+    const mine = findEvent(eventId).members.find((m) => m.userId === meId());
+    if (mine?.status === 'invited') mine.status = 'opened';
+  },
+
   async removeEventMember(memberId) {
     await wait(200);
     for (const e of state.events) {

@@ -11,7 +11,7 @@ const ROWS: { key: keyof NotificationPreferences; title: string; subtitle: strin
   { key: 'invites', title: 'Invitasjoner', subtitle: 'Når noen inviterer deg' },
   { key: 'responses', title: 'Svar', subtitle: 'Når gjengen svarer, når alle kan samme dag, og når noen melder seg av' },
   { key: 'dateLocked', title: 'Datoer og beskjeder', subtitle: 'Når en dato er bestemt eller endret, og nye beskjeder fra arrangøren' },
-  { key: 'reminders', title: 'Påminnelser', subtitle: 'Mandag: denne uken · dagen før · 2 timer før · hvis du ikke har svart' },
+  { key: 'reminders', title: 'Påminnelser', subtitle: 'Mandag: denne uken · dagen før · 2 timer før · 2 timer etter at du så en invitasjon uten å svare' },
   { key: 'groupNudges', title: 'Forslag', subtitle: '«Skal vi finne neste dato?»' },
 ];
 

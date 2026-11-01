@@ -25,9 +25,11 @@ export default function FindFriends() {
   const colors = useColors();
   const [query, setQuery] = useState('');
   const [shareOpen, setShareOpen] = useState(false);
+  const [fromContacts, setFromContacts] = useState<string[]>([]);
   const search = useSearchPeople(query);
   const pymk = usePeopleYouMayKnow();
   const searching = query.trim().replace(/^@/, '').length >= 2;
+  const suggestions = (pymk.data ?? []).filter((p) => !fromContacts.includes(p.id));
 
   const row = (p: PersonResult, sub?: string | null) => (
     <PersonRow
@@ -73,12 +75,12 @@ export default function FindFriends() {
                 </Card>
               </PressableScale>
 
-              <ContactFriends row={(p) => row(p, detail(p))} />
+              <ContactFriends row={(p) => row(p, detail(p))} onFound={setFromContacts} />
 
-              {pymk.data?.length ? (
+              {suggestions.length ? (
                 <View style={{ marginTop: spacing.xxl }}>
                   <SectionHeader title="Personer du kanskje kjenner" />
-                  {pymk.data.map((p) => row(p, p.context))}
+                  {suggestions.map((p) => row(p, p.context))}
                 </View>
               ) : null}
             </>

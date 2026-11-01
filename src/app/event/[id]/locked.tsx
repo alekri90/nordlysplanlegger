@@ -1,18 +1,16 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 
 import { ActionButton } from '@/components/event/ActionButton';
-import { ShareSheet } from '@/components/event/ShareSheet';
 import { SponsoredSlot } from '@/components/sponsored/SponsoredSlot';
 import { BottomBar, Button, Card, Confetti, Header, Icon, PageSkeleton, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
 import { useEvent } from '@/data/hooks';
 import { thumb } from '@/lib/categories';
 import { formatLong, formatTime } from '@/lib/dates';
 import { addEventToCalendar } from '@/lib/eventActions';
-import { firstName } from '@/lib/eventText';
 import { spacing } from '@/theme';
 
 /** "Vi har en dato!" — the payoff moment. */
@@ -20,7 +18,6 @@ export default function Locked() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const toast = useToast();
   const event = useEvent(id);
-  const [shareOpen, setShareOpen] = useState(false);
 
   const pop = useSharedValue(0);
   const tilt = useSharedValue(0);
@@ -98,7 +95,6 @@ export default function Locked() {
               }
             }}
           />
-          <ActionButton icon="share-2" label="Del" onPress={() => setShareOpen(true)} />
           <ActionButton icon="edit-2" label="Endre" onPress={() => router.push(`/event/${id}/edit`)} />
         </Animated.View>
 
@@ -111,7 +107,6 @@ export default function Locked() {
       <BottomBar>
         <Button variant="ink" title="Ferdig" onPress={done} />
       </BottomBar>
-      <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} title={e.title} token={e.inviteToken} organizerName={firstName(e.organizer.name)} />
     </Screen>
   );
 }

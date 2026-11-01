@@ -624,6 +624,18 @@ export const supabaseRepository: Repository = {
     return data as number;
   },
 
+  async addEventGuests(eventId, names) {
+    if (!names.length) return [];
+    const { data, error } = await getSupabase().rpc('add_event_guests', { p_event_id: eventId, p_guest_ids: [], p_names: names });
+    fail(error);
+    return (data as { guest_id: string; name: string; token: string }[]).map((g) => ({ guestId: g.guest_id, name: g.name, token: g.token }));
+  },
+
+  async markEventOpened(eventId) {
+    const { error } = await getSupabase().rpc('mark_event_opened', { p_event_id: eventId });
+    fail(error);
+  },
+
   async removeEventMember(memberId) {
     const { error } = await getSupabase().rpc('remove_event_member', { p_member_id: memberId });
     fail(error);

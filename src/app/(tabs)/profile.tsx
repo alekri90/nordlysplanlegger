@@ -72,14 +72,6 @@ export default function Profile() {
         </View>
 
         <Card style={{ marginTop: spacing.xxl, paddingVertical: spacing.xs }}>
-          <ListRow
-            icon="users"
-            title="Venner"
-            subtitle={pending ? `${pending} ${pending === 1 ? 'ny forespørsel' : 'nye forespørsler'}` : 'Finn og legg til venner'}
-            chevron
-            onPress={() => router.push('/friends')}
-          />
-          <Divider />
           <ListRow icon="bell" title="Varsler" subtitle="Velg hva du vil få beskjed om" chevron onPress={() => router.push('/settings/notifications')} />
           <Divider />
           <AppearanceSetting />

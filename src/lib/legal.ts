@@ -41,6 +41,7 @@ export const PRIVACY: LegalSection[] = [
     paragraphs: [
       'Visningsnavn, brukernavn og profilbilde kan sees av andre etter innstillingen du velger under Personvern: alle, venners venner eller ingen. E-postadressen og mobilnummeret ditt vises aldri.',
       'Svarene dine på et arrangement, og bilder som deles der, kan sees av arrangøren og de andre som er invitert til det samme arrangementet.',
+      'Arrangøren og medarrangørene ser om du har åpnet invitasjonen.',
     ],
   },
   {

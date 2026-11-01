@@ -70,14 +70,7 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
   return (
     <Screen>
       <Confetti active={everyoneCan} count={30} />
-      <Header
-        right={
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-            <IconButton icon="user-plus" accessibilityLabel="Inviter flere" onPress={() => router.push(`/event/${event.id}/invite`)} />
-            <IconButton icon="share" accessibilityLabel="Del invitasjonen" onPress={() => setShareOpen(true)} />
-          </View>
-        }
-      />
+      <Header right={<IconButton icon="user-plus" accessibilityLabel="Inviter flere" onPress={() => router.push(`/event/${event.id}/invite`)} />} />
       <ScreenScroll bottomInset={140}>
         <Animated.View entering={FadeIn.duration(260)} style={{ marginBottom: spacing.xl }}>
           <Text variant="overline" color="textSecondary">
@@ -142,11 +135,16 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
             </View>
           ))}
           {pending.map((m) => (
-            <PressableScale key={m.id} onPress={() => setMember(m)} style={{ alignItems: 'center', width: 56, gap: 4, opacity: 0.45 }} accessibilityLabel={`${m.person.name} har ikke svart`}>
+            <PressableScale key={m.id} onPress={() => setMember(m)} style={{ alignItems: 'center', width: 56, gap: 4, opacity: 0.45 }} accessibilityLabel={`${m.person.name} har ${m.status === 'opened' ? 'sett invitasjonen, men ikke svart' : 'ikke svart'}`}>
               <Avatar name={m.person.name} uri={m.person.avatarUrl} size={48} />
               <Text variant="caption" numberOfLines={1}>
                 {nameOf(m.id)}
               </Text>
+              {m.status === 'opened' ? (
+                <Text variant="caption" numberOfLines={1}>
+                  Har sett
+                </Text>
+              ) : null}
             </PressableScale>
           ))}
         </View>

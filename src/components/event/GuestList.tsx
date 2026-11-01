@@ -13,6 +13,8 @@ type Props = {
   interest?: boolean;
   /** Beside «Har ikke svart», e.g. «Minn på». */
   pendingAction?: ReactNode;
+  /** Organizer side: split those who haven't answered into seen / not seen. */
+  showSeen?: boolean;
 };
 
 function Group({ title, members, names, dim, onPress, action }: { title: string; members: EventMember[]; names: Map<string, string>; dim?: boolean; onPress?: (m: EventMember) => void; action?: ReactNode }) {
@@ -47,19 +49,22 @@ function Group({ title, members, names, dim, onPress, action }: { title: string;
 }
 
 /** Kommer · Kan ikke · Har ikke svart — status is in the heading text, never only colour. Tap someone for actions. */
-export function GuestList({ members, onPressMember, interest, pendingAction }: Props) {
+export function GuestList({ members, onPressMember, interest, pendingAction, showSeen }: Props) {
   const coming = members.filter((m) => m.status === 'attending' || (m.role === 'organizer' && m.status !== 'declined'));
   const notComing = members.filter((m) => m.status === 'declined');
   // In line for a place, first first.
   const waitlist = members.filter((m) => m.status === 'waitlisted').sort((a, b) => (a.waitlistedAt ?? '').localeCompare(b.waitlistedAt ?? ''));
   const waiting = members.filter((m) => !coming.includes(m) && !notComing.includes(m) && !waitlist.includes(m));
+  const seen = showSeen ? waiting.filter((m) => m.status === 'opened') : [];
+  const unseen = waiting.filter((m) => !seen.includes(m));
   const names = shortNames(members.map((m) => ({ id: m.id, name: m.person.name })));
   return (
     <View>
       <Group title={interest ? 'Er med' : 'Kommer'} members={coming} names={names} onPress={onPressMember} />
       <Group title="Venteliste" members={waitlist} names={names} onPress={onPressMember} />
       <Group title={interest ? 'Ikke denne gangen' : 'Kan ikke'} members={notComing} names={names} dim onPress={onPressMember} />
-      <Group title="Har ikke svart" members={waiting} names={names} dim onPress={onPressMember} action={pendingAction} />
+      <Group title="Har sett, ikke svart" members={seen} names={names} dim onPress={onPressMember} action={pendingAction} />
+      <Group title={showSeen ? 'Har ikke sett ennå' : 'Har ikke svart'} members={unseen} names={names} dim onPress={onPressMember} action={seen.length ? undefined : pendingAction} />
     </View>
   );
 }

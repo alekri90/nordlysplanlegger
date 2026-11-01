@@ -1,8 +1,8 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
-import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AppState, Platform } from 'react-native';
 
 import { repo } from '@/data';
 import { env } from './config';
@@ -19,8 +19,8 @@ if (Platform.OS !== 'web') {
 }
 
 /**
- * Ask for permission and register this device. Called at a meaningful moment
- * (right after the first invitation is sent), never on app start.
+ * Ask for permission (the phone only ever asks once) and register this device.
+ * Notifications are on unless you turn them off, so this runs as soon as you're signed in.
  * Returns false when the user declined or push isn't available.
  */
 export async function registerForPush(): Promise<boolean> {
@@ -49,6 +49,30 @@ export async function pushPermissionStatus(): Promise<'granted' | 'denied' | 'un
   if (Platform.OS === 'web') return 'denied';
   const { status } = await Notifications.getPermissionsAsync();
   return status as 'granted' | 'denied' | 'undetermined';
+}
+
+/** Follows the phone's setting, also when it's changed in Settings and you come back. */
+export function usePushPermission() {
+  const [permission, setPermission] = useState<'granted' | 'denied' | 'undetermined' | null>(null);
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const read = () => pushPermissionStatus().then(setPermission, () => {});
+    read();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') read();
+    });
+    return () => sub.remove();
+  }, []);
+  return permission;
+}
+
+/** Keeps this phone registered for whoever is signed in. Mount once at the root. */
+export function usePushRegistration(userId: string | null) {
+  const permission = usePushPermission();
+  useEffect(() => {
+    if (!userId || !permission || permission === 'denied') return;
+    registerForPush().catch(() => {});
+  }, [userId, permission]);
 }
 
 function openFromNotification(response: Notifications.NotificationResponse | null) {

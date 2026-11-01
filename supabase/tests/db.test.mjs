@@ -1017,5 +1017,60 @@ console.log('\nInviting friends later, and contacts');
   });
 }
 
+console.log('\nSeen, and the reminder two hours later');
+{
+  const org = await newUser('sett@example.com', { display_name: 'Siri Sett', username: 'sirisett' });
+  const [seer, blind, quick] = [
+    await newUser('saa@example.com', { display_name: 'Sara Saa', username: 'sarasaa' }),
+    await newUser('blind@example.com', { display_name: 'Bo Blind', username: 'boblind' }),
+    await newUser('kjapp@example.com', { display_name: 'Kim Kjapp', username: 'kimkjapp' }),
+  ];
+  for (const u of [seer, blind, quick]) { await as(org); await q(`select send_friend_request($1)`, [u]); await as(u); await q(`select send_friend_request($1)`, [org]); }
+  await as(org);
+  const [{ r }] = await q(`select create_event($1) r`, [{ title: 'Bowling', category: 'games', date_mode: 'fixed', fixed_date: '2030-03-05', time_hint: 'evening', member_user_ids: [seer, blind, quick], guest_names: ['Gry Gjest'] }]);
+  const ev = r.event_id;
+  const reminders = async (u) => q(`select title, body from notifications where user_id = $1 and event_id = $2 and data ->> 'kind' = 'seen_reminder'`, [u, ev]);
+  const statusOf = async (u) => (await q(`select status::text s from event_members where event_id = $1 and user_id = $2`, [ev, u]))[0].s;
+
+  await check('opening from the app counts as seen; the organizer checking a personal link does not', async () => {
+    await as(seer);
+    await q(`select mark_event_opened($1)`, [ev]);
+    assert.equal(await statusOf(seer), 'opened');
+    const token = r.guests[0].token;
+    await as(org);
+    await q(`select mark_invite_opened($1)`, [token]);
+    assert.equal((await q(`select status::text s from event_members where event_id = $1 and guest_id = $2`, [ev, r.guests[0].guest_id]))[0].s, 'invited');
+    await as(null);
+    await q(`select mark_invite_opened($1)`, [token]);
+    assert.equal((await q(`select status::text s from event_members where event_id = $1 and guest_id = $2`, [ev, r.guests[0].guest_id]))[0].s, 'opened');
+  });
+
+  await check('seen but unanswered gets one reminder after two hours, in the daytime', async () => {
+    await as(quick);
+    await q(`select mark_event_opened($1)`, [ev]);
+    await q(`update event_members set status = 'attending', responded_at = now() where event_id = $1 and user_id = $2`, [ev, quick]);
+    await as(null);
+    await q(`update event_members set opened_at = timestamptz '2030-03-01 08:00:00+01' where event_id = $1 and status in ('opened', 'attending')`, [ev]);
+    await q(`select remind_seen_unanswered(timestamptz '2030-03-01 09:30:00+01')`);
+    assert.equal((await reminders(seer)).length, 0, 'not yet');
+    await q(`select remind_seen_unanswered(timestamptz '2030-03-02 02:00:00+01')`);
+    assert.equal((await reminders(seer)).length, 0, 'not at night');
+    await q(`select remind_seen_unanswered(timestamptz '2030-03-01 10:15:00+01')`);
+    const got = await reminders(seer);
+    assert.equal(got.length, 1);
+    assert.equal(got[0].title, 'Siri venter på svaret ditt');
+    assert.equal(got[0].body, 'Bowling – kommer du?');
+    assert.equal((await reminders(blind)).length, 0, 'has not seen it');
+    assert.equal((await reminders(quick)).length, 0, 'has answered');
+    await q(`select remind_seen_unanswered(timestamptz '2030-03-02 11:00:00+01')`);
+    assert.equal((await reminders(seer)).length, 1, 'only once');
+  });
+
+  await check('the 15-minute job includes it', async () => {
+    const [{ d }] = await q(`select pg_get_functiondef('public.send_event_reminders_with_series(timestamptz)'::regprocedure) d`);
+    assert.match(d, /remind_seen_unanswered/);
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

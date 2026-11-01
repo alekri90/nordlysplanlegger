@@ -2,11 +2,14 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
+import { PersonalLinks } from '@/components/event/PersonalLinks';
 import { ShareSheet } from '@/components/event/ShareSheet';
 import { PeoplePicker } from '@/components/people/PeoplePicker';
-import { AvatarStack, BottomBar, Button, Card, Divider, Icon, KeyboardAware, Header, ListRow, PageSkeleton, PressableScale, Screen, ScreenScroll, SectionHeader, Text, useToast } from '@/components/ui';
-import { useAddEventMembers, useEvent, useGroups } from '@/data/hooks';
-import type { Group } from '@/data/types';
+import { SelectedSummary } from '@/components/people/SelectedSummary';
+import { AvatarStack, BottomBar, Button, Card, Divider, Icon, KeyboardAware, Header, ListRow, PageSkeleton, PressableScale, Screen, ScreenScroll, SectionHeader, Sheet, Text, useToast } from '@/components/ui';
+import { repo } from '@/data';
+import { queryClient, useAddEventMembers, useEvent, useGroups } from '@/data/hooks';
+import type { Group, GuestInvite } from '@/data/types';
 import { firstName } from '@/lib/eventText';
 import { haptics } from '@/lib/haptics';
 import { useMe } from '@/state/session';
@@ -25,6 +28,9 @@ export default function InviteToEvent() {
   const groups = useGroups();
   const add = useAddEventMembers(id);
   const [userIds, setUserIds] = useState<string[]>([]);
+  const [guestNames, setGuestNames] = useState<string[]>([]);
+  const [links, setLinks] = useState<GuestInvite[]>([]);
+  const [sending, setSending] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
   const e = event.data;
@@ -38,16 +44,23 @@ export default function InviteToEvent() {
     haptics.light();
     setUserIds((ids) => [...new Set([...ids, ...newFrom(g)])]);
   };
-  const count = userIds.length;
+  const count = userIds.length + guestNames.length;
 
   const send = async () => {
+    setSending(true);
     try {
-      const added = await add.mutateAsync(userIds);
+      const added = userIds.length ? await add.mutateAsync(userIds) : 0;
+      const guests = await repo.addEventGuests(e.id, guestNames);
+      queryClient.invalidateQueries();
       haptics.success();
-      toast({ message: added ? `${added === 1 ? 'Invitasjonen' : `${added} invitasjoner`} er sendt` : 'De var allerede invitert', tone: 'success', icon: 'send' });
-      router.back();
+      if (added) toast({ message: `${added === 1 ? 'Invitasjonen' : `${added} invitasjoner`} er sendt`, tone: 'success', icon: 'send' });
+      // Those without an account only get it when their link is sent.
+      if (guests.length) setLinks(guests);
+      else router.back();
     } catch (err) {
       toast({ message: err instanceof Error ? err.message : 'Kunne ikke invitere', tone: 'error' });
+    } finally {
+      setSending(false);
     }
   };
 
@@ -55,15 +68,17 @@ export default function InviteToEvent() {
     <Screen>
       <KeyboardAware>
         <Header back="close" title="Inviter" />
-        <ScreenScroll bottomInset={170}>
+        <ScreenScroll bottomInset={220}>
           <Text variant="subhead" color="textSecondary" style={{ marginBottom: spacing.lg }}>
             {e.title} · {e.members.length} invitert. Venner får beskjed i appen med en gang.
           </Text>
           <PeoplePicker
             selectedIds={userIds}
-            onToggle={(p) => (p.isGuest ? toast('De uten konto får lenken – trykk «Del lenke» nederst') : toggle(p.id))}
+            onToggle={(p) => (p.isGuest ? toast('Skriv navnet under «Uten konto», så får de en personlig lenke') : toggle(p.id))}
             existingIds={existingIds}
             existingLabel="Invitert"
+            guestNames={guestNames}
+            onGuestNamesChange={setGuestNames}
             header={
               groupList.length ? (
                 <View>
@@ -107,10 +122,15 @@ export default function InviteToEvent() {
           </PressableScale>
         </ScreenScroll>
         <BottomBar>
-          <Button variant="ink" title={count ? `Inviter ${count} ${count === 1 ? 'venn' : 'venner'}` : 'Velg venner'} icon="send" disabled={!count} loading={add.isPending} onPress={send} />
+          <SelectedSummary ids={userIds} names={guestNames} />
+          <Button variant="ink" title={count ? `Inviter ${count} ${count === 1 ? 'person' : 'personer'}` : 'Velg hvem'} icon="send" disabled={!count} loading={sending} onPress={send} />
           <Button variant="ghost" title="Del lenke til andre" icon="link" onPress={() => setShareOpen(true)} style={{ marginTop: spacing.xs }} />
         </BottomBar>
       </KeyboardAware>
+      <Sheet visible={links.length > 0} onClose={() => router.back()} title="Send lenkene">
+        <PersonalLinks guests={links} title={e.title} organizerName={firstName(e.organizer.name)} />
+        <Button title="Ferdig" variant="ink" style={{ marginTop: spacing.lg }} onPress={() => router.back()} />
+      </Sheet>
       <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} title={e.title} token={e.inviteToken} organizerName={firstName(e.organizer.name)} />
     </Screen>
   );

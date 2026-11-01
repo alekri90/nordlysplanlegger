@@ -75,38 +75,33 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
   const [reporting, setReporting] = useState(false);
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [repeatDraft, setRepeatDraft] = useState<EventSeriesInfo | null>(null);
-  // Co-hosts, fixed guests and the limit — loaded when the organizer opens the repeat settings.
-  const [seriesPeople, setSeriesPeople] = useState<SeriesPeople | null>(null);
-  const [savingPeople, setSavingPeople] = useState(false);
-  useEffect(() => {
-    if (!repeatOpen || !e.series || !isOwner) return;
-    let alive = true;
-    repo.getSeriesPeople(e.series.id).then((p) => alive && setSeriesPeople(p)).catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [repeatOpen, e.series, isOwner]);
   const updateSeries = useUpdateEventSeries();
   const [personMember, setPersonMember] = useState<EventMember | null>(null);
   const updateEvent = useUpdateEvent(e.id);
-  // «Medarrangører og faste plasser» on a single event.
+  // «Medarrangører og plasser»: for this event, or every round when it repeats.
+  const seriesId = e.series?.id;
   const [rolesOpen, setRolesOpen] = useState(false);
   const [roles, setRoles] = useState<SeriesPeople | null>(null);
   const [savingRoles, setSavingRoles] = useState(false);
   useEffect(() => {
     if (!rolesOpen || !isOwner) return;
     let alive = true;
-    repo.getEventPeople(e.id).then((p) => alive && setRoles({ ...p, maxParticipants: e.maxParticipants ?? null })).catch(() => {});
+    const load = seriesId ? repo.getSeriesPeople(seriesId) : repo.getEventPeople(e.id).then((p) => ({ ...p, maxParticipants: e.maxParticipants ?? null }));
+    load.then((p) => alive && setRoles(p)).catch(() => {});
     return () => {
       alive = false;
     };
-  }, [rolesOpen, isOwner, e.id, e.maxParticipants]);
+  }, [rolesOpen, isOwner, e.id, e.maxParticipants, seriesId]);
   const rsvp = useSetRsvp(e.id);
   const cancel = useCancelEvent(e.id);
   const addPhotosMutation = useAddEventPhotos(e.id);
   const prefillFromEvent = useCreateDraft((s) => s.prefillFromEvent);
 
   const mine = e.members.find((m) => m.userId === meId);
+  const unseen = mine?.status === 'invited';
+  useEffect(() => {
+    if (unseen) repo.markEventOpened(e.id).catch(() => {});
+  }, [unseen, e.id]);
   const category = CATEGORIES[e.category] ?? CATEGORIES.hangout;
   const when = e.selectedDate ? formatLong(e.selectedDate) : e.periodLabel ?? 'Dato ikke bestemt';
   const time = e.startTime ? `Kl. ${formatTime(e.startTime)}` : e.selectedDate ? timeHintLabel(e.timeHint) : null;
@@ -141,6 +136,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
   };
 
   const isPast = e.status === 'completed';
+  const canInvite = isOrganizer && !isPast && e.status !== 'cancelled';
   // Photos can be shared from the day it happens.
   const canAddPhotos = isPast || (!!e.selectedDate && e.selectedDate <= today() && e.status !== 'cancelled');
 
@@ -174,7 +170,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
         <EventHero
           imageUrl={e.coverImageUrl}
           height={300}
-          right={<IconButton icon="share" variant="glass" accessibilityLabel="Del" onPress={() => setShareOpen(true)} />}
+          right={canInvite ? undefined : <IconButton icon="share" variant="glass" accessibilityLabel="Del" onPress={() => setShareOpen(true)} />}
         />
         <View style={{ marginTop: -spacing.xxl, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, backgroundColor: colors.background, paddingHorizontal: gutter, paddingTop: spacing.xxl }}>
           <Animated.View entering={FadeInDown.duration(320)}>
@@ -231,7 +227,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
 
           <View style={{ flexDirection: 'row', marginTop: spacing.xl }}>
             {e.selectedDate && !isPast ? <ActionButton icon="calendar" label="Kalender" onPress={calendar} /> : null}
-            {isOrganizer && !isPast && e.status !== 'cancelled' ? (
+            {canInvite ? (
               <ActionButton icon="user-plus" label="Inviter" onPress={() => router.push(`/event/${e.id}/invite`)} />
             ) : (
               <ActionButton icon="share-2" label="Del" onPress={() => setShareOpen(true)} />
@@ -259,6 +255,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
                 <GuestList
                   members={e.members}
                   interest={e.status === 'draft'}
+                  showSeen={isOrganizer}
                   pendingAction={isOrganizer ? <RemindButton event={e} onShareLinks={() => setShareOpen(true)} /> : undefined}
                   onPressMember={(m) => {
                     if (m.userId === meId) return;
@@ -401,9 +398,9 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
 
       <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} title={e.title} token={e.inviteToken} organizerName={firstName(e.organizer.name)} />
       <MemberSheet member={personMember} canRemove={isOrganizer} onClose={() => setPersonMember(null)} />
-      {isOwner && !e.series ? (
+      {isOwner ? (
         <Sheet visible={rolesOpen} onClose={() => setRolesOpen(false)} title="Medarrangører og plasser">
-          {roles ? <SeriesPeopleEditor members={e.members} value={roles} onChange={setRoles} recurring={false} /> : null}
+          {roles ? <SeriesPeopleEditor members={e.members} value={roles} onChange={setRoles} recurring={!!e.series} /> : null}
           <Button
             title="Lagre"
             variant="ink"
@@ -413,8 +410,12 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
               if (roles) {
                 setSavingRoles(true);
                 try {
-                  await repo.setEventPeople(e.id, { cohostIds: roles.cohostIds, reservedIds: roles.reservedIds });
-                  if (roles.maxParticipants !== (e.maxParticipants ?? null)) await updateEvent.mutateAsync({ maxParticipants: roles.maxParticipants });
+                  if (seriesId) {
+                    await repo.setSeriesPeople(seriesId, roles);
+                  } else {
+                    await repo.setEventPeople(e.id, { cohostIds: roles.cohostIds, reservedIds: roles.reservedIds });
+                    if (roles.maxParticipants !== (e.maxParticipants ?? null)) await updateEvent.mutateAsync({ maxParticipants: roles.maxParticipants });
+                  }
                   await queryClient.invalidateQueries();
                   toast({ message: 'Lagret', tone: 'success' });
                   setRolesOpen(false);
@@ -431,25 +432,15 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
       {e.series ? (
         <Sheet visible={repeatOpen} onClose={() => setRepeatOpen(false)} title="Endre gjentakelse">
           <RepeatEditor value={repeatDraft ?? e.series} poll={e.series.dateMode === 'poll_each'} firstDate={e.selectedDate} onChange={(patch) => setRepeatDraft({ ...(repeatDraft ?? e.series!), ...patch })} />
-          {seriesPeople ? <SeriesPeopleEditor members={e.members} value={seriesPeople} onChange={setSeriesPeople} /> : null}
           <Button
             title="Lagre"
             variant="ink"
-            loading={updateSeries.isPending || savingPeople}
+            loading={updateSeries.isPending}
             style={{ marginTop: spacing.lg }}
             onPress={async () => {
               if (repeatDraft) {
                 const { id: _id, status: _status, ...patch } = repeatDraft;
                 await updateSeries.mutateAsync({ seriesId: e.series!.id, patch });
-              }
-              if (seriesPeople) {
-                setSavingPeople(true);
-                try {
-                  await repo.setSeriesPeople(e.series!.id, seriesPeople);
-                  await queryClient.invalidateQueries();
-                } finally {
-                  setSavingPeople(false);
-                }
               }
               setRepeatOpen(false);
               setRepeatDraft(null);
@@ -464,7 +455,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
         ) : (
           <>
             {e.selectedDate && !isPast ? <ListRow icon="calendar" title="Legg i kalender" onPress={() => { setMoreOpen(false); calendar(); }} /> : null}
-            <ListRow icon="share-2" title="Del invitasjonen" onPress={() => { setMoreOpen(false); setShareOpen(true); }} />
+            {!canInvite ? <ListRow icon="share-2" title="Del invitasjonen" onPress={() => { setMoreOpen(false); setShareOpen(true); }} /> : null}
             {isOrganizer && e.groupId ? <ListRow icon="users" title="Gå til gjengen" onPress={() => { setMoreOpen(false); router.push(`/group/${e.groupId}`); }} /> : null}
             {isOwner && e.series && e.series.status !== 'ended' ? (
               <>
@@ -494,7 +485,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
               </>
             ) : null}
             {!isOrganizer ? <ListRow icon="flag" title="Rapporter arrangementet" subtitle="Også bilder som er delt her" onPress={() => setReporting(true)} /> : null}
-            {isOwner && !e.series && !isPast && e.status !== 'cancelled' ? (
+            {isOwner && !isPast && e.status !== 'cancelled' && e.series?.status !== 'ended' ? (
               <ListRow icon="users" title="Medarrangører og plasser" subtitle="Hvem som har alltid plass, og hvor mange" onPress={() => { setMoreOpen(false); setRolesOpen(true); }} />
             ) : null}
             {isOwner && !isPast ? <ListRow icon="x-circle" title="Avlys arrangementet" destructive onPress={confirmCancel} /> : null}

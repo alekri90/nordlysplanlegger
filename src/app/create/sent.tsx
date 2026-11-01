@@ -1,41 +1,41 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withDelay, withSpring } from 'react-native-reanimated';
 
 import { ShareGrid } from '@/components/event/ShareSheet';
-import { PersonRow } from '@/components/people/PersonRow';
-import { BottomBar, Button, Card, Confetti, Divider, Icon, Screen, ScreenScroll, Text } from '@/components/ui';
+import { PersonalLinks } from '@/components/event/PersonalLinks';
+import { namesLine } from '@/components/people/SelectedSummary';
+import { BottomBar, Button, Card, Confetti, Icon, Screen, ScreenScroll, Text } from '@/components/ui';
 import type { GuestInvite } from '@/data/types';
 import { useEvent } from '@/data/hooks';
 import { thumb } from '@/lib/categories';
 import { inviteUrl } from '@/lib/config';
 import { repeatSummary } from '@/lib/recurrence';
-import { inviteMessage, shareTo } from '@/lib/share';
+import { inviteMessage } from '@/lib/share';
 import { eventDateLine, firstName } from '@/lib/eventText';
-import { pushPermissionStatus, registerForPush } from '@/lib/push';
 import { useCreateDraft } from '@/state/createDraft';
 import { motion, radius, spacing, useColors } from '@/theme';
 
-/** Sent! Share the link, and — only now — offer notifications. */
+/** Sent! Says who has been told; the link is for whoever is left. */
 export default function CreateSent() {
   const colors = useColors();
   const { id, token, guests: guestsParam } = useLocalSearchParams<{ id: string; token: string; guests?: string }>();
   const guests = parseGuests(guestsParam);
   const event = useEvent(id);
   const resetDraft = useCreateDraft((s) => s.reset);
-  const [askPush, setAskPush] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
 
   const scale = useSharedValue(0);
   useEffect(() => {
     scale.value = withDelay(100, withSpring(1, { ...motion.spring, damping: 11 }));
-    pushPermissionStatus().then((s) => setAskPush(s === 'undetermined'));
   }, [scale]);
   const check = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   const e = event.data;
   const isPoll = e?.status === 'polling';
+  const notified = (e?.members ?? []).filter((m) => m.role === 'guest' && m.userId).map((m) => m.person.name);
 
   const finish = () => {
     resetDraft();
@@ -52,10 +52,14 @@ export default function CreateSent() {
         </Animated.View>
         <Animated.View entering={FadeInDown.delay(200).duration(380)}>
           <Text variant="title1" align="center" style={{ marginTop: spacing.xl }} accessibilityRole="header">
-            {isPoll ? 'Invitasjonen er klar!' : 'Arrangementet er klart!'}
+            {notified.length ? 'Invitasjonen er sendt!' : isPoll ? 'Invitasjonen er klar!' : 'Arrangementet er klart!'}
           </Text>
           <Text variant="body" color="textSecondary" align="center" style={{ marginTop: spacing.sm, paddingHorizontal: spacing.lg }}>
-            {isPoll ? 'Del lenken med gjengen. De trykker på dagene de ikke kan – uten app eller konto.' : 'Del lenken, så kan alle svare om de kommer.'}
+            {notified.length
+              ? `${namesLine(notified)} har fått beskjed.`
+              : isPoll
+                ? 'Del lenken med gjengen. De trykker på dagene de ikke kan – uten app eller konto.'
+                : 'Del lenken, så kan alle svare om de kommer.'}
           </Text>
         </Animated.View>
 
@@ -81,69 +85,20 @@ export default function CreateSent() {
         ) : null}
 
         <Animated.View entering={FadeIn.delay(450)} style={{ marginTop: spacing.xxl }}>
-          <ShareGrid
-            url={inviteUrl(token ?? '')}
-            title={e?.title ?? ''}
-            message={inviteMessage(e?.title ?? '', inviteUrl(token ?? ''), e ? firstName(e.organizer.name) : undefined)}
-          />
+          {notified.length && !linkOpen ? (
+            <Button title="Noen uten appen? Del lenken" variant="ghost" icon="link" onPress={() => setLinkOpen(true)} />
+          ) : (
+            <ShareGrid
+              url={inviteUrl(token ?? '')}
+              title={e?.title ?? ''}
+              message={inviteMessage(e?.title ?? '', inviteUrl(token ?? ''), e ? firstName(e.organizer.name) : undefined)}
+            />
+          )}
         </Animated.View>
 
         {guests.length ? (
           <Animated.View entering={FadeInDown.delay(520).duration(380)} style={{ marginTop: spacing.xxl }}>
-            <Text variant="title3">Personlige lenker</Text>
-            <Text variant="footnote" color="textSecondary" style={{ marginTop: 2, marginBottom: spacing.md }}>
-              Til dem uten konto. Navnet deres er fylt inn når de åpner lenken.
-            </Text>
-            <Card style={{ paddingVertical: spacing.xs }}>
-              {guests.map((g, i) => (
-                <View key={g.guestId}>
-                  {i ? <Divider /> : null}
-                  <PersonRow
-                    person={{ id: g.guestId, name: g.name, isGuest: true }}
-                    size={40}
-                    trailing={
-                      <Button
-                        title="Send"
-                        size="sm"
-                        variant="ink"
-                        icon="send"
-                        accessibilityLabel={`Send personlig lenke til ${g.name}`}
-                        onPress={() => {
-                          const url = inviteUrl(g.token);
-                          const organizer = e ? firstName(e.organizer.name) : undefined;
-                          shareTo('more', { url, title: e?.title ?? '', message: inviteMessage(e?.title ?? '', url, organizer, firstName(g.name)) });
-                        }}
-                      />
-                    }
-                  />
-                </View>
-              ))}
-            </Card>
-          </Animated.View>
-        ) : null}
-
-        {askPush && Platform.OS !== 'web' ? (
-          <Animated.View entering={FadeInDown.delay(600).duration(380)}>
-            <Card muted style={{ marginTop: spacing.xxl, gap: spacing.md }}>
-              <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
-                <Icon name="bell" size={20} color="primary" />
-                <Text variant="callout" style={{ flex: 1 }}>
-                  Vil du få beskjed når gjengen svarer og når alle kan samme dag?
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <Button
-                  title="Ja, gi meg beskjed"
-                  size="sm"
-                  variant="ink"
-                  onPress={async () => {
-                    await registerForPush();
-                    setAskPush(false);
-                  }}
-                />
-                <Button title="Ikke nå" size="sm" variant="ghost" onPress={() => setAskPush(false)} />
-              </View>
-            </Card>
+            <PersonalLinks guests={guests} title={e?.title ?? ''} organizerName={e ? firstName(e.organizer.name) : undefined} />
           </Animated.View>
         ) : null}
       </ScreenScroll>

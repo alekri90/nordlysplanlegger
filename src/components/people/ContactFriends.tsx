@@ -14,14 +14,19 @@ type State = { kind: 'idle' } | { kind: 'loading' } | { kind: 'denied' } | { kin
  * People in your phone's contacts who use the app. Only the numbers are checked against
  * profiles; nothing from the address book is stored. In the app only (and the demo).
  */
-export function ContactFriends({ row }: { row: (p: PersonResult) => React.ReactNode }) {
+export function ContactFriends({ row, onFound }: { row: (p: PersonResult) => React.ReactNode; onFound?: (ids: string[]) => void }) {
   const colors = useColors();
   const [state, setState] = useState<State>({ kind: 'idle' });
+
+  const show = (people: PersonResult[]) => {
+    setState({ kind: 'done', people });
+    onFound?.(people.map((p) => p.id));
+  };
 
   const find = async () => {
     setState({ kind: 'loading' });
     if (isDemoMode && !contactsSupported) {
-      setState({ kind: 'done', people: await repo.matchContacts(['+4700000000']) });
+      show(await repo.matchContacts(['+4700000000']));
       return;
     }
     const contacts = await readContactPhones();
@@ -30,7 +35,7 @@ export function ContactFriends({ row }: { row: (p: PersonResult) => React.ReactN
       return;
     }
     try {
-      setState({ kind: 'done', people: await repo.matchContacts(contacts.phones) });
+      show(await repo.matchContacts(contacts.phones));
     } catch {
       setState({ kind: 'idle' });
     }
@@ -41,6 +46,7 @@ export function ContactFriends({ row }: { row: (p: PersonResult) => React.ReactN
     hasContactsAccess().then((ok) => {
       if (ok) find();
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!contactsSupported && !isDemoMode) return null;

@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
@@ -9,6 +9,7 @@ import { repo } from '@/data';
 import { StepHeader } from '@/components/create/StepHeader';
 import { PeoplePicker } from '@/components/people/PeoplePicker';
 import { PersonRow } from '@/components/people/PersonRow';
+import { SelectedSummary } from '@/components/people/SelectedSummary';
 import { AvatarStack, BottomBar, Button, Card, Divider, Icon, Input, KeyboardAware, ListRow, PageTitle, PressableScale, Screen, ScreenScroll, SectionHeader, Text, Toggle, useToast } from '@/components/ui';
 import { useCreateEvent, useCreateEventSeries, useGroups, useInviteSuggestions } from '@/data/hooks';
 import type { Group, Person } from '@/data/types';
@@ -35,6 +36,7 @@ export default function CreateWho() {
   const createEvent = useCreateEvent();
   const createSeries = useCreateEventSeries();
   const awaitingAuth = useRef(false);
+  const [moreOpen, setMoreOpen] = useState(!!draft.maxParticipants || draft.saveAsGroup);
 
   const groupList = groups.data ?? [];
   const selectedGroup = groupList.find((g) => g.id === draft.groupId) ?? null;
@@ -125,6 +127,7 @@ export default function CreateWho() {
 
   const count = draft.memberIds.length + draft.guestIds.length + draft.guestNames.length;
   const canSaveGroup = !draft.groupId && draft.memberIds.length + draft.guestNames.length >= 2;
+  const hasMore = !draft.existingEventId || canSaveGroup;
   const groupMembers = selectedGroup?.members.filter((m) => m.id !== me?.id) ?? [];
   const selectedInGroup = groupMembers.filter((m) => selected.has(m.id)).length;
 
@@ -132,7 +135,7 @@ export default function CreateWho() {
     <Screen>
       <KeyboardAware>
         <StepHeader step={draft.source === 'event' ? 1 : 3} total={draft.source === 'event' ? 2 : 4} />
-        <ScreenScroll bottomInset={170}>
+        <ScreenScroll bottomInset={220}>
           <PageTitle title="Hvem skal være med?" />
 
           {selectedGroup ? (
@@ -240,46 +243,50 @@ export default function CreateWho() {
             />
           </View>
 
-          {canSaveGroup ? (
-            <Animated.View entering={FadeInDown.duration(250)} style={{ marginTop: spacing.xl }}>
-              <Card>
-                <ListRow
-                  icon="users"
-                  title="Lagre som gjeng"
-                  subtitle="Neste gang er det ett trykk"
-                  trailing={<Toggle value={draft.saveAsGroup} onValueChange={(v) => draft.set({ saveAsGroup: v })} accessibilityLabel="Lagre som gjeng" />}
-                />
-                {draft.saveAsGroup ? (
-                  <Animated.View entering={FadeIn}>
-                    <Input placeholder="Navn på gjengen, f.eks. Jentene" value={draft.groupName} onChangeText={(t) => draft.set({ groupName: t })} containerStyle={{ marginTop: spacing.sm }} />
-                  </Animated.View>
-                ) : null}
-              </Card>
-            </Animated.View>
-          ) : null}
-
-          {!draft.existingEventId ? (
-            <Card style={{ marginTop: spacing.xl, paddingVertical: spacing.xs }}>
-              <PlacesSetting value={draft.maxParticipants} onChange={(maxParticipants) => draft.set({ maxParticipants })} />
-            </Card>
-          ) : null}
-
-          <Card muted style={{ marginTop: spacing.xl, flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
-            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
-              <Icon name="link" size={18} />
+          {hasMore ? (
+            <View style={{ marginTop: spacing.xl }}>
+              <PressableScale
+                onPress={() => setMoreOpen(!moreOpen)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: moreOpen }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+              >
+                <Text variant="callout" style={{ flex: 1 }}>
+                  Flere valg
+                </Text>
+                <Icon name={moreOpen ? 'chevron-up' : 'chevron-down'} size={18} color="textSecondary" />
+              </PressableScale>
+              {moreOpen ? (
+                <Animated.View entering={FadeIn.duration(200)} style={{ gap: spacing.md, marginTop: spacing.sm }}>
+                  {!draft.existingEventId ? (
+                    <Card style={{ paddingVertical: spacing.xs }}>
+                      <PlacesSetting value={draft.maxParticipants} onChange={(maxParticipants) => draft.set({ maxParticipants })} />
+                    </Card>
+                  ) : null}
+                  {canSaveGroup ? (
+                    <Card>
+                      <ListRow
+                        icon="users"
+                        title="Lagre som gjeng"
+                        subtitle="Neste gang er det ett trykk"
+                        trailing={<Toggle value={draft.saveAsGroup} onValueChange={(v) => draft.set({ saveAsGroup: v })} accessibilityLabel="Lagre som gjeng" />}
+                      />
+                      {draft.saveAsGroup ? (
+                        <Animated.View entering={FadeIn}>
+                          <Input placeholder="Navn på gjengen, f.eks. Jentene" value={draft.groupName} onChangeText={(t) => draft.set({ groupName: t })} containerStyle={{ marginTop: spacing.sm }} />
+                        </Animated.View>
+                      ) : null}
+                    </Card>
+                  ) : null}
+                  {/* No date step for «Ikke bestemt ennå», so the optional place lives here. */}
+                  {draft.dateMode === 'undecided' && !draft.existingEventId ? <PlaceDetails /> : null}
+                </Animated.View>
+              ) : null}
             </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="callout">Del invitasjonslenke</Text>
-              <Text variant="footnote" color="textSecondary">
-                Send på SMS, WhatsApp eller Messenger rett etterpå. Gjestene kan svare uten konto.
-              </Text>
-            </View>
-          </Card>
-
-          {/* No date step for «Ikke bestemt ennå», so the optional place lives here. */}
-          {draft.dateMode === 'undecided' && !draft.existingEventId ? <PlaceDetails style={{ marginTop: spacing.xl }} /> : null}
+          ) : null}
         </ScreenScroll>
         <BottomBar>
+          <SelectedSummary ids={[...draft.memberIds, ...draft.guestIds]} names={draft.guestNames} />
           <Button
             variant="ink"
             title={draft.spontaneous ? (count ? `Spør hvem som er gira · ${count}` : 'Lag lenke – hvem er gira?') : count ? `Send invitasjon · ${count + 1} personer` : 'Lag invitasjonslenke'}

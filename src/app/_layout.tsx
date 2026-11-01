@@ -16,7 +16,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ToastProvider } from '@/components/ui';
 import { queryClient } from '@/data/hooks';
 import { usePendingGroupJoin } from '@/lib/pendingJoin';
-import { useNotificationRouting } from '@/lib/push';
+import { useNotificationRouting, usePushRegistration } from '@/lib/push';
 import { useSession, useSessionBootstrap } from '@/state/session';
 import { useAppearance } from '@/state/appearance';
 import { ThemeProvider, useColors, useTheme } from '@/theme';
@@ -65,6 +65,7 @@ function AppStack() {
   const segments = useSegments();
   useSessionBootstrap();
   useNotificationRouting();
+  usePushRegistration(useSession((s) => (s.status === 'signedIn' && s.profile?.onboarded ? s.profile.id : null)));
   usePendingGroupJoin();
 
   useEffect(() => {

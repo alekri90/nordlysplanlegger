@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { Linking, RefreshControl, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { EventCard } from '@/components/event/EventCard';
@@ -10,6 +10,7 @@ import { Button, Card, EmptyState, ErrorState, EventListSkeleton, Icon, IconButt
 import { useEvents, useGroups, useNotifications } from '@/data/hooks';
 import type { Group } from '@/data/types';
 import { daysBetween, today } from '@/lib/dates';
+import { usePushPermission } from '@/lib/push';
 import { useCreateDraft } from '@/state/createDraft';
 import { useMe } from '@/state/session';
 import { gutter, radius, spacing, useColors } from '@/theme';
@@ -26,6 +27,8 @@ export default function Home() {
   const resetDraft = useCreateDraft((s) => s.reset);
   const prefillFromGroup = useCreateDraft((s) => s.prefillFromGroup);
   const [refreshing, setRefreshing] = useState(false);
+  const permission = usePushPermission();
+  const [pushHidden, setPushHidden] = useState(false);
 
   const { invitations, upcoming, deciding } = useMemo(() => splitEvents(events.data ?? [], me?.id), [events.data, me?.id]);
   const nudge = useMemo(() => findNudge(groups.data ?? []), [groups.data]);
@@ -56,8 +59,22 @@ export default function Home() {
             </Text>
             <IconButton icon="bell" accessibilityLabel="Varsler" badge={unread || false} onPress={() => router.push('/notifications')} />
           </View>
-          <Button title="Lag noe" icon="plus" onPress={startCreate} style={{ marginTop: spacing.xl }} accessibilityHint="Lag et arrangement og finn en dato" />
         </Animated.View>
+
+        {permission === 'denied' && !pushHidden ? (
+          <Card style={{ marginTop: spacing.xl, gap: spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <Icon name="bell-off" size={20} color="primary" />
+              <Text variant="callout" style={{ flex: 1 }}>
+                Varsler er slått av. Da går du glipp av invitasjoner og endringer.
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <Button title="Slå på" size="sm" variant="ink" onPress={() => Linking.openSettings()} />
+              <Button title="Ikke nå" size="sm" variant="ghost" onPress={() => setPushHidden(true)} />
+            </View>
+          </Card>
+        ) : null}
 
         {nudge ? (
           <Animated.View entering={FadeInDown.delay(80).duration(380)} style={{ marginTop: spacing.xl }}>
@@ -124,6 +141,8 @@ export default function Home() {
                     icon="sun"
                     title={deciding.length ? 'Ingen dato satt ennå' : 'Ingenting planlagt ennå'}
                     body={deciding.length ? 'Når en dato er låst, dukker arrangementet opp her.' : 'Det er her det starter. Lag noe, så finner vi en dato som passer gjengen.'}
+                    action={deciding.length ? undefined : 'Lag noe'}
+                    onAction={deciding.length ? undefined : startCreate}
                   />
                 </Card>
               )}
