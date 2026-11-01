@@ -55,6 +55,7 @@ type EventRow = {
   locked_at: string | null;
   max_participants: number | null;
   places_taken: number | null;
+  guests_can_invite: boolean;
   spontaneous: boolean;
   organizer: ProfileRow | null;
   location: { name: string; address: string | null; details_pending: boolean } | null;
@@ -89,7 +90,7 @@ type EventRow = {
 
 const EVENT_SELECT = `
   id, title, category, cover_image_url, status, date_mode, group_id, period_label, time_hint,
-  start_time, selected_date, selected_option_id, description, created_at, locked_at, max_participants, places_taken, spontaneous,
+  start_time, selected_date, selected_option_id, description, created_at, locked_at, max_participants, places_taken, guests_can_invite, spontaneous,
   organizer:profiles!events_organizer_id_fkey(id, display_name, avatar_url, username),
   location:event_locations(name, address, details_pending),
   options:event_date_options!event_date_options_event_id_fkey(id, date),
@@ -143,6 +144,7 @@ function toEvent(r: EventRow): PlannerEvent {
     })),
     maxParticipants: r.max_participants,
     placesTaken: r.places_taken,
+    guestsCanInvite: r.guests_can_invite,
     spontaneous: r.spontaneous,
     inviteToken: r.invites?.find((i) => !i.revoked_at)?.token ?? '',
     photos: (r.images ?? []).filter((i) => i.kind === 'memory').map((i) => i.url),
@@ -522,6 +524,7 @@ export const supabaseRepository: Repository = {
     if (patch.startTime !== undefined) update.start_time = patch.startTime;
     if (patch.timeHint !== undefined) update.time_hint = patch.timeHint;
     if (patch.maxParticipants !== undefined) update.max_participants = patch.maxParticipants;
+    if (patch.guestsCanInvite !== undefined) update.guests_can_invite = patch.guestsCanInvite;
     if (patch.coverImageUrl !== undefined) {
       update.cover_image_url = isLocalUri(patch.coverImageUrl) ? await uploadImage('covers', await requireUserId(), patch.coverImageUrl) : patch.coverImageUrl;
     }

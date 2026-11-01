@@ -33,6 +33,7 @@ export const PRIVACY: LegalSection[] = [
       'Varsler: en anonym push-nøkkel for telefonen din og hvilke varsler du vil ha.',
       'Mobilnummer (valgfritt): hvis du legger det inn på profilen, lagrer vi det slik at folk som har nummeret ditt i kontaktene sine kan finne deg. Det vises aldri for andre, og du kan slå det av under Personvern eller slette det.',
       'Kontaktlisten: hvis du trykker «Finn venner fra kontaktene», leser appen telefonnumrene i kontaktlisten din og sjekker dem mot mobilnumrene på profilene. Vi lagrer ikke kontaktlisten, navn eller numre fra den – du får bare se hvem som allerede bruker appen.',
+      'Kalendersynk (valgfritt): slår du det på, legger appen arrangementene dine i kalenderen du velger, og endrer eller fjerner dem igjen. Det skjer bare på telefonen din – appen leser listen over kalendere og sine egne oppføringer, og ingenting fra kalenderen sendes til oss.',
       'Blokkeringer og rapporter: hvem du har blokkert, og rapporter du sender om personer, arrangementer eller gjenger. Den som blir rapportert eller blokkert får ikke vite hvem det var.',
     ],
   },

@@ -191,6 +191,8 @@ export interface PlannerEvent {
   maxParticipants?: number | null;
   /** Places taken (people coming + places kept for the organizer side and fixed guests). */
   placesTaken?: number | null;
+  /** Everyone taking part can invite, not only the organizer and co-hosts. */
+  guestsCanInvite?: boolean;
   /** Set when this is one time of a recurring event. */
   series?: EventSeriesInfo | null;
 }
@@ -384,6 +386,7 @@ export interface EventPatch {
   coverImageUrl?: string;
   /** null removes the limit. */
   maxParticipants?: number | null;
+  guestsCanInvite?: boolean;
 }
 
 /** Co-hosts and fixed places on a single (not recurring) event. Organizer only. */

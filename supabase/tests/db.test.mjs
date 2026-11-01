@@ -1072,5 +1072,62 @@ console.log('\nSeen, and the reminder two hours later');
   });
 }
 
+console.log('\nWho can invite');
+{
+  const org = await newUser('invorg@example.com', { display_name: 'Ida Org', username: 'idaorg' });
+  const [guest, nope, pal] = [
+    await newUser('invgjest@example.com', { display_name: 'Geir Gjest', username: 'geirgjest' }),
+    await newUser('invnei@example.com', { display_name: 'Nils Nei', username: 'nilsnei' }),
+    await newUser('invpal@example.com', { display_name: 'Pia Pal', username: 'piapal' }),
+  ];
+  const befriend = async (a, b) => { await as(a); await q(`select send_friend_request($1)`, [b]); await as(b); await q(`select send_friend_request($1)`, [a]); };
+  for (const u of [guest, nope]) await befriend(org, u);
+  await befriend(guest, pal);
+  await befriend(nope, pal);
+  await as(org);
+  const [{ r }] = await q(`select create_event($1) r`, [{ title: 'Grilling', category: 'food', date_mode: 'fixed', fixed_date: '2030-06-05', time_hint: 'evening', member_user_ids: [guest, nope] }]);
+  const ev = r.event_id;
+  const invited = async (u) => (await q(`select 1 from event_members where event_id = $1 and user_id = $2`, [ev, u])).length === 1;
+  const asGuest = async (u, sql, args) => { await as(u); await db.exec('set role authenticated'); try { return await q(sql, args); } finally { await db.exec('reset role'); } };
+
+  await check('off by default: a guest cannot invite, not even by calling the database', async () => {
+    assert.equal((await q(`select guests_can_invite g from events where id = $1`, [ev]))[0].g, false);
+    await assert.rejects(asGuest(guest, `select add_event_members($1, $2)`, [ev, [pal]]), /not_organizer/);
+    await assert.rejects(asGuest(guest, `select add_event_guests($1, '{}', $2)`, [ev, ['Berit']]), /not_organizer/);
+    assert.equal(await invited(pal), false);
+  });
+  await check('a guest cannot turn it on themselves', async () => {
+    const rows = await asGuest(guest, `update events set guests_can_invite = true where id = $1 returning id`, [ev]);
+    assert.equal(rows.length, 0);
+  });
+  await check('turned on: guests invite friends and people without an account, but not those who said no', async () => {
+    await asGuest(org, `update events set guests_can_invite = true where id = $1`, [ev]);
+    await q(`update event_members set status = 'declined' where event_id = $1 and user_id = $2`, [ev, nope]);
+    await assert.rejects(asGuest(nope, `select add_event_members($1, $2)`, [ev, [pal]]), /not_organizer/);
+    assert.equal((await asGuest(guest, `select add_event_members($1, $2) n`, [ev, [pal]]))[0].n, 1);
+    assert.equal(await invited(pal), true);
+    const [{ g }] = await asGuest(guest, `select add_event_guests($1, '{}', $2) g`, [ev, ['Berit']]);
+    assert.equal(g[0].name, 'Berit');
+    assert.ok(g[0].token);
+  });
+  await check('over means over: nobody but the organizer side invites to a cancelled event', async () => {
+    await q(`update events set status = 'cancelled' where id = $1`, [ev]);
+    await assert.rejects(asGuest(guest, `select add_event_guests($1, '{}', $2)`, [ev, ['Rolf']]), /not_organizer/);
+  });
+  await check('a series keeps the choice: from the first event, into the next round, and when changed', async () => {
+    await as(org);
+    const [{ r: first }] = await q(`select create_event($1) r`, [{ title: 'Fast middag', category: 'food', date_mode: 'fixed', fixed_date: '2030-07-05', time_hint: 'evening', member_user_ids: [guest] }]);
+    await q(`update events set guests_can_invite = true where id = $1`, [first.event_id]);
+    const [{ id: series }] = await q(`select create_event_series($1, $2) id`, [first.event_id, { frequency: 'monthly', mode: 'fixed', weekday: 1, week_of_month: 1 }]);
+    const seriesValue = async () => (await q(`select guests_can_invite g from event_series where id = $1`, [series]))[0].g;
+    assert.equal(await seriesValue(), true, 'from the first event');
+    const [{ r: next }] = await q(`select create_event($1) r`, [{ title: 'Fast middag', category: 'food', date_mode: 'fixed', fixed_date: '2030-08-05', time_hint: 'evening' }]);
+    await q(`update events set series_id = $1, series_period_start = '2030-08-01' where id = $2`, [series, next.event_id]);
+    assert.equal((await q(`select guests_can_invite g from events where id = $1`, [next.event_id]))[0].g, true, 'into the next round');
+    await q(`update events set guests_can_invite = false where id = $1`, [next.event_id]);
+    assert.equal(await seriesValue(), false, 'when changed');
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

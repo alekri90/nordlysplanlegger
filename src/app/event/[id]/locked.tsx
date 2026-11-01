@@ -11,6 +11,7 @@ import { useEvent } from '@/data/hooks';
 import { thumb } from '@/lib/categories';
 import { formatLong, formatTime } from '@/lib/dates';
 import { addEventToCalendar } from '@/lib/eventActions';
+import { useIsInCalendar } from '@/state/calendarSync';
 import { spacing } from '@/theme';
 
 /** "Vi har en dato!" — the payoff moment. */
@@ -27,6 +28,7 @@ export default function Locked() {
   }, [pop, tilt]);
   const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }, { rotate: `${tilt.value}deg` }] }));
 
+  const inCalendar = useIsInCalendar(id);
   const e = event.data;
   if (!e) return <Screen><PageSkeleton /></Screen>;
 
@@ -83,18 +85,20 @@ export default function Locked() {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(360).duration(380)} style={{ flexDirection: 'row', marginTop: spacing.xl }}>
-          <ActionButton
-            icon="calendar"
-            label="Legg i kalender"
-            onPress={async () => {
-              try {
-                const msg = await addEventToCalendar(e);
-                if (msg) toast({ message: msg, tone: 'success', icon: 'calendar' });
-              } catch {
-                toast({ message: 'Fikk ikke tilgang til kalenderen', tone: 'error' });
-              }
-            }}
-          />
+          {!inCalendar ? (
+            <ActionButton
+              icon="calendar"
+              label="Legg i kalender"
+              onPress={async () => {
+                try {
+                  const msg = await addEventToCalendar(e);
+                  if (msg) toast({ message: msg, tone: 'success', icon: 'calendar' });
+                } catch {
+                  toast({ message: 'Fikk ikke tilgang til kalenderen', tone: 'error' });
+                }
+              }}
+            />
+          ) : null}
           <ActionButton icon="edit-2" label="Endre" onPress={() => router.push(`/event/${id}/edit`)} />
         </Animated.View>
 

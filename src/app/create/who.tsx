@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 import { PlaceDetails } from '@/components/create/PlaceDetails';
+import { GuestsCanInviteSetting } from '@/components/event/GuestsCanInviteSetting';
 import { PlacesSetting } from '@/components/event/PlacesSetting';
 import { repo } from '@/data';
 import { StepHeader } from '@/components/create/StepHeader';
@@ -36,7 +37,7 @@ export default function CreateWho() {
   const createEvent = useCreateEvent();
   const createSeries = useCreateEventSeries();
   const awaitingAuth = useRef(false);
-  const [moreOpen, setMoreOpen] = useState(!!draft.maxParticipants || draft.saveAsGroup);
+  const [moreOpen, setMoreOpen] = useState(!!draft.maxParticipants || draft.guestsCanInvite || draft.saveAsGroup);
 
   const groupList = groups.data ?? [];
   const selectedGroup = groupList.find((g) => g.id === draft.groupId) ?? null;
@@ -96,8 +97,10 @@ export default function CreateWho() {
         description: draft.details.trim() || null,
         spontaneous: draft.spontaneous,
       });
-      // The limit is set right after, before a series copies it.
-      if (draft.maxParticipants) await repo.updateEvent(result.eventId, { maxParticipants: draft.maxParticipants });
+      // These are set right after, before a series copies them.
+      if (draft.maxParticipants || draft.guestsCanInvite) {
+        await repo.updateEvent(result.eventId, { ...(draft.maxParticipants && { maxParticipants: draft.maxParticipants }), ...(draft.guestsCanInvite && { guestsCanInvite: true }) });
+      }
       if (draft.repeat.enabled && draft.dateMode !== 'undecided') {
         const { enabled: _on, ...config } = draft.repeat;
         try {
@@ -260,6 +263,8 @@ export default function CreateWho() {
                 {!draft.existingEventId ? (
                   <Card style={{ paddingVertical: spacing.xs }}>
                     <PlacesSetting value={draft.maxParticipants} onChange={(maxParticipants) => draft.set({ maxParticipants })} />
+                    <Divider />
+                    <GuestsCanInviteSetting value={draft.guestsCanInvite} onChange={(guestsCanInvite) => draft.set({ guestsCanInvite })} />
                   </Card>
                 ) : null}
                 {canSaveGroup ? (

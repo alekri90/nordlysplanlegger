@@ -17,6 +17,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ToastProvider } from '@/components/ui';
 import { queryClient } from '@/data/hooks';
 import { usePendingGroupJoin } from '@/lib/pendingJoin';
+import { useCalendarSync } from '@/lib/calendarSync';
 import { useNotificationRouting, usePushRegistration } from '@/lib/push';
 import { useSession, useSessionBootstrap } from '@/state/session';
 import { useAppearance } from '@/state/appearance';
@@ -69,6 +70,7 @@ function AppStack() {
   useSessionBootstrap();
   useNotificationRouting();
   usePushRegistration(useSession((s) => (s.status === 'signedIn' && s.profile?.onboarded ? s.profile.id : null)));
+  useCalendarSync(useSession((s) => (s.status === 'signedIn' ? (s.profile?.id ?? null) : null)));
   usePendingGroupJoin();
 
   useEffect(() => {

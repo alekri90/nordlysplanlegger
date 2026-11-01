@@ -42,6 +42,8 @@ export type CreateDraft = {
   spontaneous: boolean;
   /** Places in total; null = no limit («Begrens antall plasser»). */
   maxParticipants: number | null;
+  /** Everyone taking part can invite. Off: only the organizer and co-hosts. */
+  guestsCanInvite: boolean;
   /** "Gjenta arrangementet": off unless the user turns it on. */
   repeat: RepeatConfig & { enabled: boolean };
   /** Where the flow started — used to keep it as short as possible. */
@@ -82,6 +84,7 @@ const initial = (): CreateDraft => ({
   existingEventId: null,
   repeat: { ...DEFAULT_REPEAT, enabled: false },
   maxParticipants: null,
+  guestsCanInvite: false,
   spontaneous: false,
   source: 'new',
 });

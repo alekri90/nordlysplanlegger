@@ -534,6 +534,7 @@ export const demoRepository: Repository = {
       ...(patch.location !== undefined && { location: patch.location }),
       ...(patch.coverImageUrl !== undefined && { coverImageUrl: patch.coverImageUrl }),
       ...(patch.maxParticipants !== undefined && { maxParticipants: patch.maxParticipants }),
+      ...(patch.guestsCanInvite !== undefined && { guestsCanInvite: patch.guestsCanInvite }),
     });
     demoPromote(e);
     e.placesTaken = demoPlacesTaken(e);

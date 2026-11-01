@@ -27,6 +27,8 @@ const config: ExpoConfig = {
     infoPlist: {
       // Under the icon on the home screen; the App Store name stays "Nordlys Planlegger".
       CFBundleDisplayName: 'Planlegger',
+      // «Legg i kalender» on a single event still only asks to add.
+      NSCalendarsWriteOnlyAccessUsageDescription: 'Lar deg legge arrangementer rett i kalenderen din.',
       // Lets us check if share targets are installed before deep linking into them.
       LSApplicationQueriesSchemes: ['whatsapp', 'fb-messenger', 'snapchat', 'instagram'],
       ITSAppUsesNonExemptEncryption: false,
@@ -101,9 +103,8 @@ const config: ExpoConfig = {
     [
       'expo-calendar',
       {
-        calendarPermission: 'Lar deg legge arrangementer rett i kalenderen din.',
-        writeOnlyCalendarPermission: 'Lar deg legge arrangementer rett i kalenderen din.',
-        writeOnlyAccess: true,
+        // Full access: keeping the calendar in step means finding, changing and removing our own entries.
+        calendarPermission: 'Legger arrangementene dine i kalenderen du velger, og endrer eller fjerner dem når planene endres. Ingenting fra kalenderen sendes til oss.',
       },
     ],
     [

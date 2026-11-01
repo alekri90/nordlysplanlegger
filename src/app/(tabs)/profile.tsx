@@ -8,7 +8,9 @@ import { AppearanceSetting } from '@/components/settings/AppearanceSetting';
 import { Avatar, Button, Card, Divider, ListRow, PressableScale, Screen, Tag, Text } from '@/components/ui';
 import { repo } from '@/data';
 import { queryClient, useFriendRequests, useFriends, useFriendsRealtime, useGroups } from '@/data/hooks';
+import { calendarSyncSupported } from '@/lib/calendarSync';
 import { isDemoMode } from '@/lib/config';
+import { useCalendarSyncState } from '@/state/calendarSync';
 import { useMe, usePlan } from '@/state/session';
 import { gutter, radius, spacing, useColors } from '@/theme';
 
@@ -19,6 +21,7 @@ export default function Profile() {
   const friends = useFriends();
   const requests = useFriendRequests();
   useFriendsRealtime();
+  const calendarTitle = useCalendarSyncState((s) => s.calendarTitle);
   const [shareOpen, setShareOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -74,6 +77,12 @@ export default function Profile() {
         <Card style={{ marginTop: spacing.xxl, paddingVertical: spacing.xs }}>
           <ListRow icon="bell" title="Varsler" subtitle="Velg hva du vil få beskjed om" chevron onPress={() => router.push('/settings/notifications')} />
           <Divider />
+          {calendarSyncSupported ? (
+            <>
+              <ListRow icon="calendar" title="Kalendersynk" subtitle={calendarTitle ?? 'Av'} chevron onPress={() => router.push('/settings/calendar')} />
+              <Divider />
+            </>
+          ) : null}
           <AppearanceSetting />
           <Divider />
           <ListRow icon="shield" title="Personvern" subtitle="Hvem kan finne meg, blokkerte, eksport og sletting" chevron onPress={() => router.push('/settings/privacy')} />

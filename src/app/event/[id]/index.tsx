@@ -27,6 +27,7 @@ import { formatLong, formatTime, today } from '@/lib/dates';
 import { addEventToCalendar } from '@/lib/eventActions';
 import { firstName, timeHintLabel } from '@/lib/eventText';
 import { repeatSummary } from '@/lib/recurrence';
+import { useIsInCalendar } from '@/state/calendarSync';
 import { useCreateDraft } from '@/state/createDraft';
 import { useMe } from '@/state/session';
 import { gutter, radius, spacing, useColors } from '@/theme';
@@ -98,6 +99,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
   const prefillFromEvent = useCreateDraft((s) => s.prefillFromEvent);
 
   const mine = e.members.find((m) => m.userId === meId);
+  const inCalendar = useIsInCalendar(e.id);
   const unseen = mine?.status === 'invited';
   useEffect(() => {
     if (unseen) repo.markEventOpened(e.id).catch(() => {});
@@ -136,7 +138,8 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
   };
 
   const isPast = e.status === 'completed';
-  const canInvite = isOrganizer && !isPast && e.status !== 'cancelled';
+  const canAddToCalendar = !!e.selectedDate && !isPast && !inCalendar;
+  const canInvite = (isOrganizer || (!!e.guestsCanInvite && !!mine && mine.status !== 'declined')) && !isPast && e.status !== 'cancelled';
   // Photos can be shared from the day it happens.
   const canAddPhotos = isPast || (!!e.selectedDate && e.selectedDate <= today() && e.status !== 'cancelled');
 
@@ -222,7 +225,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
           ) : null}
 
           <View style={{ flexDirection: 'row', marginTop: spacing.xl }}>
-            {e.selectedDate && !isPast ? <ActionButton icon="calendar" label="Kalender" onPress={calendar} /> : null}
+            {canAddToCalendar ? <ActionButton icon="calendar" label="Kalender" onPress={calendar} /> : null}
             {canInvite ? <ActionButton icon="user-plus" label="Inviter" onPress={() => router.push(`/event/${e.id}/invite`)} /> : null}
             {isOrganizer ? <ActionButton icon="edit-2" label="Rediger" onPress={() => router.push(`/event/${e.id}/edit`)} /> : null}
             <ActionButton icon="more-horizontal" label="Mer" onPress={() => setMoreOpen(true)} />
@@ -446,7 +449,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
           <ReportForm target={{ eventId: e.id }} onDone={() => { setMoreOpen(false); setReporting(false); }} />
         ) : (
           <>
-            {e.selectedDate && !isPast ? <ListRow icon="calendar" title="Legg i kalender" onPress={() => { setMoreOpen(false); calendar(); }} /> : null}
+            {canAddToCalendar ? <ListRow icon="calendar" title="Legg i kalender" onPress={() => { setMoreOpen(false); calendar(); }} /> : null}
             {isOrganizer && e.groupId ? <ListRow icon="users" title="Gå til gjengen" onPress={() => { setMoreOpen(false); router.push(`/group/${e.groupId}`); }} /> : null}
             {isOwner && e.series && e.series.status !== 'ended' ? (
               <>

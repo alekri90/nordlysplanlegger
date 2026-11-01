@@ -3,9 +3,10 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { CoverPicker } from '@/components/create/CoverPicker';
+import { GuestsCanInviteSetting } from '@/components/event/GuestsCanInviteSetting';
 import { PlacesSetting } from '@/components/event/PlacesSetting';
 import { TimePicker } from '@/components/create/TimePicker';
-import { BottomBar, Button, Card, Header, Input, ListRow, PageSkeleton, Screen, ScreenScroll, Text, Toggle, useToast } from '@/components/ui';
+import { BottomBar, Button, Card, Divider, Header, Input, ListRow, PageSkeleton, Screen, ScreenScroll, Text, Toggle, useToast } from '@/components/ui';
 import { useEvent, useSetSeriesCover, useUpdateEvent } from '@/data/hooks';
 import type { CategoryId, PlannerEvent, TimeHint } from '@/data/types';
 import { defaultCoverFor } from '@/lib/categories';
@@ -29,6 +30,7 @@ function EditForm({ event: e }: { event: PlannerEvent }) {
   const inSeries = !!e.series && e.series.status !== 'ended';
   const [coverScope, setCoverScope] = useState<'this' | 'series'>('this');
   const [maxParticipants, setMaxParticipants] = useState<number | null>(e.maxParticipants ?? null);
+  const [guestsCanInvite, setGuestsCanInvite] = useState(!!e.guestsCanInvite);
 
   const [title, setTitle] = useState(e.title);
   const [place, setPlace] = useState(e.location?.name ?? '');
@@ -47,6 +49,7 @@ function EditForm({ event: e }: { event: PlannerEvent }) {
         location: place.trim() ? { name: place.trim(), address: address.trim() || null, detailsPending: pending } : null,
         ...(coverChanged && !(inSeries && coverScope === 'series') && { coverImageUrl: cover }),
         ...(maxParticipants !== (e.maxParticipants ?? null) && { maxParticipants }),
+        ...(guestsCanInvite !== !!e.guestsCanInvite && { guestsCanInvite }),
       });
       if (coverChanged && inSeries && coverScope === 'series') await setSeriesCover.mutateAsync({ seriesId: e.series!.id, coverImageUrl: cover, eventId: e.id });
       toast({ message: 'Lagret', tone: 'success' });
@@ -92,6 +95,8 @@ function EditForm({ event: e }: { event: PlannerEvent }) {
           ) : null}
           <Card style={{ paddingVertical: spacing.xs }}>
             <PlacesSetting value={maxParticipants} onChange={setMaxParticipants} />
+            <Divider />
+            <GuestsCanInviteSetting value={guestsCanInvite} onChange={setGuestsCanInvite} />
           </Card>
           {e.selectedDate ? <TimePicker hint={time.hint} time={time.time} allowHints={false} onChange={(hint, t) => setTime({ hint, time: t })} /> : null}
           <View>
