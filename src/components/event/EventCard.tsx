@@ -7,7 +7,7 @@ import type { PlannerEvent } from '@/data/types';
 import { thumb } from '@/lib/categories';
 import { eventDateLine, eventStatusLine, spontaneousWhen } from '@/lib/eventText';
 import { repeatTag } from '@/lib/recurrence';
-import { radius, shadows, spacing } from '@/theme';
+import { radius, shadows, spacing, useTheme } from '@/theme';
 
 type Props = {
   event: PlannerEvent;
@@ -17,8 +17,16 @@ type Props = {
   invite?: boolean;
 };
 
+/** The photo fades into the card: warm in light mode, the app's own surface in dark mode. */
+const LIGHT_FADE = { base: '#201A17', colors: ['rgba(24,19,17,0)', 'rgba(24,19,17,0.85)', '#181311'], locations: [0, 0.42, 0.62], imageRight: '38%' } as const;
+
 /** Large visual event card: photo, dark overlay, the one status that matters. */
 export function EventCard({ event, meId, onPress, invite }: Props) {
+  const { colors, scheme } = useTheme();
+  const fade =
+    scheme === 'dark'
+      ? { base: colors.surface, colors: [`${colors.surface}00`, `${colors.surface}D9`, colors.surface] as const, locations: [0, 0.46, 0.72] as const, imageRight: '28%' as const }
+      : LIGHT_FADE;
   const status = eventStatusLine(event, meId);
   const attending = event.members.filter((m) => m.status === 'attending' || m.role === 'organizer').map((m) => m.person);
   const dateLine = (event.spontaneous && spontaneousWhen(event)) || eventDateLine(event);
@@ -30,12 +38,12 @@ export function EventCard({ event, meId, onPress, invite }: Props) {
       accessibilityRole="button"
       accessibilityLabel={`${event.title}. ${dateLine}. ${status.text}`}
       accessibilityHint={invite ? 'Åpner invitasjonen' : 'Åpner arrangementet'}
-      style={[{ height: 136, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: '#201A17' }, shadows.md]}
+      style={[{ height: 136, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: fade.base }, shadows.md]}
     >
-      <Image source={{ uri: thumb(event.coverImageUrl, 700) }} style={[StyleSheet.absoluteFill, { right: '38%' }]} contentFit="cover" transition={200} />
+      <Image source={{ uri: thumb(event.coverImageUrl, 700) }} style={[StyleSheet.absoluteFill, { right: fade.imageRight }]} contentFit="cover" transition={200} />
       <LinearGradient
-        colors={['rgba(24,19,17,0)', 'rgba(24,19,17,0.85)', '#181311']}
-        locations={[0, 0.42, 0.62]}
+        colors={fade.colors}
+        locations={fade.locations}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
         style={StyleSheet.absoluteFill}
