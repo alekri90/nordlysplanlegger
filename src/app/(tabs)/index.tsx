@@ -48,7 +48,7 @@ export default function Home() {
   return (
     <Screen>
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: gutter, paddingBottom: spacing.huge }}
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: gutter, paddingBottom: spacing.xl }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />}
       >
@@ -166,7 +166,8 @@ export default function Home() {
           </>
         )}
 
-        <View style={{ marginTop: spacing.xxl }}>
+        {/* At the bottom of the screen when there's room to spare; after the events when there are many. */}
+        <View style={{ marginTop: 'auto', paddingTop: spacing.xxl }}>
           <SectionHeader title="Dine gjenger" action={groups.data?.length ? 'Se alle' : undefined} onAction={() => router.push('/(tabs)/groups')} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.xs, paddingRight: gutter }} style={{ marginHorizontal: -spacing.sm }}>
             {groups.isLoading

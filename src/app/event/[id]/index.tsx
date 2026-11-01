@@ -16,7 +16,7 @@ import { RemindButton } from '@/components/event/RemindButton';
 import { ResultsView } from '@/components/event/ResultsView';
 import { SeriesPeopleEditor } from '@/components/event/SeriesPeopleEditor';
 import { ShareSheet } from '@/components/event/ShareSheet';
-import { BottomBar, Button, Card, EmptyState, ErrorState, Icon, IconButton, ListRow, PageSkeleton, Screen, Segmented, Sheet, Text, useToast, type IconName } from '@/components/ui';
+import { BottomBar, Button, Card, EmptyState, ErrorState, Icon, ListRow, PageSkeleton, Screen, Segmented, Sheet, Text, useToast, type IconName } from '@/components/ui';
 import { repo } from '@/data';
 import { queryClient, useAddEventPhotos, useCancelEvent, useEvent, useSetRsvp, useUpdateEvent, useUpdateEventSeries } from '@/data/hooks';
 import type { EventMember, EventSeriesInfo, PlannerEvent, SeriesPeople } from '@/data/types';
@@ -167,11 +167,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
   return (
     <Screen edges={[]}>
       <ScrollView showsVerticalScrollIndicator={false} contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingBottom: 140 }}>
-        <EventHero
-          imageUrl={e.coverImageUrl}
-          height={300}
-          right={canInvite ? undefined : <IconButton icon="share" variant="glass" accessibilityLabel="Del" onPress={() => setShareOpen(true)} />}
-        />
+        <EventHero imageUrl={e.coverImageUrl} height={300} />
         <View style={{ marginTop: -spacing.xxl, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, backgroundColor: colors.background, paddingHorizontal: gutter, paddingTop: spacing.xxl }}>
           <Animated.View entering={FadeInDown.duration(320)}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
@@ -227,11 +223,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
 
           <View style={{ flexDirection: 'row', marginTop: spacing.xl }}>
             {e.selectedDate && !isPast ? <ActionButton icon="calendar" label="Kalender" onPress={calendar} /> : null}
-            {canInvite ? (
-              <ActionButton icon="user-plus" label="Inviter" onPress={() => router.push(`/event/${e.id}/invite`)} />
-            ) : (
-              <ActionButton icon="share-2" label="Del" onPress={() => setShareOpen(true)} />
-            )}
+            {canInvite ? <ActionButton icon="user-plus" label="Inviter" onPress={() => router.push(`/event/${e.id}/invite`)} /> : null}
             {isOrganizer ? <ActionButton icon="edit-2" label="Rediger" onPress={() => router.push(`/event/${e.id}/edit`)} /> : null}
             <ActionButton icon="more-horizontal" label="Mer" onPress={() => setMoreOpen(true)} />
           </View>
@@ -455,7 +447,6 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
         ) : (
           <>
             {e.selectedDate && !isPast ? <ListRow icon="calendar" title="Legg i kalender" onPress={() => { setMoreOpen(false); calendar(); }} /> : null}
-            {!canInvite ? <ListRow icon="share-2" title="Del invitasjonen" onPress={() => { setMoreOpen(false); setShareOpen(true); }} /> : null}
             {isOrganizer && e.groupId ? <ListRow icon="users" title="Gå til gjengen" onPress={() => { setMoreOpen(false); router.push(`/group/${e.groupId}`); }} /> : null}
             {isOwner && e.series && e.series.status !== 'ended' ? (
               <>
