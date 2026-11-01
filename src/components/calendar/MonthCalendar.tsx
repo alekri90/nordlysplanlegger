@@ -1,5 +1,5 @@
 import { memo, useEffect } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 
 import { Icon } from '@/components/ui/Icon';
@@ -161,7 +161,7 @@ export function MonthCalendar({ month, getState, onPressDay, onPrev, onNext, day
 }
 
 /** Small legend row so status is never communicated by colour alone. */
-export function CalendarLegend({ items }: { items: { state: DayState | 'busy'; label: string }[] }) {
+export function CalendarLegend({ items, style }: { items: { state: DayState | 'busy'; label: string }[]; style?: StyleProp<ViewStyle> }) {
   const colors = useColors();
   const swatch: Partial<Record<DayState | 'busy', string>> = {
     candidate: colors.primarySoft,
@@ -170,7 +170,7 @@ export function CalendarLegend({ items }: { items: { state: DayState | 'busy'; l
     best: colors.success,
   };
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, justifyContent: 'center', marginTop: spacing.md }}>
+    <View style={[{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, justifyContent: 'center', marginTop: spacing.md }, style]}>
       {items.map((i) => (
         <View key={i.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <View style={{ width: 14, height: 14, borderRadius: 4, backgroundColor: swatch[i.state] ?? colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}>

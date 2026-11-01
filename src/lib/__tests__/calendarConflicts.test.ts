@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { conflictsFor, conflictSummary, conflictTime, toBusyItems, type RawCalendarEvent } from '../calendarConflicts.ts';
+import { busyOnDay, conflictsFor, conflictSummary, conflictTime, toBusyItems, type RawCalendarEvent } from '../calendarConflicts.ts';
 
 const DAY = '2030-05-10';
 const raw = (from: string, to: string, over: Partial<RawCalendarEvent> = {}): RawCalendarEvent => ({ title: 'Tannlege', startDate: new Date(`${DAY}T${from}:00`), endDate: new Date(`${DAY}T${to}:00`), ...over });
@@ -59,6 +59,23 @@ describe('what collides', () => {
   it('something longer than the day says so', () => {
     const trip = busy({ title: 'Tur', startDate: new Date('2030-05-09T16:00:00'), endDate: new Date('2030-05-12T12:00:00') });
     assert.equal(conflictTime(trip[0], DAY), 'hele dagen');
+  });
+});
+
+describe('the day in the Kalender tab', () => {
+  const day = busy(raw('08:00', '17:00', { title: 'Jobb' }), raw('15:00', '16:00', { title: 'Møte' }), raw('16:00', '17:00', { title: 'Trening' }), raw('19:00', '21:00', { title: 'Middag' }));
+
+  it('shows everything by default', () => {
+    assert.equal(busyOnDay(day, DAY).length, 4);
+  });
+  it('«etter kl. 16» leaves out what starts earlier, even a working day that ends later', () => {
+    assert.deepEqual(titles(busyOnDay(day, DAY, true)), ['Trening', 'Middag']);
+  });
+  it('keeps a trip that is still going in the evening, not a night shift that ended in the morning', () => {
+    const trip = busy({ title: 'Tur', startDate: new Date('2030-05-09T12:00:00'), endDate: new Date('2030-05-12T12:00:00') });
+    const night = busy({ title: 'Nattevakt', startDate: new Date('2030-05-09T22:00:00'), endDate: new Date(`${DAY}T06:00:00`) });
+    assert.equal(busyOnDay(trip, DAY, true).length, 1);
+    assert.equal(busyOnDay(night, DAY, true).length, 0);
   });
 });
 

@@ -3,7 +3,7 @@ import { create } from 'zustand';
 
 import type { SyncedEntries } from '@/lib/calendarPlan';
 
-type Saved = { calendarId: string | null; calendarTitle: string | null; synced: SyncedEntries; conflicts: boolean; skippedCalendars: string[] };
+type Saved = { calendarId: string | null; calendarTitle: string | null; synced: SyncedEntries; conflicts: boolean; skippedCalendars: string[]; eveningOnly: boolean };
 
 type State = Saved & {
   userId: string | null;
@@ -12,16 +12,17 @@ type State = Saved & {
   setSynced: (update: (synced: SyncedEntries) => SyncedEntries) => void;
   setConflicts: (conflicts: boolean) => void;
   toggleSkipped: (calendarId: string) => void;
+  setEveningOnly: (eveningOnly: boolean) => void;
 };
 
-const EMPTY: Saved = { calendarId: null, calendarTitle: null, synced: {}, conflicts: false, skippedCalendars: [] };
+const EMPTY: Saved = { calendarId: null, calendarTitle: null, synced: {}, conflicts: false, skippedCalendars: [], eveningOnly: false };
 const keyFor = (userId: string) => `nordlys.calendarSync.${userId}`;
 
 /** Remembered on this phone, per person: the calendar is the phone's, not the account's. */
 export const useCalendarSyncState = create<State>((set, get) => {
   const save = () => {
-    const { userId, calendarId, calendarTitle, synced, conflicts, skippedCalendars } = get();
-    if (userId) AsyncStorage.setItem(keyFor(userId), JSON.stringify({ calendarId, calendarTitle, synced, conflicts, skippedCalendars })).catch(() => {});
+    const { userId, calendarId, calendarTitle, synced, conflicts, skippedCalendars, eveningOnly } = get();
+    if (userId) AsyncStorage.setItem(keyFor(userId), JSON.stringify({ calendarId, calendarTitle, synced, conflicts, skippedCalendars, eveningOnly })).catch(() => {});
   };
   return {
     ...EMPTY,
@@ -41,6 +42,10 @@ export const useCalendarSyncState = create<State>((set, get) => {
     },
     setConflicts: (conflicts) => {
       set({ conflicts });
+      save();
+    },
+    setEveningOnly: (eveningOnly) => {
+      set({ eveningOnly });
       save();
     },
     toggleSkipped: (calendarId) => {

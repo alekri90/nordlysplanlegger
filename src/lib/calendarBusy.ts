@@ -10,6 +10,7 @@ import { addDays, dateRange, parseISODate } from './dates';
 const NOTHING: BusyItem[] = [];
 
 const DEMO_DAYS = [
+  { every: 3, title: 'Jobbmøte', calendarId: 'demo-jobb', from: '10:00', to: '11:00' },
   { every: 7, title: 'Tannlege', calendarId: 'demo-privat', from: '18:00', to: '19:00' },
   { every: 5, title: 'Foreldremøte', calendarId: 'demo-familie', from: '18:30', to: '20:00' },
   { every: 11, title: 'Kundemiddag', calendarId: 'demo-jobb', from: '19:00', to: '22:00' },

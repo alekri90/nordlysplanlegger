@@ -75,6 +75,17 @@ export function conflictsFor(items: BusyItem[], when: ConflictWhen) {
   return items.filter((i) => i.start < end && i.end > start && (!when.eventId || i.eventId !== when.eventId));
 }
 
+/**
+ * What's in the calendar on a day. «Etter kl. 16» goes by when something starts, so a working day
+ * that ends at 17 stays out. What began on an earlier day and is still going, stays in.
+ */
+export function busyOnDay(items: BusyItem[], date: string, eveningOnly = false) {
+  const all = conflictsFor(items, { date });
+  if (!eveningOnly) return all;
+  const evening = at(date, '16:00');
+  return all.filter((i) => i.start >= evening || (i.start < dayStart(date) && i.end > evening));
+}
+
 const pad = (n: number) => String(n).padStart(2, '0');
 const clock = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 

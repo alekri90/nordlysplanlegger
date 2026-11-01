@@ -138,7 +138,7 @@ export default function CalendarSettings() {
             <Card style={{ paddingVertical: spacing.xs }}>
               <ListRow
                 title="Vis kollisjoner"
-                subtitle="Sier fra når du allerede har noe i kalenderen"
+                subtitle="Viser kalenderne dine i Kalender, og sier fra når noe kolliderer"
                 trailing={<Toggle value={conflicts} onValueChange={setConflicts} accessibilityLabel="Vis kollisjoner" />}
               />
               {conflicts
