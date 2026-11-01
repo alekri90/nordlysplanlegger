@@ -222,6 +222,9 @@ describe('inspiration', () => {
     assert.equal(holidays[0].inSeason, true);
     assert.ok(holidays.slice(0, 3).some((a) => a.title === 'Halloweenfest'));
     assert.deepEqual(searchActivities('bowl', october).map((a) => a.title), ['Bowling']);
+    assert.deepEqual(searchActivities('aufguss', october).map((a) => a.title), ['Aufguss']);
+    assert.equal(activity('Aufguss').category, 'sauna');
+    assert.ok(activity('Aufguss').cover.includes('1660735698223'));
     assert.ok(activity('Gokart').cover.includes('1779128773287'));
   });
 });

@@ -34,7 +34,7 @@ export const CATEGORIES: Record<CategoryId, Category> = {
     id: 'sauna',
     label: 'Badstu',
     icon: 'sunset',
-    keywords: ['badstu', 'sauna', 'bad', 'spa', 'kaldbad', 'isbad', 'sjøbad'],
+    keywords: ['badstu', 'sauna', 'aufguss', 'løyly', 'bad', 'spa', 'kaldbad', 'isbad', 'sjøbad'],
     photos: [
       '1579457870378-16e766c0c266', // friends at the shore, sunset
       '1739869481946-c054e37a55b1', // sauna interior with people
@@ -42,6 +42,12 @@ export const CATEGORIES: Record<CategoryId, Category> = {
       '1712659606957-b7395ba9ebb2', // sauna with window
       '1741601274134-fa98352f1c95', // water on sauna rocks
       '1728404259075-209cfb5bb89c', // wood stove in cabin
+      '1660735698223-23a4edefa264', // steam rising from the stones
+      '1749561532759-f66ea4b3e66c', // friends on the bench around the heater
+      '1759216852991-323dad82e5ba', // laughing in the sauna
+      '1741601274210-14b7ab1ef99c', // two people talking in the warmth
+      '1790756548568-a94c841b4b1c', // bench, bucket and ladle
+      '1757940556610-a114be4733bf', // modern sauna with heated stones
     ],
   },
   games: {
@@ -309,6 +315,18 @@ export function thumb(url: string, width = 400): string {
 export type PhotoSet = { id: string; keywords: string[]; photos: string[] };
 
 export const PHOTO_SETS: PhotoSet[] = [
+  {
+    id: 'aufguss',
+    keywords: ['aufguss', 'løyly'],
+    photos: [
+      '1660735698223-23a4edefa264', // steam rising from the stones
+      '1741601272384-7150b6e6b842', // pouring water in a dark, steamy sauna
+      '1749561532759-f66ea4b3e66c', // friends with birch whisks, heater in front
+      '1741601273990-df3fca1d2bd9', // ladle over the hot stones
+      '1749561532773-a320c8a16341', // group with birch whisks on the bench
+      '1759216852708-d57a21133557', // ladle above the heater
+    ],
+  },
   {
     id: 'halloween',
     keywords: ['halloween'],

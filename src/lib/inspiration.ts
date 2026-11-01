@@ -16,19 +16,19 @@ export const INSPIRATION_GROUPS: InspirationGroup[] = [
     id: 'friends',
     label: 'Med vennegjengen',
     photo: '1746635732312-0083b7f9423f',
-    activities: ['Spillkveld', 'Hyttetur', 'Badstu og bading', 'Grillkveld', 'Quizkveld', 'Sommerfest', 'Bowling', 'Middag hjemme', 'Konsert', 'Stranddag', 'Escape room', 'Padelturnering'],
+    activities: ['Spillkveld', 'Hyttetur', 'Badstu og bading', 'Aufguss', 'Grillkveld', 'Quizkveld', 'Sommerfest', 'Bowling', 'Middag hjemme', 'Konsert', 'Stranddag', 'Escape room', 'Padelturnering'],
   },
   {
     id: 'guys',
     label: 'Med gutta',
     photo: '1490578474895-699cd4e2cf59',
-    activities: ['Fotballkveld', 'Kortkveld', 'Golftur', 'Gokart', 'Hyttetur', 'Badstu og isbading', 'Fisketur', 'Gamingkveld', 'Paintball', 'Grillkveld', 'Skitur'],
+    activities: ['Fotballkveld', 'Kortkveld', 'Golftur', 'Gokart', 'Hyttetur', 'Badstu og isbading', 'Aufguss', 'Fisketur', 'Gamingkveld', 'Paintball', 'Grillkveld', 'Skitur'],
   },
   {
     id: 'girls',
     label: 'Med jentene',
     photo: '1579457870378-16e766c0c266',
-    activities: ['Spa og velvære', 'Brunsj', 'Badstu med jentene', 'Tapaskveld', 'Shoppingtur', 'Yogakveld', 'Hyttetur', 'Sommerfest', 'Keramikkurs', 'Julebord'],
+    activities: ['Spa og velvære', 'Brunsj', 'Badstu med jentene', 'Aufguss', 'Tapaskveld', 'Shoppingtur', 'Yogakveld', 'Hyttetur', 'Sommerfest', 'Keramikkurs', 'Julebord'],
   },
   {
     id: 'family',
