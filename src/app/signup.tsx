@@ -6,7 +6,7 @@ import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 
 import { FriendButton } from '@/components/people/FriendButton';
 import { UsernameField } from '@/components/people/UsernameField';
-import { Avatar, BottomBar, Button, Card, Confetti, Header, Icon, Input, KeyboardAware, PressableScale, Screen, ScreenScroll, Tag, Text, useToast, type IconName } from '@/components/ui';
+import { Avatar, BottomBar, Button, Card, Confetti, Header, Icon, Input, PressableScale, Screen, ScreenScroll, Tag, Text, useToast, type IconName } from '@/components/ui';
 import { repo } from '@/data';
 import { queryClient, useGroups, useInvite, usePublicProfile, useUpdateProfile } from '@/data/hooks';
 import { firstName } from '@/lib/eventText';
@@ -91,94 +91,90 @@ export default function SignUp() {
   if (step === 'code') {
     return (
       <Screen>
-        <KeyboardAware>
-          <Header back="back" onBack={() => setStep('form')} />
-          <ScreenScroll>
-            <Animated.View entering={FadeIn.duration(220)}>
-              <Text variant="title1" accessibilityRole="header">
-                Skriv inn koden
+        <Header back="back" onBack={() => setStep('form')} />
+        <ScreenScroll>
+          <Animated.View entering={FadeIn.duration(220)}>
+            <Text variant="title1" accessibilityRole="header">
+              Skriv inn koden
+            </Text>
+            <Text variant="body" color="textSecondary" style={{ marginTop: spacing.sm, marginBottom: spacing.xl }}>
+              Vi sendte en kode til {email.trim()}. Sjekk søppelpost hvis du ikke finner den.
+            </Text>
+            <Input
+              size="lg"
+              value={code}
+              onChangeText={(t) => {
+                const digits = t.replace(/\D/g, '').slice(0, OTP_MAX);
+                // Pasted or auto-filled → submit right away; typed → submit at full length.
+                const pasted = digits.length - code.length > 1;
+                setCode(digits);
+                if (digits.length === OTP_MAX || (pasted && digits.length >= OTP_MIN)) verify(digits);
+              }}
+              placeholder="Kode"
+              keyboardType="number-pad"
+              autoComplete="one-time-code"
+              textContentType="oneTimeCode"
+              maxLength={OTP_MAX}
+              autoFocus
+              style={{ letterSpacing: 8, fontSize: 24 }}
+              error={codeError}
+              accessibilityLabel="Engangskode"
+            />
+            <PressableScale onPress={resend} hitSlop={10} style={{ alignSelf: 'center', marginTop: spacing.lg }} accessibilityLabel="Send ny kode">
+              <Text variant="footnote" color="textSecondary">
+                Fikk du ingen kode? <Text variant="footnote" color="primary">Send på nytt</Text>
               </Text>
-              <Text variant="body" color="textSecondary" style={{ marginTop: spacing.sm, marginBottom: spacing.xl }}>
-                Vi sendte en kode til {email.trim()}. Sjekk søppelpost hvis du ikke finner den.
-              </Text>
-              <Input
-                size="lg"
-                value={code}
-                onChangeText={(t) => {
-                  const digits = t.replace(/\D/g, '').slice(0, OTP_MAX);
-                  // Pasted or auto-filled → submit right away; typed → submit at full length.
-                  const pasted = digits.length - code.length > 1;
-                  setCode(digits);
-                  if (digits.length === OTP_MAX || (pasted && digits.length >= OTP_MIN)) verify(digits);
-                }}
-                placeholder="Kode"
-                keyboardType="number-pad"
-                autoComplete="one-time-code"
-                textContentType="oneTimeCode"
-                maxLength={OTP_MAX}
-                autoFocus
-                style={{ letterSpacing: 8, fontSize: 24 }}
-                error={codeError}
-                accessibilityLabel="Engangskode"
-              />
-              <PressableScale onPress={resend} hitSlop={10} style={{ alignSelf: 'center', marginTop: spacing.lg }} accessibilityLabel="Send ny kode">
-                <Text variant="footnote" color="textSecondary">
-                  Fikk du ingen kode? <Text variant="footnote" color="primary">Send på nytt</Text>
-                </Text>
-              </PressableScale>
-            </Animated.View>
-          </ScreenScroll>
-          <BottomBar>
-            <Button title="Bekreft" variant="ink" disabled={code.length < OTP_MIN} loading={busy} onPress={() => verify()} />
-          </BottomBar>
-        </KeyboardAware>
+            </PressableScale>
+          </Animated.View>
+        </ScreenScroll>
+        <BottomBar>
+          <Button title="Bekreft" variant="ink" disabled={code.length < OTP_MIN} loading={busy} onPress={() => verify()} />
+        </BottomBar>
       </Screen>
     );
   }
 
   return (
     <Screen>
-      <KeyboardAware>
-        <Header back="close" />
-        <ScreenScroll bottomInset={150}>
-          <Animated.View entering={FadeIn.duration(260)}>
-            <Text variant="title1" accessibilityRole="header">
-              Gjør det enklere neste gang
-            </Text>
-            <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
-              {BENEFITS.map((b) => (
-                <View key={b.icon} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-                  <Icon name={b.icon} size={16} color="primary" />
-                  <Text variant="subhead" color="textSecondary" style={{ flex: 1 }}>
-                    {b.text}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </Animated.View>
-
-          <View style={{ gap: spacing.xl, marginTop: spacing.xxl }}>
-            <Field label="Visningsnavn" visibility="public" hint="Dette er navnet vennene dine ser.">
-              <Input value={displayName} onChangeText={setDisplayName} placeholder="Alexander Kristensen" autoCapitalize="words" textContentType="name" autoComplete="name" maxLength={60} accessibilityLabel="Visningsnavn" />
-            </Field>
-            <Field label="Brukernavn" visibility="public" hint="Brukes for å finne og legge deg til.">
-              <UsernameField value={username} onChange={setUsername} displayName={displayName} onValidChange={onValid} />
-            </Field>
-            <Field label="E-post" visibility="private" hint="Vi sender deg en kode her – ingen passord å huske. Vises aldri for andre.">
-              <Input value={email} onChangeText={setEmail} placeholder="navn@epost.no" keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" accessibilityLabel="E-post" />
-            </Field>
+      <Header back="close" />
+      <ScreenScroll bottomInset={150}>
+        <Animated.View entering={FadeIn.duration(260)}>
+          <Text variant="title1" accessibilityRole="header">
+            Gjør det enklere neste gang
+          </Text>
+          <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
+            {BENEFITS.map((b) => (
+              <View key={b.icon} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <Icon name={b.icon} size={16} color="primary" />
+                <Text variant="subhead" color="textSecondary" style={{ flex: 1 }}>
+                  {b.text}
+                </Text>
+              </View>
+            ))}
           </View>
+        </Animated.View>
 
-          <PressableScale onPress={() => router.replace('/auth')} style={{ alignSelf: 'center', padding: spacing.md, marginTop: spacing.xl }} accessibilityLabel="Logg inn">
-            <Text variant="footnote" color="textSecondary">
-              Har du allerede en profil? <Text variant="footnote" color="primary">Logg inn</Text>
-            </Text>
-          </PressableScale>
-        </ScreenScroll>
-        <BottomBar>
-          <Button title="Send kode" variant="ink" disabled={!canSubmit} loading={busy} onPress={submit} />
-        </BottomBar>
-      </KeyboardAware>
+        <View style={{ gap: spacing.xl, marginTop: spacing.xxl }}>
+          <Field label="Visningsnavn" visibility="public" hint="Dette er navnet vennene dine ser.">
+            <Input value={displayName} onChangeText={setDisplayName} placeholder="Alexander Kristensen" autoCapitalize="words" textContentType="name" autoComplete="name" maxLength={60} accessibilityLabel="Visningsnavn" />
+          </Field>
+          <Field label="Brukernavn" visibility="public" hint="Brukes for å finne og legge deg til.">
+            <UsernameField value={username} onChange={setUsername} displayName={displayName} onValidChange={onValid} />
+          </Field>
+          <Field label="E-post" visibility="private" hint="Vi sender deg en kode her – ingen passord å huske. Vises aldri for andre.">
+            <Input value={email} onChangeText={setEmail} placeholder="navn@epost.no" keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" accessibilityLabel="E-post" />
+          </Field>
+        </View>
+
+        <PressableScale onPress={() => router.replace('/auth')} style={{ alignSelf: 'center', padding: spacing.md, marginTop: spacing.xl }} accessibilityLabel="Logg inn">
+          <Text variant="footnote" color="textSecondary">
+            Har du allerede en profil? <Text variant="footnote" color="primary">Logg inn</Text>
+          </Text>
+        </PressableScale>
+      </ScreenScroll>
+      <BottomBar>
+        <Button title="Send kode" variant="ink" disabled={!canSubmit} loading={busy} onPress={submit} />
+      </BottomBar>
     </Screen>
   );
 }

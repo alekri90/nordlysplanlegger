@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
 import { UsernameField } from '@/components/people/UsernameField';
-import { Avatar, BottomBar, Button, Icon, Input, KeyboardAware, PageTitle, PressableScale, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
+import { Avatar, BottomBar, Button, Icon, Input, PageTitle, PressableScale, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
 import { useUpdateProfile } from '@/data/hooks';
 import { useMe, useSession } from '@/state/session';
 import { spacing, useColors } from '@/theme';
@@ -44,29 +44,27 @@ export default function ProfileSetup() {
 
   return (
     <Screen>
-      <KeyboardAware>
-        <ScreenScroll contentContainerStyle={{ paddingTop: spacing.xxl }} bottomInset={140}>
-          <PageTitle title="Velkommen!" subtitle="Slik ser vennene dine deg. Du kan endre det senere." />
-          <PressableScale onPress={pick} accessibilityLabel="Legg til profilbilde (valgfritt)" style={{ alignSelf: 'center', marginBottom: spacing.xl }}>
-            <Avatar name={name || '?'} uri={avatar === undefined ? me?.avatarUrl : avatar} size={104} />
-            <View style={{ position: 'absolute', right: 0, bottom: 0, width: 34, height: 34, borderRadius: 17, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: colors.background }}>
-              <Icon name="camera" size={15} tint={colors.textOnInk} />
-            </View>
-          </PressableScale>
-          <View style={{ gap: spacing.xl }}>
-            <Input label="Visningsnavn" value={name} onChangeText={setName} autoCapitalize="words" maxLength={60} />
-            <View>
-              <Text variant="footnote" color="textSecondary" style={{ marginBottom: spacing.sm, marginLeft: 4 }}>
-                Brukernavn – brukes for å finne og legge deg til
-              </Text>
-              <UsernameField value={username} onChange={setUsername} displayName={name} current={me?.username} onValidChange={onValid} />
-            </View>
+      <ScreenScroll contentContainerStyle={{ paddingTop: spacing.xxl }} bottomInset={140}>
+        <PageTitle title="Velkommen!" subtitle="Slik ser vennene dine deg. Du kan endre det senere." />
+        <PressableScale onPress={pick} accessibilityLabel="Legg til profilbilde (valgfritt)" style={{ alignSelf: 'center', marginBottom: spacing.xl }}>
+          <Avatar name={name || '?'} uri={avatar === undefined ? me?.avatarUrl : avatar} size={104} />
+          <View style={{ position: 'absolute', right: 0, bottom: 0, width: 34, height: 34, borderRadius: 17, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: colors.background }}>
+            <Icon name="camera" size={15} tint={colors.textOnInk} />
           </View>
-        </ScreenScroll>
-        <BottomBar>
-          <Button title="Fortsett" variant="ink" disabled={!name.trim() || !valid} loading={update.isPending} onPress={save} />
-        </BottomBar>
-      </KeyboardAware>
+        </PressableScale>
+        <View style={{ gap: spacing.xl }}>
+          <Input label="Visningsnavn" value={name} onChangeText={setName} autoCapitalize="words" maxLength={60} />
+          <View>
+            <Text variant="footnote" color="textSecondary" style={{ marginBottom: spacing.sm, marginLeft: 4 }}>
+              Brukernavn – brukes for å finne og legge deg til
+            </Text>
+            <UsernameField value={username} onChange={setUsername} displayName={name} current={me?.username} onValidChange={onValid} />
+          </View>
+        </View>
+      </ScreenScroll>
+      <BottomBar>
+        <Button title="Fortsett" variant="ink" disabled={!name.trim() || !valid} loading={update.isPending} onPress={save} />
+      </BottomBar>
     </Screen>
   );
 }

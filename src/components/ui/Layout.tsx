@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View, type ScrollViewProps, type StyleProp, type ViewStyle } from 'react-native';
+import { View, type ScrollViewProps, type StyleProp, type ViewStyle } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -31,10 +32,11 @@ export function Screen({ children, style, edges = ['top'] }: { children: ReactNo
   );
 }
 
-/** Scrollable page body with the standard gutter. Leaves room for a BottomBar. */
+/** Scrollable page body with the standard gutter. Leaves room for a BottomBar, and lifts the focused field above it and the keyboard. */
 export function ScreenScroll({ children, contentContainerStyle, bottomInset = 120, ...rest }: ScrollViewProps & { bottomInset?: number }) {
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
+      bottomOffset={bottomInset}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
       showsVerticalScrollIndicator={false}
@@ -42,7 +44,7 @@ export function ScreenScroll({ children, contentContainerStyle, bottomInset = 12
       {...rest}
     >
       {children}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -100,13 +102,15 @@ export function PageTitle({ title, subtitle, style }: { title: string; subtitle?
 
 /**
  * Sticky bottom action area. Primary actions live here — within thumb reach,
- * above the home indicator / gesture bar on both platforms.
+ * above the home indicator / gesture bar on both platforms, and above the keyboard when it's open.
  */
 export function BottomBar({ children, style, transparent }: { children: ReactNode; style?: StyleProp<ViewStyle>; transparent?: boolean }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const paddingBottom = Math.max(insets.bottom, spacing.lg) + spacing.xs;
   return (
-    <View
+    <KeyboardStickyView
+      offset={{ opened: paddingBottom - spacing.md }}
       pointerEvents="box-none"
       style={[
         {
@@ -116,7 +120,7 @@ export function BottomBar({ children, style, transparent }: { children: ReactNod
           bottom: 0,
           paddingHorizontal: gutter,
           paddingTop: spacing.xxl,
-          paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.xs,
+          paddingBottom,
           gap: spacing.sm,
         },
         style,
@@ -131,16 +135,7 @@ export function BottomBar({ children, style, transparent }: { children: ReactNod
         />
       ) : null}
       {children}
-    </View>
-  );
-}
-
-/** Wraps forms so the bottom bar rides above the keyboard on iOS. */
-export function KeyboardAware({ children }: { children: ReactNode }) {
-  return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      {children}
-    </KeyboardAvoidingView>
+    </KeyboardStickyView>
   );
 }
 

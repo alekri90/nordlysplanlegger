@@ -10,7 +10,7 @@ import { StepHeader } from '@/components/create/StepHeader';
 import { PeoplePicker } from '@/components/people/PeoplePicker';
 import { PersonRow } from '@/components/people/PersonRow';
 import { SelectedSummary } from '@/components/people/SelectedSummary';
-import { AvatarStack, BottomBar, Button, Card, Divider, Icon, Input, KeyboardAware, ListRow, PageTitle, PressableScale, Screen, ScreenScroll, SectionHeader, Text, Toggle, useToast } from '@/components/ui';
+import { AvatarStack, BottomBar, Button, Card, Divider, Icon, Input, ListRow, PageTitle, PressableScale, Screen, ScreenScroll, SectionHeader, Text, Toggle, useToast } from '@/components/ui';
 import { useCreateEvent, useCreateEventSeries, useGroups, useInviteSuggestions } from '@/data/hooks';
 import type { Group, Person } from '@/data/types';
 import { periodLabelFor } from '@/lib/dates';
@@ -133,169 +133,167 @@ export default function CreateWho() {
 
   return (
     <Screen>
-      <KeyboardAware>
-        <StepHeader step={draft.source === 'event' ? 1 : 3} total={draft.source === 'event' ? 2 : 4} />
-        <ScreenScroll bottomInset={220}>
-          <PageTitle title="Hvem skal være med?" />
+      <StepHeader step={draft.source === 'event' ? 1 : 3} total={draft.source === 'event' ? 2 : 4} />
+      <ScreenScroll bottomInset={220}>
+        <PageTitle title="Hvem skal være med?" />
 
-          {selectedGroup ? (
-            <Animated.View entering={FadeIn.duration(220)}>
-              <Card>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-                  <View style={{ width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
-                    {selectedGroup.emoji ? <Text style={{ fontSize: 24 }}>{selectedGroup.emoji}</Text> : <Icon name="users" size={22} color="primary" />}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text variant="headline">{selectedGroup.name}</Text>
-                    <Text variant="footnote" color="textSecondary">
-                      {selectedInGroup} av {groupMembers.length} valgt
-                    </Text>
-                  </View>
-                  <Button title="Bytt" size="sm" variant="secondary" onPress={clearGroup} />
+        {selectedGroup ? (
+          <Animated.View entering={FadeIn.duration(220)}>
+            <Card>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <View style={{ width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
+                  {selectedGroup.emoji ? <Text style={{ fontSize: 24 }}>{selectedGroup.emoji}</Text> : <Icon name="users" size={22} color="primary" />}
                 </View>
-                <View style={{ marginTop: spacing.sm }}>
-                  {groupMembers.map((m) => (
-                    <PersonRow key={m.id} person={m} size={40} selected={selected.has(m.id)} onPress={() => toggle(m)} />
-                  ))}
+                <View style={{ flex: 1 }}>
+                  <Text variant="headline">{selectedGroup.name}</Text>
+                  <Text variant="footnote" color="textSecondary">
+                    {selectedInGroup} av {groupMembers.length} valgt
+                  </Text>
                 </View>
-                {draft.repeat.enabled ? (
-                  <>
-                    <Divider />
-                    <ListRow
-                      icon="repeat"
-                      title="Samme gjeng neste gang"
-                      subtitle="Nye i gjengen blir med automatisk"
-                      trailing={<Toggle value={draft.repeat.autoInviteGroup} onValueChange={(autoInviteGroup) => draft.set({ repeat: { ...draft.repeat, autoInviteGroup } })} accessibilityLabel="Samme gjeng neste gang" />}
-                    />
-                  </>
-                ) : null}
-              </Card>
-            </Animated.View>
-          ) : (
-            <>
-              {suggestedGroup ? (
-                <Animated.View entering={FadeInDown.duration(260)}>
-                  <PressableScale onPress={() => chooseGroup(suggestedGroup)} accessibilityLabel={`Velg ${suggestedGroup.name}, ${suggestedGroup.members.length} personer`}>
-                    <Card style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.feature, borderWidth: 0 }}>
-                      <Icon name="zap" size={18} tint="#FF9AA2" />
-                      <View style={{ flex: 1 }}>
-                        <Text variant="footnote" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                          Forslag
-                        </Text>
-                        <Text variant="headline" style={{ color: colors.textOnFeature }}>
-                          {suggestedGroup.emoji ? `${suggestedGroup.emoji} ` : ''}
-                          {suggestedGroup.name} · {suggestedGroup.members.length} personer
-                        </Text>
-                      </View>
-                      <AvatarStack people={suggestedGroup.members} size={26} max={3} />
-                    </Card>
-                  </PressableScale>
-                </Animated.View>
-              ) : usual.length >= 2 ? (
-                <Animated.View entering={FadeInDown.duration(260)}>
-                  <Card style={{ gap: spacing.md }}>
-                    <Text variant="footnote" color="textSecondary">
-                      Du inviterer vanligvis
-                    </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-                      <AvatarStack people={usual} size={32} max={4} />
-                      <Text variant="callout" style={{ flex: 1 }} numberOfLines={2}>
-                        {usual.slice(0, 4).map((p) => firstName(p.name)).join(', ')}
+                <Button title="Bytt" size="sm" variant="secondary" onPress={clearGroup} />
+              </View>
+              <View style={{ marginTop: spacing.sm }}>
+                {groupMembers.map((m) => (
+                  <PersonRow key={m.id} person={m} size={40} selected={selected.has(m.id)} onPress={() => toggle(m)} />
+                ))}
+              </View>
+              {draft.repeat.enabled ? (
+                <>
+                  <Divider />
+                  <ListRow
+                    icon="repeat"
+                    title="Samme gjeng neste gang"
+                    subtitle="Nye i gjengen blir med automatisk"
+                    trailing={<Toggle value={draft.repeat.autoInviteGroup} onValueChange={(autoInviteGroup) => draft.set({ repeat: { ...draft.repeat, autoInviteGroup } })} accessibilityLabel="Samme gjeng neste gang" />}
+                  />
+                </>
+              ) : null}
+            </Card>
+          </Animated.View>
+        ) : (
+          <>
+            {suggestedGroup ? (
+              <Animated.View entering={FadeInDown.duration(260)}>
+                <PressableScale onPress={() => chooseGroup(suggestedGroup)} accessibilityLabel={`Velg ${suggestedGroup.name}, ${suggestedGroup.members.length} personer`}>
+                  <Card style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.feature, borderWidth: 0 }}>
+                    <Icon name="zap" size={18} tint="#FF9AA2" />
+                    <View style={{ flex: 1 }}>
+                      <Text variant="footnote" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                        Forslag
+                      </Text>
+                      <Text variant="headline" style={{ color: colors.textOnFeature }}>
+                        {suggestedGroup.emoji ? `${suggestedGroup.emoji} ` : ''}
+                        {suggestedGroup.name} · {suggestedGroup.members.length} personer
                       </Text>
                     </View>
-                    <Button title="Velg alle" size="sm" variant="ink" icon="check" onPress={selectAllUsual} />
+                    <AvatarStack people={suggestedGroup.members} size={26} max={3} />
                   </Card>
-                </Animated.View>
-              ) : null}
+                </PressableScale>
+              </Animated.View>
+            ) : usual.length >= 2 ? (
+              <Animated.View entering={FadeInDown.duration(260)}>
+                <Card style={{ gap: spacing.md }}>
+                  <Text variant="footnote" color="textSecondary">
+                    Du inviterer vanligvis
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                    <AvatarStack people={usual} size={32} max={4} />
+                    <Text variant="callout" style={{ flex: 1 }} numberOfLines={2}>
+                      {usual.slice(0, 4).map((p) => firstName(p.name)).join(', ')}
+                    </Text>
+                  </View>
+                  <Button title="Velg alle" size="sm" variant="ink" icon="check" onPress={selectAllUsual} />
+                </Card>
+              </Animated.View>
+            ) : null}
 
-              {groupList.length ? (
-                <View style={{ marginTop: spacing.xl }}>
-                  <SectionHeader title="Gjengene dine" />
-                  <Card style={{ paddingVertical: spacing.xs }}>
-                    {groupList.map((g, i) => (
-                      <View key={g.id}>
-                        {i > 0 ? <Divider /> : null}
-                        <ListRow
-                          title={`${g.emoji ? `${g.emoji} ` : ''}${g.name}`}
-                          subtitle={`Hele gjengen · ${g.members.length} personer`}
-                          leading={<AvatarStack people={g.members.slice(0, 3)} size={30} max={3} />}
-                          radio
-                          selected={false}
-                          onPress={() => chooseGroup(g)}
-                        />
-                      </View>
-                    ))}
-                  </Card>
-                </View>
-              ) : null}
-            </>
-          )}
-
-          <View style={{ marginTop: spacing.xl }}>
-            <PeoplePicker
-              selectedIds={[...selected]}
-              onToggle={toggle}
-              // Group members are toggled in the group card above; here they just show as "Med".
-              existingIds={groupMembers.map((m) => m.id)}
-              existingLabel="I gjengen"
-              guestNames={draft.guestNames}
-              onGuestNamesChange={(names) => draft.set({ guestNames: names })}
-            />
-          </View>
-
-          {hasMore ? (
-            <View style={{ marginTop: spacing.xl }}>
-              <PressableScale
-                onPress={() => setMoreOpen(!moreOpen)}
-                accessibilityRole="button"
-                accessibilityState={{ expanded: moreOpen }}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
-              >
-                <Text variant="callout" style={{ flex: 1 }}>
-                  Flere valg
-                </Text>
-                <Icon name={moreOpen ? 'chevron-up' : 'chevron-down'} size={18} color="textSecondary" />
-              </PressableScale>
-              {moreOpen ? (
-                <Animated.View entering={FadeIn.duration(200)} style={{ gap: spacing.md, marginTop: spacing.sm }}>
-                  {!draft.existingEventId ? (
-                    <Card style={{ paddingVertical: spacing.xs }}>
-                      <PlacesSetting value={draft.maxParticipants} onChange={(maxParticipants) => draft.set({ maxParticipants })} />
-                    </Card>
-                  ) : null}
-                  {canSaveGroup ? (
-                    <Card>
+            {groupList.length ? (
+              <View style={{ marginTop: spacing.xl }}>
+                <SectionHeader title="Gjengene dine" />
+                <Card style={{ paddingVertical: spacing.xs }}>
+                  {groupList.map((g, i) => (
+                    <View key={g.id}>
+                      {i > 0 ? <Divider /> : null}
                       <ListRow
-                        icon="users"
-                        title="Lagre som gjeng"
-                        subtitle="Neste gang er det ett trykk"
-                        trailing={<Toggle value={draft.saveAsGroup} onValueChange={(v) => draft.set({ saveAsGroup: v })} accessibilityLabel="Lagre som gjeng" />}
+                        title={`${g.emoji ? `${g.emoji} ` : ''}${g.name}`}
+                        subtitle={`Hele gjengen · ${g.members.length} personer`}
+                        leading={<AvatarStack people={g.members.slice(0, 3)} size={30} max={3} />}
+                        radio
+                        selected={false}
+                        onPress={() => chooseGroup(g)}
                       />
-                      {draft.saveAsGroup ? (
-                        <Animated.View entering={FadeIn}>
-                          <Input placeholder="Navn på gjengen, f.eks. Jentene" value={draft.groupName} onChangeText={(t) => draft.set({ groupName: t })} containerStyle={{ marginTop: spacing.sm }} />
-                        </Animated.View>
-                      ) : null}
-                    </Card>
-                  ) : null}
-                  {/* No date step for «Ikke bestemt ennå», so the optional place lives here. */}
-                  {draft.dateMode === 'undecided' && !draft.existingEventId ? <PlaceDetails /> : null}
-                </Animated.View>
-              ) : null}
-            </View>
-          ) : null}
-        </ScreenScroll>
-        <BottomBar>
-          <SelectedSummary ids={[...draft.memberIds, ...draft.guestIds]} names={draft.guestNames} />
-          <Button
-            variant="ink"
-            title={draft.spontaneous ? (count ? `Spør hvem som er gira · ${count}` : 'Lag lenke – hvem er gira?') : count ? `Send invitasjon · ${count + 1} personer` : 'Lag invitasjonslenke'}
-            icon="send"
-            loading={createEvent.isPending}
-            onPress={send}
+                    </View>
+                  ))}
+                </Card>
+              </View>
+            ) : null}
+          </>
+        )}
+
+        <View style={{ marginTop: spacing.xl }}>
+          <PeoplePicker
+            selectedIds={[...selected]}
+            onToggle={toggle}
+            // Group members are toggled in the group card above; here they just show as "Med".
+            existingIds={groupMembers.map((m) => m.id)}
+            existingLabel="I gjengen"
+            guestNames={draft.guestNames}
+            onGuestNamesChange={(names) => draft.set({ guestNames: names })}
           />
-        </BottomBar>
-      </KeyboardAware>
+        </View>
+
+        {hasMore ? (
+          <View style={{ marginTop: spacing.xl }}>
+            <PressableScale
+              onPress={() => setMoreOpen(!moreOpen)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: moreOpen }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm }}
+            >
+              <Text variant="callout" style={{ flex: 1 }}>
+                Flere valg
+              </Text>
+              <Icon name={moreOpen ? 'chevron-up' : 'chevron-down'} size={18} color="textSecondary" />
+            </PressableScale>
+            {moreOpen ? (
+              <Animated.View entering={FadeIn.duration(200)} style={{ gap: spacing.md, marginTop: spacing.sm }}>
+                {!draft.existingEventId ? (
+                  <Card style={{ paddingVertical: spacing.xs }}>
+                    <PlacesSetting value={draft.maxParticipants} onChange={(maxParticipants) => draft.set({ maxParticipants })} />
+                  </Card>
+                ) : null}
+                {canSaveGroup ? (
+                  <Card>
+                    <ListRow
+                      icon="users"
+                      title="Lagre som gjeng"
+                      subtitle="Neste gang er det ett trykk"
+                      trailing={<Toggle value={draft.saveAsGroup} onValueChange={(v) => draft.set({ saveAsGroup: v })} accessibilityLabel="Lagre som gjeng" />}
+                    />
+                    {draft.saveAsGroup ? (
+                      <Animated.View entering={FadeIn}>
+                        <Input placeholder="Navn på gjengen, f.eks. Jentene" value={draft.groupName} onChangeText={(t) => draft.set({ groupName: t })} containerStyle={{ marginTop: spacing.sm }} />
+                      </Animated.View>
+                    ) : null}
+                  </Card>
+                ) : null}
+                {/* No date step for «Ikke bestemt ennå», so the optional place lives here. */}
+                {draft.dateMode === 'undecided' && !draft.existingEventId ? <PlaceDetails /> : null}
+              </Animated.View>
+            ) : null}
+          </View>
+        ) : null}
+      </ScreenScroll>
+      <BottomBar>
+        <SelectedSummary ids={[...draft.memberIds, ...draft.guestIds]} names={draft.guestNames} />
+        <Button
+          variant="ink"
+          title={draft.spontaneous ? (count ? `Spør hvem som er gira · ${count}` : 'Lag lenke – hvem er gira?') : count ? `Send invitasjon · ${count + 1} personer` : 'Lag invitasjonslenke'}
+          icon="send"
+          loading={createEvent.isPending}
+          onPress={send}
+        />
+      </BottomBar>
     </Screen>
   );
 }

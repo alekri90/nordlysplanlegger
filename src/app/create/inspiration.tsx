@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { ImageCard } from '@/components/create/ImageCard';
-import { Header, Input, KeyboardAware, PageTitle, PressableScale, Screen, ScreenScroll, Text } from '@/components/ui';
+import { Header, Input, PageTitle, PressableScale, Screen, ScreenScroll, Text } from '@/components/ui';
 import { useGroup } from '@/data/hooks';
 import { suggestCategory } from '@/lib/categories';
 import { suggestIdeas } from '@/lib/ideas';
@@ -42,48 +42,46 @@ export default function Inspiration() {
 
   return (
     <Screen>
-      <KeyboardAware>
-        <Header back={open && !query ? 'back' : 'close'} onBack={() => (open && !query ? setOpen(null) : router.back())} />
-        <ScreenScroll>
-          <PageTitle title={open && !query ? open.label : 'Hva har du lyst til å finne på?'} />
-          <Input icon="search" placeholder="Søk etter aktiviteter" value={query} onChangeText={setQuery} clearable accessibilityLabel="Søk etter aktiviteter" returnKeyType="search" />
+      <Header back={open && !query ? 'back' : 'close'} onBack={() => (open && !query ? setOpen(null) : router.back())} />
+      <ScreenScroll>
+        <PageTitle title={open && !query ? open.label : 'Hva har du lyst til å finne på?'} />
+        <Input icon="search" placeholder="Søk etter aktiviteter" value={query} onChangeText={setQuery} clearable accessibilityLabel="Søk etter aktiviteter" returnKeyType="search" />
 
-          {query.trim() ? (
-            results.length ? (
-              <Grid items={results} onPick={pick} />
-            ) : (
-              <Animated.View entering={FadeIn} style={{ marginTop: spacing.xl, gap: spacing.md }}>
-                <Text variant="body" color="textSecondary">
-                  Ingen forslag for «{query.trim()}».
-                </Text>
-                <PressableScale onPress={() => pick({ title: query.trim().replace(/^./, (c) => c.toUpperCase()), category: 'hangout', cover: '', inSeason: false })} accessibilityRole="button">
-                  <Text variant="callout" color="primary">
-                    Bruk «{query.trim()}» som navn
-                  </Text>
-                </PressableScale>
-              </Animated.View>
-            )
-          ) : open ? (
-            <Grid items={activities} onPick={pick} />
+        {query.trim() ? (
+          results.length ? (
+            <Grid items={results} onPick={pick} />
           ) : (
-            <>
-              {forGroup.length ? (
-                <View style={{ marginTop: spacing.xl }}>
-                  <Text variant="title3" style={{ marginBottom: spacing.md }}>
-                    Forslag for {g!.name}
-                  </Text>
-                  <Grid items={forGroup} onPick={pick} />
-                </View>
-              ) : null}
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.md, justifyContent: 'space-between', marginTop: spacing.xl }}>
-                {INSPIRATION_GROUPS.map((c) => (
-                  <ImageCard key={c.id} uri={groupPhoto(c)} label={c.label} onPress={() => setOpen(c)} />
-                ))}
+            <Animated.View entering={FadeIn} style={{ marginTop: spacing.xl, gap: spacing.md }}>
+              <Text variant="body" color="textSecondary">
+                Ingen forslag for «{query.trim()}».
+              </Text>
+              <PressableScale onPress={() => pick({ title: query.trim().replace(/^./, (c) => c.toUpperCase()), category: 'hangout', cover: '', inSeason: false })} accessibilityRole="button">
+                <Text variant="callout" color="primary">
+                  Bruk «{query.trim()}» som navn
+                </Text>
+              </PressableScale>
+            </Animated.View>
+          )
+        ) : open ? (
+          <Grid items={activities} onPick={pick} />
+        ) : (
+          <>
+            {forGroup.length ? (
+              <View style={{ marginTop: spacing.xl }}>
+                <Text variant="title3" style={{ marginBottom: spacing.md }}>
+                  Forslag for {g!.name}
+                </Text>
+                <Grid items={forGroup} onPick={pick} />
               </View>
-            </>
-          )}
-        </ScreenScroll>
-      </KeyboardAware>
+            ) : null}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.md, justifyContent: 'space-between', marginTop: spacing.xl }}>
+              {INSPIRATION_GROUPS.map((c) => (
+                <ImageCard key={c.id} uri={groupPhoto(c)} label={c.label} onPress={() => setOpen(c)} />
+              ))}
+            </View>
+          </>
+        )}
+      </ScreenScroll>
     </Screen>
   );
 }

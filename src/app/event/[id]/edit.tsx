@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import { CoverPicker } from '@/components/create/CoverPicker';
 import { PlacesSetting } from '@/components/event/PlacesSetting';
 import { TimePicker } from '@/components/create/TimePicker';
-import { BottomBar, Button, Card, Header, Input, KeyboardAware, ListRow, PageSkeleton, Screen, ScreenScroll, Text, Toggle, useToast } from '@/components/ui';
+import { BottomBar, Button, Card, Header, Input, ListRow, PageSkeleton, Screen, ScreenScroll, Text, Toggle, useToast } from '@/components/ui';
 import { useEvent, useSetSeriesCover, useUpdateEvent } from '@/data/hooks';
 import type { CategoryId, PlannerEvent, TimeHint } from '@/data/types';
 import { defaultCoverFor } from '@/lib/categories';
@@ -58,55 +58,53 @@ function EditForm({ event: e }: { event: PlannerEvent }) {
 
   return (
     <Screen>
-      <KeyboardAware>
-        <Header back="close" title="Endre" />
-        <ScreenScroll bottomInset={140}>
-          <View style={{ gap: spacing.lg, marginTop: spacing.md }}>
-            <Input label="Navn" value={title} onChangeText={setTitle} maxLength={80} />
-            <View>
-              <Text variant="title3" style={{ marginBottom: spacing.md }}>
-                Bilde
-              </Text>
-              <CoverPicker
-                title={title}
-                category={category}
-                onCategory={(c) => {
-                  setCategory(c);
-                  setCover(defaultCoverFor(title, c));
-                }}
-                value={cover}
-                onChange={setCover}
-              />
-              {coverChanged && inSeries ? (
-                <Card style={{ paddingVertical: spacing.xs, marginTop: spacing.md }}>
-                  <ListRow title="Bare denne gangen" subtitle="De andre gangene beholder bildet sitt" radio selected={coverScope === 'this'} onPress={() => setCoverScope('this')} />
-                  <ListRow title="Alle gangene fremover" subtitle="Blir det nye bildet for gjentakelsen" radio selected={coverScope === 'series'} onPress={() => setCoverScope('series')} />
-                </Card>
-              ) : null}
-            </View>
-            <Input label="Hvor?" icon="map-pin" placeholder="F.eks. Sørenga sjøbad" value={place} onChangeText={setPlace} />
-            {place ? <Input label="Adresse" placeholder="Valgfritt" value={address} onChangeText={setAddress} /> : null}
-            {place ? (
-              <Card style={{ paddingVertical: spacing.xs }}>
-                <ListRow title="Detaljer kommer" subtitle="Vis at stedet ikke er helt bestemt" trailing={<Toggle value={pending} onValueChange={setPending} accessibilityLabel="Detaljer kommer" />} />
+      <Header back="close" title="Endre" />
+      <ScreenScroll bottomInset={140}>
+        <View style={{ gap: spacing.lg, marginTop: spacing.md }}>
+          <Input label="Navn" value={title} onChangeText={setTitle} maxLength={80} />
+          <View>
+            <Text variant="title3" style={{ marginBottom: spacing.md }}>
+              Bilde
+            </Text>
+            <CoverPicker
+              title={title}
+              category={category}
+              onCategory={(c) => {
+                setCategory(c);
+                setCover(defaultCoverFor(title, c));
+              }}
+              value={cover}
+              onChange={setCover}
+            />
+            {coverChanged && inSeries ? (
+              <Card style={{ paddingVertical: spacing.xs, marginTop: spacing.md }}>
+                <ListRow title="Bare denne gangen" subtitle="De andre gangene beholder bildet sitt" radio selected={coverScope === 'this'} onPress={() => setCoverScope('this')} />
+                <ListRow title="Alle gangene fremover" subtitle="Blir det nye bildet for gjentakelsen" radio selected={coverScope === 'series'} onPress={() => setCoverScope('series')} />
               </Card>
             ) : null}
-            <Card style={{ paddingVertical: spacing.xs }}>
-              <PlacesSetting value={maxParticipants} onChange={setMaxParticipants} />
-            </Card>
-            {e.selectedDate ? <TimePicker hint={time.hint} time={time.time} allowHints={false} onChange={(hint, t) => setTime({ hint, time: t })} /> : null}
-            <View>
-              <Text variant="title3" style={{ marginBottom: spacing.md }}>
-                Detaljer
-              </Text>
-              <Input placeholder="Det alle bør vite, f.eks. «Ta med håndkle». Nye beskjeder sender du fra arrangementet." value={description} onChangeText={setDescription} multiline style={{ minHeight: 96, paddingTop: spacing.md, textAlignVertical: 'top' }} maxLength={2000} />
-            </View>
           </View>
-        </ScreenScroll>
-        <BottomBar>
-          <Button variant="ink" title="Lagre" loading={update.isPending || setSeriesCover.isPending} onPress={save} />
-        </BottomBar>
-      </KeyboardAware>
+          <Input label="Hvor?" icon="map-pin" placeholder="F.eks. Sørenga sjøbad" value={place} onChangeText={setPlace} />
+          {place ? <Input label="Adresse" placeholder="Valgfritt" value={address} onChangeText={setAddress} /> : null}
+          {place ? (
+            <Card style={{ paddingVertical: spacing.xs }}>
+              <ListRow title="Detaljer kommer" subtitle="Vis at stedet ikke er helt bestemt" trailing={<Toggle value={pending} onValueChange={setPending} accessibilityLabel="Detaljer kommer" />} />
+            </Card>
+          ) : null}
+          <Card style={{ paddingVertical: spacing.xs }}>
+            <PlacesSetting value={maxParticipants} onChange={setMaxParticipants} />
+          </Card>
+          {e.selectedDate ? <TimePicker hint={time.hint} time={time.time} allowHints={false} onChange={(hint, t) => setTime({ hint, time: t })} /> : null}
+          <View>
+            <Text variant="title3" style={{ marginBottom: spacing.md }}>
+              Detaljer
+            </Text>
+            <Input placeholder="Det alle bør vite, f.eks. «Ta med håndkle». Nye beskjeder sender du fra arrangementet." value={description} onChangeText={setDescription} multiline style={{ minHeight: 96, paddingTop: spacing.md, textAlignVertical: 'top' }} maxLength={2000} />
+          </View>
+        </View>
+      </ScreenScroll>
+      <BottomBar>
+        <Button variant="ink" title="Lagre" loading={update.isPending || setSeriesCover.isPending} onPress={save} />
+      </BottomBar>
     </Screen>
   );
 }

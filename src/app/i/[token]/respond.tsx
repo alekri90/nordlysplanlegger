@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { CalendarLegend, MonthCalendar, type DayState } from '@/components/calendar/MonthCalendar';
-import { BottomBar, Button, Header, Input, KeyboardAware, PageSkeleton, PageTitle, PressableScale, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
+import { BottomBar, Button, Header, Input, PageSkeleton, PageTitle, PressableScale, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
 import { useInvite, useSubmitAvailability } from '@/data/hooks';
 import type { InviteView } from '@/data/types';
 import { monthKey } from '@/lib/dates';
@@ -79,43 +79,41 @@ function RespondForm({ invite }: { invite: InviteView }) {
 
   return (
     <Screen>
-      <KeyboardAware>
-        <Header />
-        <ScreenScroll bottomInset={needsName ? 230 : 170}>
-          <PageTitle title="Hvilke dager kan du ikke?" subtitle="Trykk på dagene som ikke passer for deg." />
-          <View style={{ gap: spacing.xxl }}>
-            {months.map((m) => (
-              <MonthCalendar key={m} month={m} getState={getState} onPressDay={toggle} dayHint="Trykk for å markere at du ikke kan denne dagen" />
-            ))}
-          </View>
-          <CalendarLegend
-            items={[
-              { state: 'candidate', label: 'Mulig dag' },
-              { state: 'unavailable', label: 'Kan ikke' },
-            ]}
-          />
-          <PressableScale
-            onPress={() => setUnavailable(allMarked ? new Set() : new Set(options.map((o) => o.id)))}
-            style={{ alignSelf: 'center', padding: spacing.md, marginTop: spacing.sm }}
-            accessibilityLabel={allMarked ? 'Fjern alle markeringer' : 'Jeg kan ingen av dagene'}
-          >
-            <Text variant="footnote" color="textSecondary" style={{ textDecorationLine: 'underline' }}>
-              {allMarked ? 'Fjern alle markeringer' : 'Jeg kan ingen av dagene'}
-            </Text>
-          </PressableScale>
-        </ScreenScroll>
-        <BottomBar>
-          <Animated.View key={summary} entering={FadeIn.duration(200)}>
-            <Text variant="footnote" color="textSecondary" align="center" accessibilityLiveRegion="polite">
-              {summary}
-            </Text>
-          </Animated.View>
-          {needsName ? (
-            <Input placeholder="Hva heter du?" value={name} onChangeText={setName} autoCapitalize="words" maxLength={60} textContentType="givenName" autoComplete="given-name" accessibilityLabel="Navnet ditt" />
-          ) : null}
-          <Button variant="ink" title="Send svar" disabled={!responderName} loading={submit.isPending} onPress={send} />
-        </BottomBar>
-      </KeyboardAware>
+      <Header />
+      <ScreenScroll bottomInset={needsName ? 230 : 170}>
+        <PageTitle title="Hvilke dager kan du ikke?" subtitle="Trykk på dagene som ikke passer for deg." />
+        <View style={{ gap: spacing.xxl }}>
+          {months.map((m) => (
+            <MonthCalendar key={m} month={m} getState={getState} onPressDay={toggle} dayHint="Trykk for å markere at du ikke kan denne dagen" />
+          ))}
+        </View>
+        <CalendarLegend
+          items={[
+            { state: 'candidate', label: 'Mulig dag' },
+            { state: 'unavailable', label: 'Kan ikke' },
+          ]}
+        />
+        <PressableScale
+          onPress={() => setUnavailable(allMarked ? new Set() : new Set(options.map((o) => o.id)))}
+          style={{ alignSelf: 'center', padding: spacing.md, marginTop: spacing.sm }}
+          accessibilityLabel={allMarked ? 'Fjern alle markeringer' : 'Jeg kan ingen av dagene'}
+        >
+          <Text variant="footnote" color="textSecondary" style={{ textDecorationLine: 'underline' }}>
+            {allMarked ? 'Fjern alle markeringer' : 'Jeg kan ingen av dagene'}
+          </Text>
+        </PressableScale>
+      </ScreenScroll>
+      <BottomBar>
+        <Animated.View key={summary} entering={FadeIn.duration(200)}>
+          <Text variant="footnote" color="textSecondary" align="center" accessibilityLiveRegion="polite">
+            {summary}
+          </Text>
+        </Animated.View>
+        {needsName ? (
+          <Input placeholder="Hva heter du?" value={name} onChangeText={setName} autoCapitalize="words" maxLength={60} textContentType="givenName" autoComplete="given-name" accessibilityLabel="Navnet ditt" />
+        ) : null}
+        <Button variant="ink" title="Send svar" disabled={!responderName} loading={submit.isPending} onPress={send} />
+      </BottomBar>
     </Screen>
   );
 }

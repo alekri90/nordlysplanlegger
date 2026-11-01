@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { GroupLookPicker } from '@/components/group/GroupLookPicker';
-import { BottomBar, Button, Header, Input, KeyboardAware, PageSkeleton, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
+import { BottomBar, Button, Header, Input, PageSkeleton, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
 import { useGroup, useUpdateGroup } from '@/data/hooks';
 import type { Group } from '@/data/types';
 import { coverOptions, suggestCategory } from '@/lib/categories';
@@ -38,24 +38,22 @@ function EditGroupForm({ group }: { group: Group }) {
 
   return (
     <Screen>
-      <KeyboardAware>
-        <Header back="close" title="Rediger gjengen" />
-        <ScreenScroll bottomInset={140}>
-          <View style={{ gap: spacing.xl, marginTop: spacing.md }}>
-            <Input label="Navn" value={name} onChangeText={setName} maxLength={60} />
-            <Input label="Beskrivelse (valgfritt)" value={description} onChangeText={setDescription} maxLength={280} placeholder="Første fredag i måneden …" multiline style={{ minHeight: 72, paddingTop: spacing.md, textAlignVertical: 'top' }} />
-            <View>
-              <Text variant="title3" style={{ marginBottom: spacing.md }}>
-                Bilde og emoji
-              </Text>
-              <GroupLookPicker photos={photos} photo={photo} onPhoto={setPhoto} emoji={emoji} onEmoji={setEmoji} />
-            </View>
+      <Header back="close" title="Rediger gjengen" />
+      <ScreenScroll bottomInset={140}>
+        <View style={{ gap: spacing.xl, marginTop: spacing.md }}>
+          <Input label="Navn" value={name} onChangeText={setName} maxLength={60} />
+          <Input label="Beskrivelse (valgfritt)" value={description} onChangeText={setDescription} maxLength={280} placeholder="Første fredag i måneden …" multiline style={{ minHeight: 72, paddingTop: spacing.md, textAlignVertical: 'top' }} />
+          <View>
+            <Text variant="title3" style={{ marginBottom: spacing.md }}>
+              Bilde og emoji
+            </Text>
+            <GroupLookPicker photos={photos} photo={photo} onPhoto={setPhoto} emoji={emoji} onEmoji={setEmoji} />
           </View>
-        </ScreenScroll>
-        <BottomBar>
-          <Button variant="ink" title="Lagre" disabled={!name.trim()} loading={update.isPending} onPress={save} />
-        </BottomBar>
-      </KeyboardAware>
+        </View>
+      </ScreenScroll>
+      <BottomBar>
+        <Button variant="ink" title="Lagre" disabled={!name.trim()} loading={update.isPending} onPress={save} />
+      </BottomBar>
     </Screen>
   );
 }

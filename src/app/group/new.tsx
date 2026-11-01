@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import { GroupLookPicker } from '@/components/group/GroupLookPicker';
 import { PeoplePicker } from '@/components/people/PeoplePicker';
 import { PersonRow } from '@/components/people/PersonRow';
-import { BottomBar, Button, Header, Input, KeyboardAware, PageTitle, Screen, ScreenScroll, SectionHeader, Text, useToast } from '@/components/ui';
+import { BottomBar, Button, Header, Input, PageTitle, Screen, ScreenScroll, SectionHeader, Text, useToast } from '@/components/ui';
 import { useCreateGroup, useEvent } from '@/data/hooks';
 import type { Person } from '@/data/types';
 import { coverOptions, suggestCategory } from '@/lib/categories';
@@ -70,44 +70,42 @@ function NewGroupForm({ initialName, initialCover, eventPeople, eventTitle }: { 
 
   return (
     <Screen>
-      <KeyboardAware>
-        <Header back="close" />
-        <ScreenScroll bottomInset={140}>
-          <PageTitle title={eventTitle ? 'Lag gruppe av gjengen' : 'Ny gjeng'} subtitle={eventTitle ? `Alle fra ${eventTitle} er valgt. Neste gang er det ett trykk.` : 'Folk du gjør ting med igjen og igjen.'} />
-          <Input size="lg" autoFocus={!initialName} placeholder="F.eks. Kortklubben" value={name} onChangeText={setName} maxLength={60} accessibilityLabel="Navn på gjengen" />
+      <Header back="close" />
+      <ScreenScroll bottomInset={140}>
+        <PageTitle title={eventTitle ? 'Lag gruppe av gjengen' : 'Ny gjeng'} subtitle={eventTitle ? `Alle fra ${eventTitle} er valgt. Neste gang er det ett trykk.` : 'Folk du gjør ting med igjen og igjen.'} />
+        <Input size="lg" autoFocus={!initialName} placeholder="F.eks. Kortklubben" value={name} onChangeText={setName} maxLength={60} accessibilityLabel="Navn på gjengen" />
 
-          <Text variant="title3" style={{ marginTop: spacing.xl, marginBottom: spacing.md }}>
-            Bilde
-          </Text>
-          <View>
-            <GroupLookPicker photos={photos} photo={chosenPhoto} onPhoto={setPhoto} emoji={emoji} onEmoji={setEmoji} />
-          </View>
+        <Text variant="title3" style={{ marginTop: spacing.xl, marginBottom: spacing.md }}>
+          Bilde
+        </Text>
+        <View>
+          <GroupLookPicker photos={photos} photo={chosenPhoto} onPhoto={setPhoto} emoji={emoji} onEmoji={setEmoji} />
+        </View>
 
-          <Text variant="title3" style={{ marginTop: spacing.xxl }}>
-            Hvem er med?
-          </Text>
-          <Text variant="footnote" color="textSecondary" style={{ marginTop: 2, marginBottom: spacing.md }}>
-            Velg dem som allerede er her. Resten inviterer du med Snapchat eller melding når gjengen er laget.
-          </Text>
-          <PeoplePicker
-            selectedIds={[...userIds, ...guestIds]}
-            onToggle={(p) => (p.isGuest ? toggleGuest(p) : toggleUser(p))}
-            header={
-              fromEvent.length ? (
-                <View>
-                  <SectionHeader title={`Fra ${eventTitle}`} />
-                  {fromEvent.map((p) => (
-                    <PersonRow key={p.id} person={p} selected={p.isGuest ? guestIds.includes(p.id) : userIds.includes(p.id)} onPress={() => (p.isGuest ? toggleGuest(p) : toggleUser(p))} />
-                  ))}
-                </View>
-              ) : undefined
-            }
-          />
-        </ScreenScroll>
-        <BottomBar>
-          <Button variant="ink" title={count ? `Lag gjengen · ${count + 1} personer` : 'Lag gjengen'} disabled={!name.trim()} loading={create.isPending} onPress={save} />
-        </BottomBar>
-      </KeyboardAware>
+        <Text variant="title3" style={{ marginTop: spacing.xxl }}>
+          Hvem er med?
+        </Text>
+        <Text variant="footnote" color="textSecondary" style={{ marginTop: 2, marginBottom: spacing.md }}>
+          Velg dem som allerede er her. Resten inviterer du med Snapchat eller melding når gjengen er laget.
+        </Text>
+        <PeoplePicker
+          selectedIds={[...userIds, ...guestIds]}
+          onToggle={(p) => (p.isGuest ? toggleGuest(p) : toggleUser(p))}
+          header={
+            fromEvent.length ? (
+              <View>
+                <SectionHeader title={`Fra ${eventTitle}`} />
+                {fromEvent.map((p) => (
+                  <PersonRow key={p.id} person={p} selected={p.isGuest ? guestIds.includes(p.id) : userIds.includes(p.id)} onPress={() => (p.isGuest ? toggleGuest(p) : toggleUser(p))} />
+                ))}
+              </View>
+            ) : undefined
+          }
+        />
+      </ScreenScroll>
+      <BottomBar>
+        <Button variant="ink" title={count ? `Lag gjengen · ${count + 1} personer` : 'Lag gjengen'} disabled={!name.trim()} loading={create.isPending} onPress={save} />
+      </BottomBar>
     </Screen>
   );
 }

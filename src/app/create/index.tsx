@@ -7,7 +7,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { CoverPicker } from '@/components/create/CoverPicker';
 import { StepHeader } from '@/components/create/StepHeader';
-import { BottomBar, Button, Divider, Icon, Input, KeyboardAware, PageTitle, PressableScale, Screen, ScreenScroll, Sheet, Text } from '@/components/ui';
+import { BottomBar, Button, Divider, Icon, Input, PageTitle, PressableScale, Screen, ScreenScroll, Sheet, Text } from '@/components/ui';
 import { useEvents } from '@/data/hooks';
 import type { PlannerEvent } from '@/data/types';
 import { coverOptionsFor, defaultCoverFor, thumb } from '@/lib/categories';
@@ -39,71 +39,69 @@ export default function CreateWhat() {
 
   return (
     <Screen>
-      <KeyboardAware>
-        <StepHeader step={0} />
-        <ScreenScroll>
-          <PageTitle title="Hva skal dere gjøre?" />
-          <Input
-            size="lg"
-            value={draft.title}
-            onChangeText={draft.setTitle}
-            placeholder="F.eks. Badstu med jentene"
-            autoFocus={!draft.title}
-            clearable
-            maxLength={80}
-            returnKeyType="done"
-            autoCapitalize="sentences"
-            accessibilityLabel="Hva skal dere gjøre?"
-          />
+      <StepHeader step={0} />
+      <ScreenScroll>
+        <PageTitle title="Hva skal dere gjøre?" />
+        <Input
+          size="lg"
+          value={draft.title}
+          onChangeText={draft.setTitle}
+          placeholder="F.eks. Badstu med jentene"
+          autoFocus={!draft.title}
+          clearable
+          maxLength={80}
+          returnKeyType="done"
+          autoCapitalize="sentences"
+          accessibilityLabel="Hva skal dere gjøre?"
+        />
 
-          <View style={{ marginTop: spacing.sm }}>
-            <LinkRow icon={<Ionicons name="bulb-outline" size={18} color={colors.primary} />} label="Trenger du inspirasjon?" onPress={() => router.push('/create/inspiration')} />
-            {earlier.length && draft.source === 'new' && !draft.groupId ? (
-              <LinkRow icon={<Icon name="copy" size={17} color="textSecondary" />} label="Gjenta et tidligere arrangement" onPress={() => setAgainOpen(true)} />
-            ) : null}
-          </View>
+        <View style={{ marginTop: spacing.sm }}>
+          <LinkRow icon={<Ionicons name="bulb-outline" size={18} color={colors.primary} />} label="Trenger du inspirasjon?" onPress={() => router.push('/create/inspiration')} />
+          {earlier.length && draft.source === 'new' && !draft.groupId ? (
+            <LinkRow icon={<Icon name="copy" size={17} color="textSecondary" />} label="Gjenta et tidligere arrangement" onPress={() => setAgainOpen(true)} />
+          ) : null}
+        </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xl, marginBottom: spacing.md }}>
-            <Text variant="title3" accessibilityRole="header">
-              Velg bilde
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xl, marginBottom: spacing.md }}>
+          <Text variant="title3" accessibilityRole="header">
+            Velg bilde
+          </Text>
+          <PressableScale onPress={() => setPhotosOpen(true)} hitSlop={8} accessibilityRole="button">
+            <Text variant="callout" color="primary">
+              Se flere bilder
             </Text>
-            <PressableScale onPress={() => setPhotosOpen(true)} hitSlop={8} accessibilityRole="button">
-              <Text variant="callout" color="primary">
-                Se flere bilder
-              </Text>
-            </PressableScale>
-          </View>
-          <Animated.View key={draft.category} entering={FadeIn.duration(250)} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'space-between' }}>
-            {four.map((url, i) => {
-              const selected = draft.coverImageUrl === url;
-              return (
-                <PressableScale
-                  key={url}
-                  onPress={() => draft.set({ coverImageUrl: url, coverTouched: true })}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: selected }}
-                  accessibilityLabel={`Bilde ${i + 1}`}
-                  style={{ width: '48.6%', aspectRatio: 1.2, borderRadius: radius.md, overflow: 'hidden', borderWidth: selected ? 3 : 0, borderColor: colors.primary }}
-                >
-                  <Image source={{ uri: thumb(url, 500) }} style={{ flex: 1, backgroundColor: colors.surfaceMuted }} contentFit="cover" transition={200} />
-                  {selected ? (
-                    <View style={{ position: 'absolute', top: 8, right: 8, width: 26, height: 26, borderRadius: 13, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
-                      <Icon name="check" size={15} tint="#fff" />
-                    </View>
-                  ) : null}
-                </PressableScale>
-              );
-            })}
-          </Animated.View>
-        </ScreenScroll>
-        <BottomBar>
-          {draft.datePreset && draft.fixedDate ? (
-            <Button title={`Velg klokkeslett · ${formatLong(draft.fixedDate)}`} disabled={!valid} onPress={() => router.push('/create/fixed')} />
-          ) : (
-            <Button title="Velg dato og tid" disabled={!valid} onPress={() => router.push('/create/when')} />
-          )}
-        </BottomBar>
-      </KeyboardAware>
+          </PressableScale>
+        </View>
+        <Animated.View key={draft.category} entering={FadeIn.duration(250)} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'space-between' }}>
+          {four.map((url, i) => {
+            const selected = draft.coverImageUrl === url;
+            return (
+              <PressableScale
+                key={url}
+                onPress={() => draft.set({ coverImageUrl: url, coverTouched: true })}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                accessibilityLabel={`Bilde ${i + 1}`}
+                style={{ width: '48.6%', aspectRatio: 1.2, borderRadius: radius.md, overflow: 'hidden', borderWidth: selected ? 3 : 0, borderColor: colors.primary }}
+              >
+                <Image source={{ uri: thumb(url, 500) }} style={{ flex: 1, backgroundColor: colors.surfaceMuted }} contentFit="cover" transition={200} />
+                {selected ? (
+                  <View style={{ position: 'absolute', top: 8, right: 8, width: 26, height: 26, borderRadius: 13, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon name="check" size={15} tint="#fff" />
+                  </View>
+                ) : null}
+              </PressableScale>
+            );
+          })}
+        </Animated.View>
+      </ScreenScroll>
+      <BottomBar>
+        {draft.datePreset && draft.fixedDate ? (
+          <Button title={`Velg klokkeslett · ${formatLong(draft.fixedDate)}`} disabled={!valid} onPress={() => router.push('/create/fixed')} />
+        ) : (
+          <Button title="Velg dato og tid" disabled={!valid} onPress={() => router.push('/create/when')} />
+        )}
+      </BottomBar>
 
       {/* The full picker as before: every theme, its photos, and your own. */}
       <Sheet visible={photosOpen} onClose={() => setPhotosOpen(false)} title="Velg bilde">

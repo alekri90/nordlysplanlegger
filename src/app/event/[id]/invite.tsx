@@ -6,7 +6,7 @@ import { PersonalLinks } from '@/components/event/PersonalLinks';
 import { ShareSheet } from '@/components/event/ShareSheet';
 import { PeoplePicker } from '@/components/people/PeoplePicker';
 import { SelectedSummary } from '@/components/people/SelectedSummary';
-import { AvatarStack, BottomBar, Button, Card, Divider, Icon, KeyboardAware, Header, ListRow, PageSkeleton, PressableScale, Screen, ScreenScroll, SectionHeader, Sheet, Text, useToast } from '@/components/ui';
+import { AvatarStack, BottomBar, Button, Card, Divider, Icon, Header, ListRow, PageSkeleton, PressableScale, Screen, ScreenScroll, SectionHeader, Sheet, Text, useToast } from '@/components/ui';
 import { repo } from '@/data';
 import { queryClient, useAddEventMembers, useEvent, useGroups } from '@/data/hooks';
 import type { Group, GuestInvite } from '@/data/types';
@@ -66,67 +66,65 @@ export default function InviteToEvent() {
 
   return (
     <Screen>
-      <KeyboardAware>
-        <Header back="close" title="Inviter" />
-        <ScreenScroll bottomInset={220}>
-          <Text variant="subhead" color="textSecondary" style={{ marginBottom: spacing.lg }}>
-            {e.title} · {e.members.length} invitert. Venner får beskjed i appen med en gang.
-          </Text>
-          <PeoplePicker
-            selectedIds={userIds}
-            onToggle={(p) => (p.isGuest ? toast('Skriv navnet under «Uten konto», så får de en personlig lenke') : toggle(p.id))}
-            existingIds={existingIds}
-            existingLabel="Invitert"
-            guestNames={guestNames}
-            onGuestNamesChange={setGuestNames}
-            header={
-              groupList.length ? (
-                <View>
-                  <SectionHeader title="Hele gjengen" />
-                  <Card style={{ paddingVertical: spacing.xs }}>
-                    {groupList.map((g, i) => {
-                      const fresh = newFrom(g);
-                      const all = fresh.every((x) => userIds.includes(x));
-                      return (
-                        <View key={g.id}>
-                          {i ? <Divider /> : null}
-                          <ListRow
-                            title={`${g.emoji ? `${g.emoji} ` : ''}${g.name}`}
-                            subtitle={`${fresh.length} ikke invitert ennå`}
-                            leading={<AvatarStack people={g.members.slice(0, 3)} size={30} max={3} />}
-                            trailing={all ? <Icon name="check" size={18} color="primary" /> : <Text variant="footnote" color="primary">Velg alle</Text>}
-                            onPress={() => (all ? setUserIds((ids) => ids.filter((x) => !fresh.includes(x))) : addGroup(g))}
-                          />
-                        </View>
-                      );
-                    })}
-                  </Card>
-                </View>
-              ) : undefined
-            }
-          />
+      <Header back="close" title="Inviter" />
+      <ScreenScroll bottomInset={220}>
+        <Text variant="subhead" color="textSecondary" style={{ marginBottom: spacing.lg }}>
+          {e.title} · {e.members.length} invitert. Venner får beskjed i appen med en gang.
+        </Text>
+        <PeoplePicker
+          selectedIds={userIds}
+          onToggle={(p) => (p.isGuest ? toast('Skriv navnet under «Uten konto», så får de en personlig lenke') : toggle(p.id))}
+          existingIds={existingIds}
+          existingLabel="Invitert"
+          guestNames={guestNames}
+          onGuestNamesChange={setGuestNames}
+          header={
+            groupList.length ? (
+              <View>
+                <SectionHeader title="Hele gjengen" />
+                <Card style={{ paddingVertical: spacing.xs }}>
+                  {groupList.map((g, i) => {
+                    const fresh = newFrom(g);
+                    const all = fresh.every((x) => userIds.includes(x));
+                    return (
+                      <View key={g.id}>
+                        {i ? <Divider /> : null}
+                        <ListRow
+                          title={`${g.emoji ? `${g.emoji} ` : ''}${g.name}`}
+                          subtitle={`${fresh.length} ikke invitert ennå`}
+                          leading={<AvatarStack people={g.members.slice(0, 3)} size={30} max={3} />}
+                          trailing={all ? <Icon name="check" size={18} color="primary" /> : <Text variant="footnote" color="primary">Velg alle</Text>}
+                          onPress={() => (all ? setUserIds((ids) => ids.filter((x) => !fresh.includes(x))) : addGroup(g))}
+                        />
+                      </View>
+                    );
+                  })}
+                </Card>
+              </View>
+            ) : undefined
+          }
+        />
 
-          <PressableScale onPress={() => router.push('/friends/find')} accessibilityRole="button" style={{ marginTop: spacing.xl }}>
-            <Card muted style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
-                <Icon name="user-plus" size={18} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text variant="callout">Finn flere venner</Text>
-                <Text variant="footnote" color="textSecondary">
-                  Søk, eller se hvem i kontaktene dine som har appen.
-                </Text>
-              </View>
-              <Icon name="chevron-right" size={18} color="textTertiary" />
-            </Card>
-          </PressableScale>
-        </ScreenScroll>
-        <BottomBar>
-          <SelectedSummary ids={userIds} names={guestNames} />
-          <Button variant="ink" title={count ? `Inviter ${count} ${count === 1 ? 'person' : 'personer'}` : 'Velg hvem'} icon="send" disabled={!count} loading={sending} onPress={send} />
-          <Button variant="ghost" title="Del lenke til andre" icon="link" onPress={() => setShareOpen(true)} style={{ marginTop: spacing.xs }} />
-        </BottomBar>
-      </KeyboardAware>
+        <PressableScale onPress={() => router.push('/friends/find')} accessibilityRole="button" style={{ marginTop: spacing.xl }}>
+          <Card muted style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="user-plus" size={18} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text variant="callout">Finn flere venner</Text>
+              <Text variant="footnote" color="textSecondary">
+                Søk, eller se hvem i kontaktene dine som har appen.
+              </Text>
+            </View>
+            <Icon name="chevron-right" size={18} color="textTertiary" />
+          </Card>
+        </PressableScale>
+      </ScreenScroll>
+      <BottomBar>
+        <SelectedSummary ids={userIds} names={guestNames} />
+        <Button variant="ink" title={count ? `Inviter ${count} ${count === 1 ? 'person' : 'personer'}` : 'Velg hvem'} icon="send" disabled={!count} loading={sending} onPress={send} />
+        <Button variant="ghost" title="Del lenke til andre" icon="link" onPress={() => setShareOpen(true)} style={{ marginTop: spacing.xs }} />
+      </BottomBar>
       <Sheet visible={links.length > 0} onClose={() => router.back()} title="Send lenkene">
         <PersonalLinks guests={links} title={e.title} organizerName={firstName(e.organizer.name)} />
         <Button title="Ferdig" variant="ink" style={{ marginTop: spacing.lg }} onPress={() => router.back()} />

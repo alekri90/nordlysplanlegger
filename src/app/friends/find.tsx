@@ -6,7 +6,7 @@ import { ContactFriends } from '@/components/people/ContactFriends';
 import { FriendButton } from '@/components/people/FriendButton';
 import { PersonRow } from '@/components/people/PersonRow';
 import { ShareProfileSheet } from '@/components/people/ShareProfileSheet';
-import { Card, EventListSkeleton, Header, Icon, Input, KeyboardAware, PressableScale, Screen, ScreenScroll, SectionHeader, Text } from '@/components/ui';
+import { Card, EventListSkeleton, Header, Icon, Input, PressableScale, Screen, ScreenScroll, SectionHeader, Text } from '@/components/ui';
 import { usePeopleYouMayKnow, useSearchPeople } from '@/data/hooks';
 import type { PersonResult } from '@/data/types';
 import { firstName } from '@/lib/eventText';
@@ -43,50 +43,48 @@ export default function FindFriends() {
 
   return (
     <Screen>
-      <KeyboardAware>
-        <Header title="Finn venner" />
-        <ScreenScroll bottomInset={spacing.huge}>
-          <Input icon="search" placeholder="Navn eller @brukernavn" value={query} onChangeText={setQuery} clearable autoFocus autoCapitalize="none" autoCorrect={false} />
+      <Header title="Finn venner" />
+      <ScreenScroll bottomInset={spacing.huge}>
+        <Input icon="search" placeholder="Navn eller @brukernavn" value={query} onChangeText={setQuery} clearable autoFocus autoCapitalize="none" autoCorrect={false} />
 
-          {searching ? (
-            <View style={{ marginTop: spacing.lg }}>
-              {search.isLoading && !search.data ? <EventListSkeleton count={2} /> : null}
-              {(search.data ?? []).map((p) => row(p, detail(p)))}
-              {search.data && !search.data.length ? (
-                <Text variant="subhead" color="textSecondary" style={{ paddingVertical: spacing.xl }} align="center">
-                  Ingen treff på «{query.trim()}». Noen kan ha valgt å ikke være søkbare.
-                </Text>
-              ) : null}
-            </View>
-          ) : (
-            <>
-              <PressableScale onPress={() => setShareOpen(true)} accessibilityLabel="Del profilen din">
-                <Card muted style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.lg }}>
-                  <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon name="share-2" size={18} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text variant="callout">Del profilen din</Text>
-                    <Text variant="footnote" color="textSecondary">
-                      Lenke eller QR-kode – så kan venner legge deg til.
-                    </Text>
-                  </View>
-                  <Icon name="chevron-right" size={18} color="textTertiary" />
-                </Card>
-              </PressableScale>
-
-              <ContactFriends row={(p) => row(p, detail(p))} onFound={setFromContacts} />
-
-              {suggestions.length ? (
-                <View style={{ marginTop: spacing.xxl }}>
-                  <SectionHeader title="Personer du kanskje kjenner" />
-                  {suggestions.map((p) => row(p, p.context))}
+        {searching ? (
+          <View style={{ marginTop: spacing.lg }}>
+            {search.isLoading && !search.data ? <EventListSkeleton count={2} /> : null}
+            {(search.data ?? []).map((p) => row(p, detail(p)))}
+            {search.data && !search.data.length ? (
+              <Text variant="subhead" color="textSecondary" style={{ paddingVertical: spacing.xl }} align="center">
+                Ingen treff på «{query.trim()}». Noen kan ha valgt å ikke være søkbare.
+              </Text>
+            ) : null}
+          </View>
+        ) : (
+          <>
+            <PressableScale onPress={() => setShareOpen(true)} accessibilityLabel="Del profilen din">
+              <Card muted style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.lg }}>
+                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="share-2" size={18} />
                 </View>
-              ) : null}
-            </>
-          )}
-        </ScreenScroll>
-      </KeyboardAware>
+                <View style={{ flex: 1 }}>
+                  <Text variant="callout">Del profilen din</Text>
+                  <Text variant="footnote" color="textSecondary">
+                    Lenke eller QR-kode – så kan venner legge deg til.
+                  </Text>
+                </View>
+                <Icon name="chevron-right" size={18} color="textTertiary" />
+              </Card>
+            </PressableScale>
+
+            <ContactFriends row={(p) => row(p, detail(p))} onFound={setFromContacts} />
+
+            {suggestions.length ? (
+              <View style={{ marginTop: spacing.xxl }}>
+                <SectionHeader title="Personer du kanskje kjenner" />
+                {suggestions.map((p) => row(p, p.context))}
+              </View>
+            ) : null}
+          </>
+        )}
+      </ScreenScroll>
       <ShareProfileSheet visible={shareOpen} onClose={() => setShareOpen(false)} />
     </Screen>
   );

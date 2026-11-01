@@ -11,6 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { Platform, useWindowDimensions, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ToastProvider } from '@/components/ui';
@@ -32,9 +33,11 @@ export default function RootLayout() {
     <ThemeProvider>
       <Root>
         <SafeAreaProvider>
-          <QueryClientProvider client={queryClient}>
-            <ToastProvider>{(fontsLoaded || fontError) && appearanceReady ? <WebFrame><AppStack /></WebFrame> : null}</ToastProvider>
-          </QueryClientProvider>
+          <KeyboardProvider>
+            <QueryClientProvider client={queryClient}>
+              <ToastProvider>{(fontsLoaded || fontError) && appearanceReady ? <WebFrame><AppStack /></WebFrame> : null}</ToastProvider>
+            </QueryClientProvider>
+          </KeyboardProvider>
         </SafeAreaProvider>
       </Root>
     </ThemeProvider>

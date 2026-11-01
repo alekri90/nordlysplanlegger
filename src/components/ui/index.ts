@@ -6,7 +6,7 @@ export { Confetti } from './Confetti';
 export { Icon, type IconName } from './Icon';
 export { IconButton } from './IconButton';
 export { Input } from './Input';
-export { BottomBar, Divider, Header, KeyboardAware, PageTitle, ProgressDots, Screen, ScreenScroll, SectionHeader } from './Layout';
+export { BottomBar, Divider, Header, PageTitle, ProgressDots, Screen, ScreenScroll, SectionHeader } from './Layout';
 export { ListRow, Radio, Toggle } from './ListRow';
 export { PressableScale } from './Pressable';
 export { Sheet } from './Sheet';
