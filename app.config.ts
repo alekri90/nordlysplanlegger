@@ -10,7 +10,7 @@ const config: ExpoConfig = {
   name: 'Nordlys Planlegger',
   slug: 'nordlys-planlegger',
   scheme: 'nordlysplanlegger',
-  version: '1.1.0',
+  version: '1.2.0',
   // Android 16 ignores orientation locks on tablets and foldables, so Android follows the device
   // (the layout centres itself on wide screens). The iPhone app stays portrait (infoPlist below).
   orientation: 'default',
