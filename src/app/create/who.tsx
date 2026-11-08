@@ -6,6 +6,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { PlaceDetails } from '@/components/create/PlaceDetails';
 import { GuestsCanInviteSetting } from '@/components/event/GuestsCanInviteSetting';
 import { PlacesSetting } from '@/components/event/PlacesSetting';
+import { PriceSetting } from '@/components/event/PriceSetting';
 import { repo } from '@/data';
 import { StepHeader } from '@/components/create/StepHeader';
 import { PeoplePicker } from '@/components/people/PeoplePicker';
@@ -98,8 +99,12 @@ export default function CreateWho() {
         spontaneous: draft.spontaneous,
       });
       // These are set right after, before a series copies them.
-      if (draft.maxParticipants || draft.guestsCanInvite) {
-        await repo.updateEvent(result.eventId, { ...(draft.maxParticipants && { maxParticipants: draft.maxParticipants }), ...(draft.guestsCanInvite && { guestsCanInvite: true }) });
+      if (draft.maxParticipants || draft.guestsCanInvite || draft.price) {
+        await repo.updateEvent(result.eventId, {
+          ...(draft.maxParticipants && { maxParticipants: draft.maxParticipants }),
+          ...(draft.guestsCanInvite && { guestsCanInvite: true }),
+          ...(draft.price && { price: draft.price }),
+        });
       }
       if (draft.repeat.enabled && draft.dateMode !== 'undecided') {
         const { enabled: _on, ...config } = draft.repeat;
@@ -263,6 +268,8 @@ export default function CreateWho() {
                 {!draft.existingEventId ? (
                   <Card style={{ paddingVertical: spacing.xs }}>
                     <PlacesSetting value={draft.maxParticipants} onChange={(maxParticipants) => draft.set({ maxParticipants })} />
+                    <Divider />
+                    <PriceSetting value={draft.price} onChange={(price) => draft.set({ price })} maxParticipants={draft.maxParticipants} />
                     <Divider />
                     <GuestsCanInviteSetting value={draft.guestsCanInvite} onChange={(guestsCanInvite) => draft.set({ guestsCanInvite })} />
                   </Card>

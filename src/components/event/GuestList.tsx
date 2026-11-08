@@ -33,7 +33,7 @@ function Group({ title, members, names, dim, onPress, action }: { title: string;
             key={m.id}
             onPress={onPress ? () => onPress(m) : undefined}
             disabled={!onPress}
-            accessibilityLabel={`${m.person.name}${m.role === 'organizer' ? ', arrangør' : ''}${m.userId ? '' : ', uten konto'}`}
+            accessibilityLabel={`${m.person.name}${m.role === 'organizer' ? ', arrangør' : ''}${m.userId ? '' : ', uten konto'}${m.answerSetBy ? `, svaret er satt av ${m.answerSetBy}` : ''}${m.paysShare === false ? ', betaler ikke andel' : ''}`}
             style={{ alignItems: 'center', width: 58, gap: 4, opacity: dim ? 0.5 : 1 }}
           >
             <Avatar name={m.person.name} uri={m.person.avatarUrl} size={48} />
@@ -41,6 +41,11 @@ function Group({ title, members, names, dim, onPress, action }: { title: string;
               {names.get(m.id)}
               {m.role === 'organizer' ? ' ★' : ''}
             </Text>
+            {m.answerSetBy ? (
+              <Text variant="caption" color="textTertiary" numberOfLines={1} style={{ fontSize: 10, lineHeight: 12, marginTop: -2 }}>
+                Satt av {m.answerSetBy}
+              </Text>
+            ) : null}
           </PressableScale>
         ))}
       </View>

@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import type { CategoryId, DateMode, Group, PlannerEvent, TimeHint } from '@/data/types';
 import { defaultCover, defaultCoverFor, suggestCategory } from '@/lib/categories';
 import { weekday } from '@/lib/dates';
+import type { Price } from '@/lib/price';
 import { DEFAULT_REPEAT, type RepeatConfig } from '@/lib/recurrence';
 import { suggestDatesForWeekdays, suggestedMonth, type Period } from '@/lib/period';
 
@@ -44,6 +45,8 @@ export type CreateDraft = {
   maxParticipants: number | null;
   /** Everyone taking part can invite. Off: only the organizer and co-hosts. */
   guestsCanInvite: boolean;
+  /** Shown to participants; null = no price. */
+  price: Price | null;
   /** "Gjenta arrangementet": off unless the user turns it on. */
   repeat: RepeatConfig & { enabled: boolean };
   /** Where the flow started — used to keep it as short as possible. */
@@ -85,6 +88,7 @@ const initial = (): CreateDraft => ({
   repeat: { ...DEFAULT_REPEAT, enabled: false },
   maxParticipants: null,
   guestsCanInvite: false,
+  price: null,
   spontaneous: false,
   source: 'new',
 });

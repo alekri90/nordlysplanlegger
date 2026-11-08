@@ -20,6 +20,7 @@ import type {
   GroupPatch,
   GroupRole,
   GuestInvite,
+  InviteStatus,
   InviteSuggestion,
   InviteView,
   NotificationPreferences,
@@ -97,6 +98,10 @@ export interface Repository {
   remindPending(eventId: string): Promise<{ sent: number; withoutAccount: number }>;
   /** Organizer side: take someone off the guest list, quietly. */
   removeEventMember(memberId: string): Promise<void>;
+  /** Organizer side: set someone's answer (they said so on SMS). Returns the result — 'waitlisted' when full. */
+  setMemberAnswer(memberId: string, status: 'attending' | 'declined' | 'invited'): Promise<InviteStatus>;
+  /** Organizer side: whether someone shares the cost. */
+  setMemberPaysShare(memberId: string, paysShare: boolean): Promise<void>;
   /** Organizer side: invite friends to an event that already exists. Returns how many were added. */
   addEventMembers(eventId: string, userIds: string[]): Promise<number>;
   /** Organizer side: people without an account get personal links. */

@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { defaultCover } from '@/lib/categories';
 import { periodLabelFor } from '@/lib/dates';
 import { clearGuestSecret, getGuestSecret, getPendingClaimToken, setGuestName, setGuestSecret, setPendingClaimToken } from '@/lib/guestIdentity';
+import type { PriceMode } from '@/lib/price';
 import type { RepeatConfig, RepeatDateMode, RepeatUnit } from '@/lib/recurrence';
 import { isLocalUri, readImageBytes } from '@/lib/upload';
 import type { Repository } from '../repository';
@@ -21,6 +22,8 @@ import type {
   GroupMember,
   GroupRole,
   GroupInviteView,
+  InvitePricing,
+  InviteStatus,
   InviteView,
   NotificationPreferences,
   Person,
@@ -57,6 +60,10 @@ type EventRow = {
   places_taken: number | null;
   guests_can_invite: boolean;
   spontaneous: boolean;
+  price_ore: number | null;
+  price_mode: PriceMode | null;
+  paying_places: number | null;
+  non_paying_places: number | null;
   organizer: ProfileRow | null;
   location: { name: string; address: string | null; details_pending: boolean } | null;
   options: { id: string; date: string }[];
@@ -70,6 +77,8 @@ type EventRow = {
     responded_at: string | null;
     is_cohost: boolean;
     waitlisted_at: string | null;
+    pays_share: boolean;
+    answer_set_by: string | null;
     profile: ProfileRow | null;
     availability: { date_option_id: string; status: string }[];
   }[];
@@ -91,10 +100,11 @@ type EventRow = {
 const EVENT_SELECT = `
   id, title, category, cover_image_url, status, date_mode, group_id, period_label, time_hint,
   start_time, selected_date, selected_option_id, description, created_at, locked_at, max_participants, places_taken, guests_can_invite, spontaneous,
+  price_ore, price_mode, paying_places, non_paying_places,
   organizer:profiles!events_organizer_id_fkey(id, display_name, avatar_url, username),
   location:event_locations(name, address, details_pending),
   options:event_date_options!event_date_options_event_id_fkey(id, date),
-  members:event_members(id, user_id, guest_id, display_name, role, status, responded_at, is_cohost, waitlisted_at,
+  members:event_members(id, user_id, guest_id, display_name, role, status, responded_at, is_cohost, waitlisted_at, pays_share, answer_set_by,
     profile:profiles(id, display_name, avatar_url, username),
     availability:event_availability(date_option_id, status)),
   invites:event_invites(token, revoked_at),
@@ -141,10 +151,15 @@ function toEvent(r: EventRow): PlannerEvent {
       respondedAt: m.responded_at,
       isCohost: m.is_cohost,
       waitlistedAt: m.waitlisted_at,
+      paysShare: m.pays_share,
+      answerSetBy: m.answer_set_by,
     })),
     maxParticipants: r.max_participants,
     placesTaken: r.places_taken,
     guestsCanInvite: r.guests_can_invite,
+    price: r.price_ore !== null && r.price_mode ? { mode: r.price_mode, amountOre: r.price_ore } : null,
+    payingPlaces: r.paying_places,
+    nonPayingPlaces: r.non_paying_places,
     spontaneous: r.spontaneous,
     inviteToken: r.invites?.find((i) => !i.revoked_at)?.token ?? '',
     photos: (r.images ?? []).filter((i) => i.kind === 'memory').map((i) => i.url),
@@ -525,6 +540,10 @@ export const supabaseRepository: Repository = {
     if (patch.timeHint !== undefined) update.time_hint = patch.timeHint;
     if (patch.maxParticipants !== undefined) update.max_participants = patch.maxParticipants;
     if (patch.guestsCanInvite !== undefined) update.guests_can_invite = patch.guestsCanInvite;
+    if (patch.price !== undefined) {
+      update.price_ore = patch.price?.amountOre ?? null;
+      update.price_mode = patch.price?.mode ?? null;
+    }
     if (patch.coverImageUrl !== undefined) {
       update.cover_image_url = isLocalUri(patch.coverImageUrl) ? await uploadImage('covers', await requireUserId(), patch.coverImageUrl) : patch.coverImageUrl;
     }
@@ -644,6 +663,17 @@ export const supabaseRepository: Repository = {
     fail(error);
   },
 
+  async setMemberAnswer(memberId, status) {
+    const { data, error } = await getSupabase().rpc('set_member_answer', { p_member_id: memberId, p_status: status });
+    fail(error);
+    return data as InviteStatus;
+  },
+
+  async setMemberPaysShare(memberId, paysShare) {
+    const { error } = await getSupabase().from('event_members').update({ pays_share: paysShare }).eq('id', memberId);
+    fail(error);
+  },
+
   async getEventPeople(eventId) {
     const sb = getSupabase();
     const [members, reserved] = await Promise.all([
@@ -713,6 +743,19 @@ export const supabaseRepository: Repository = {
     fail(error);
     if (!data || data.cancelled) return null;
     sb.rpc('mark_invite_opened', { p_token: token }).then(() => {}, () => {});
+    const pricing = await sb.rpc('get_invite_price', { p_token: token }).then(
+      ({ data: p }): InvitePricing | null =>
+        p
+          ? {
+              price: p.price_ore !== null && p.price_mode ? { mode: p.price_mode, amountOre: p.price_ore } : null,
+              maxParticipants: p.max_participants,
+              placesTaken: p.places_taken,
+              payingPlaces: p.paying_places,
+              nonPayingPlaces: p.non_paying_places,
+            }
+          : null,
+      () => null,
+    );
     const e = data.event;
     const category = (e.category as CategoryId) ?? 'hangout';
     const view: InviteView = {
@@ -738,6 +781,7 @@ export const supabaseRepository: Repository = {
       groupId: e.group_id ?? null,
       invitedCount: data.invited_count ?? 0,
       respondents: (data.respondents ?? []).map((p: { id: string; name: string; avatar_url: string | null }) => ({ id: p.id, name: p.name, avatarUrl: p.avatar_url })),
+      pricing,
       myResponse: data.my_response
         ? {
             memberId: data.my_response.member_id,

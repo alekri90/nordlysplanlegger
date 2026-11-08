@@ -1,3 +1,4 @@
+import type { Price } from '@/lib/price';
 import type { RepeatConfig } from '@/lib/recurrence';
 
 /**
@@ -149,6 +150,10 @@ export interface EventMember {
   isCohost?: boolean;
   /** Place in the waiting list (earliest first). */
   waitlistedAt?: string | null;
+  /** False: has a place but doesn't share the cost (e.g. the sauna master). */
+  paysShare?: boolean;
+  /** First name of the organizer who set this answer («Satt av Pål»); cleared when they answer themselves. */
+  answerSetBy?: string | null;
 }
 
 export interface EventLocation {
@@ -193,6 +198,11 @@ export interface PlannerEvent {
   placesTaken?: number | null;
   /** Everyone taking part can invite, not only the organizer and co-hosts. */
   guestsCanInvite?: boolean;
+  /** Shown to participants; payment happens outside the app. */
+  price?: Price | null;
+  /** With a price: places in use by people who pay a share / who don't. */
+  payingPlaces?: number | null;
+  nonPayingPlaces?: number | null;
   /** Set when this is one time of a recurring event. */
   series?: EventSeriesInfo | null;
 }
@@ -276,6 +286,14 @@ export interface NotificationPreferences {
 }
 
 /** What someone opening an invitation link is allowed to see. No contact data. */
+export interface InvitePricing {
+  price: Price | null;
+  maxParticipants: number | null;
+  placesTaken: number | null;
+  payingPlaces: number | null;
+  nonPayingPlaces: number | null;
+}
+
 export interface InviteView {
   token: string;
   event: Pick<
@@ -290,6 +308,8 @@ export interface InviteView {
   groupId?: string | null;
   invitedCount: number;
   respondents: Person[];
+  /** Places and price, without names. */
+  pricing?: InvitePricing | null;
   myResponse?: {
     memberId: string;
     name: string;
@@ -387,6 +407,8 @@ export interface EventPatch {
   /** null removes the limit. */
   maxParticipants?: number | null;
   guestsCanInvite?: boolean;
+  /** null removes the price. */
+  price?: Price | null;
 }
 
 /** Co-hosts and fixed places on a single (not recurring) event. Organizer only. */

@@ -209,7 +209,15 @@ function demoPromote(e: PlannerEvent) {
     next.status = 'attending';
     next.waitlistedAt = null;
   }
+  demoRecount(e);
+}
+
+/** Places taken, and with a price who pays a share — the server counts these as computed fields. */
+function demoRecount(e: PlannerEvent) {
   e.placesTaken = demoPlacesTaken(e);
+  const placed = e.members.filter((m) => m.status !== 'declined' && (m.status === 'attending' || m.role === 'organizer' || m.isCohost));
+  e.payingPlaces = e.price ? placed.filter((m) => m.paysShare !== false).length : null;
+  e.nonPayingPlaces = e.price ? placed.filter((m) => m.paysShare === false).length : null;
 }
 
 const seriesPeople = new Map<string, import('../types').SeriesPeople>();
@@ -535,9 +543,10 @@ export const demoRepository: Repository = {
       ...(patch.coverImageUrl !== undefined && { coverImageUrl: patch.coverImageUrl }),
       ...(patch.maxParticipants !== undefined && { maxParticipants: patch.maxParticipants }),
       ...(patch.guestsCanInvite !== undefined && { guestsCanInvite: patch.guestsCanInvite }),
+      ...(patch.price !== undefined && { price: patch.price }),
     });
     demoPromote(e);
-    e.placesTaken = demoPlacesTaken(e);
+    demoRecount(e);
   },
 
   async lockDate(eventId, optionId) {
@@ -580,8 +589,9 @@ export const demoRepository: Repository = {
       m.status = attending ? (full && !wasComing && m.role !== 'organizer' && !m.isCohost ? 'waitlisted' : 'attending') : 'declined';
       m.waitlistedAt = m.status === 'waitlisted' ? now() : null;
       m.respondedAt = now();
+      m.answerSetBy = null;
       if (wasComing && !attending) demoPromote(e);
-      e.placesTaken = demoPlacesTaken(e);
+      demoRecount(e);
     }
   },
 
@@ -607,7 +617,7 @@ export const demoRepository: Repository = {
       if (e.series?.id !== seriesId) continue;
       e.maxParticipants = people.maxParticipants;
       for (const m of e.members) m.isCohost = !!m.userId && people.cohostIds.includes(m.userId);
-      e.placesTaken = demoPlacesTaken(e);
+      demoRecount(e);
     }
   },
 
@@ -654,7 +664,33 @@ export const demoRepository: Repository = {
       if (!was) continue;
       e.members = e.members.filter((m) => m.id !== memberId);
       if (was.status === 'attending') demoPromote(e);
-      e.placesTaken = demoPlacesTaken(e);
+      demoRecount(e);
+    }
+  },
+
+  async setMemberAnswer(memberId, status) {
+    await wait(200);
+    const e = state.events.find((x) => x.members.some((m) => m.id === memberId));
+    const m = e?.members.find((x) => x.id === memberId);
+    if (!e || !m || m.role === 'organizer') throw new Error('member_not_found');
+    const wasPlaced = m.status === 'attending';
+    const full = !!e.maxParticipants && (demoPlacesTaken(e) ?? 0) >= e.maxParticipants;
+    m.status = status === 'attending' && full && !wasPlaced && !m.isCohost ? 'waitlisted' : status;
+    m.waitlistedAt = m.status === 'waitlisted' ? now() : null;
+    m.respondedAt = status === 'invited' ? null : now();
+    m.answerSetBy = status === 'invited' ? null : freshPerson(e.organizer).name.split(' ')[0];
+    if (wasPlaced && m.status !== 'attending') demoPromote(e);
+    demoRecount(e);
+    return m.status;
+  },
+
+  async setMemberPaysShare(memberId, paysShare) {
+    await wait(150);
+    for (const e of state.events) {
+      const m = e.members.find((x) => x.id === memberId);
+      if (!m) continue;
+      m.paysShare = paysShare;
+      demoRecount(e);
     }
   },
 
@@ -669,7 +705,7 @@ export const demoRepository: Repository = {
     const e = findEvent(eventId);
     for (const m of e.members) m.isCohost = !!m.userId && people.cohostIds.includes(m.userId);
     eventReserved.set(eventId, people.reservedIds);
-    e.placesTaken = demoPlacesTaken(e);
+    demoRecount(e);
   },
 
   async setSeriesCover(seriesId, coverImageUrl, eventId) {
@@ -794,6 +830,7 @@ export const demoRepository: Repository = {
       respondents: e.members
         .filter((m) => m.role === 'organizer' || ['responded', 'attending'].includes(m.status))
         .map((m) => ({ ...freshPerson(m.person), name: freshPerson(m.person).name.split(' ')[0] })),
+      pricing: { price: e.price ?? null, maxParticipants: e.maxParticipants ?? null, placesTaken: e.placesTaken ?? null, payingPlaces: e.payingPlaces ?? null, nonPayingPlaces: e.nonPayingPlaces ?? null },
       myResponse: me ? { memberId: me.id, name: me.person.name, status: me.status, unavailableOptionIds: me.unavailableOptionIds } : null,
     });
   },

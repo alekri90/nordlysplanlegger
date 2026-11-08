@@ -262,6 +262,22 @@ export function useRemoveEventMember() {
   return useMutation({ mutationFn: (memberId: string) => repo.removeEventMember(memberId), onSuccess: () => invalidateAll(qc) });
 }
 
+export function useSetMemberAnswer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ memberId, status }: { memberId: string; status: 'attending' | 'declined' | 'invited' }) => repo.setMemberAnswer(memberId, status),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+export function useSetMemberPaysShare() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ memberId, paysShare }: { memberId: string; paysShare: boolean }) => repo.setMemberPaysShare(memberId, paysShare),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
 export function useUpdateEventSeries() {
   const qc = useQueryClient();
   return useMutation({

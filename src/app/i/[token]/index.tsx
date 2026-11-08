@@ -18,6 +18,7 @@ import { CATEGORIES } from '@/lib/categories';
 import { formatLong, formatTime } from '@/lib/dates';
 import { firstName, inviteSubtitle, optionsSummary, timeHintLabel } from '@/lib/eventText';
 import { getGuestName } from '@/lib/guestIdentity';
+import { describePrice } from '@/lib/price';
 import { useMe } from '@/state/session';
 import { gutter, radius, spacing, useColors } from '@/theme';
 
@@ -72,12 +73,21 @@ function InvitationView({ invite }: { invite: InviteView }) {
   const declined = invite.myResponse?.status === 'declined';
   const isDated = !!e.selectedDate && (e.status === 'confirmed' || e.status === 'date_selected');
 
+  const pricing = invite.pricing;
+  const full = !!pricing?.maxParticipants && (pricing.placesTaken ?? 0) >= pricing.maxParticipants;
+  const placesLabel = pricing?.maxParticipants
+    ? full
+      ? 'Fullt · venteliste'
+      : `${pricing.maxParticipants - (pricing.placesTaken ?? 0)} av ${pricing.maxParticipants} plasser ledige`
+    : null;
+  const price = pricing?.price ? describePrice(pricing.price, pricing) : null;
+
   const tiles: { icon: IconName; label: string }[] = [
     isDated
       ? { icon: 'calendar', label: formatLong(e.selectedDate!) }
       : { icon: 'calendar', label: e.options.length ? optionsSummary(e.options.map((o) => o.date)) : 'Dato kommer' },
     { icon: 'clock', label: e.startTime ? `Kl. ${formatTime(e.startTime)}` : timeHintLabel(e.timeHint) },
-    { icon: 'users', label: `${invite.invitedCount} inviterte` },
+    { icon: 'users', label: placesLabel ?? `${invite.invitedCount} inviterte` },
   ];
 
   const declineRsvp = () => {
@@ -144,6 +154,15 @@ function InvitationView({ invite }: { invite: InviteView }) {
               </View>
             ))}
           </View>
+
+          {price ? (
+            <View accessible style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, justifyContent: 'center' }}>
+              <Icon name="tag" size={16} tint="rgba(255,255,255,0.85)" />
+              <Text variant="footnote" style={{ color: 'rgba(255,255,255,0.85)', flexShrink: 1 }}>
+                {price.headline}
+              </Text>
+            </View>
+          ) : null}
 
           {invite.respondents.length > 1 ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg, justifyContent: 'center' }}>
@@ -230,6 +249,8 @@ function InvitationView({ invite }: { invite: InviteView }) {
           <Detail icon="calendar" text={isDated ? formatLong(e.selectedDate!) : e.periodLabel ?? 'Dato bestemmes'} />
           <Detail icon="clock" text={e.startTime ? `Kl. ${formatTime(e.startTime)}` : timeHintLabel(e.timeHint)} />
           {e.location ? <Detail icon="map-pin" text={`${e.location.name}${e.location.detailsPending ? ' (detaljer kommer)' : ''}`} /> : null}
+          {price ? <Detail icon="tag" text={price.detail ? `${price.headline} · ${price.detail}` : price.headline} /> : null}
+          {placesLabel ? <Detail icon="users" text={placesLabel} /> : null}
           <Detail icon="user" text={`Arrangert av ${firstName(invite.organizer.name)}`} />
           {e.description ? (
             <Text variant="body" style={{ marginTop: spacing.sm }}>

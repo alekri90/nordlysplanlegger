@@ -5,11 +5,13 @@ import { View } from 'react-native';
 import { CoverPicker } from '@/components/create/CoverPicker';
 import { GuestsCanInviteSetting } from '@/components/event/GuestsCanInviteSetting';
 import { PlacesSetting } from '@/components/event/PlacesSetting';
+import { PriceSetting } from '@/components/event/PriceSetting';
 import { TimePicker } from '@/components/create/TimePicker';
 import { BottomBar, Button, Card, Divider, Header, Input, ListRow, PageSkeleton, Screen, ScreenScroll, Text, Toggle, useToast } from '@/components/ui';
 import { useEvent, useSetSeriesCover, useUpdateEvent } from '@/data/hooks';
 import type { CategoryId, PlannerEvent, TimeHint } from '@/data/types';
 import { defaultCoverFor } from '@/lib/categories';
+import type { Price } from '@/lib/price';
 import { spacing } from '@/theme';
 
 /** Short form for the details that come later: picture, place, time, a note. */
@@ -31,6 +33,8 @@ function EditForm({ event: e }: { event: PlannerEvent }) {
   const [coverScope, setCoverScope] = useState<'this' | 'series'>('this');
   const [maxParticipants, setMaxParticipants] = useState<number | null>(e.maxParticipants ?? null);
   const [guestsCanInvite, setGuestsCanInvite] = useState(!!e.guestsCanInvite);
+  const [price, setPrice] = useState<Price | null>(e.price ?? null);
+  const priceChanged = price?.mode !== e.price?.mode || price?.amountOre !== e.price?.amountOre;
 
   const [title, setTitle] = useState(e.title);
   const [place, setPlace] = useState(e.location?.name ?? '');
@@ -50,6 +54,7 @@ function EditForm({ event: e }: { event: PlannerEvent }) {
         ...(coverChanged && !(inSeries && coverScope === 'series') && { coverImageUrl: cover }),
         ...(maxParticipants !== (e.maxParticipants ?? null) && { maxParticipants }),
         ...(guestsCanInvite !== !!e.guestsCanInvite && { guestsCanInvite }),
+        ...(priceChanged && { price }),
       });
       if (coverChanged && inSeries && coverScope === 'series') await setSeriesCover.mutateAsync({ seriesId: e.series!.id, coverImageUrl: cover, eventId: e.id });
       toast({ message: 'Lagret', tone: 'success' });
@@ -95,6 +100,8 @@ function EditForm({ event: e }: { event: PlannerEvent }) {
           ) : null}
           <Card style={{ paddingVertical: spacing.xs }}>
             <PlacesSetting value={maxParticipants} onChange={setMaxParticipants} />
+            <Divider />
+            <PriceSetting value={price} onChange={setPrice} maxParticipants={maxParticipants} nonPayingPlaces={e.nonPayingPlaces} />
             <Divider />
             <GuestsCanInviteSetting value={guestsCanInvite} onChange={setGuestsCanInvite} />
           </Card>

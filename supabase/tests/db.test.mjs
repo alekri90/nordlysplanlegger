@@ -1129,5 +1129,90 @@ console.log('\nWho can invite');
   });
 }
 
+console.log('\nPrice, who pays, and answers set by the organizer');
+{
+  const org = await newUser('pris@example.com', { display_name: 'Pål Pris', username: 'paalpris' });
+  const people = [];
+  for (const [i, n] of ['Bade', 'Mester', 'Kari', 'Lise'].entries()) people.push(await newUser(`pris-${i}@example.com`, { display_name: `${n} P`, username: `prisx${i}` }));
+  for (const u of people) { await as(org); await q(`select send_friend_request($1)`, [u]); await as(u); await q(`select send_friend_request($1)`, [org]); }
+  const [bade, mester, kari, lise] = people;
+  const member = async (ev, u) => (await q(`select id, status::text s, pays_share, answer_set_by from event_members where event_id = $1 and user_id = $2`, [ev, u]))[0];
+  await as(org);
+  const [{ r }] = await q(`select create_event($1) r`, [{ title: 'Badstu', category: 'sauna', date_mode: 'fixed', fixed_date: '2027-10-05', time_hint: 'evening', member_user_ids: people }]);
+  const ev = r.event_id;
+  await q(`update events set max_participants = 3, price_ore = 150000, price_mode = 'split' where id = $1`, [ev]);
+  await q(`update event_members set is_cohost = true where event_id = $1 and user_id = $2`, [ev, mester]);
+
+  await check('price: the organizer marks who doesn\'t pay; paying and non-paying places are counted', async () => {
+    await as(org);
+    await q(`update event_members set pays_share = false where event_id = $1 and user_id = $2`, [ev, mester]);
+    const [c] = await q(`select paying_places(e) p, non_paying_places(e) n from events e where id = $1`, [ev]);
+    assert.deepEqual([c.p, c.n], [1, 1], 'organizer pays, the co-host (sauna master) does not');
+    await assert.rejects(q(`update events set price_mode = null where id = $1`, [ev]), 'price and mode go together');
+  });
+
+  await check('a guest can\'t change who pays, and can\'t mark their own answer as set by the organizer', async () => {
+    await db.exec('set role authenticated');
+    await as(kari);
+    try {
+      await assert.rejects(q(`update event_members set pays_share = false where event_id = $1 and user_id = $2`, [ev, kari]), /only_organizer_sets_share/);
+      await q(`update event_members set answer_set_by = 'Pål', status = 'attending', responded_at = now() where event_id = $1 and user_id = $2`, [ev, kari]);
+    } finally { await db.exec('reset role'); }
+    const k = await member(ev, kari);
+    assert.equal(k.s, 'attending');
+    assert.equal(k.answer_set_by, null);
+  });
+
+  await check('the organizer sets an answer: marked, told, waiting list when full, cleared when they answer themselves', async () => {
+    await as(org);
+    const b = await member(ev, bade);
+    const [{ s: full }] = await q(`select set_member_answer($1, 'attending') s`, [b.id]);
+    assert.equal(full, 'waitlisted', 'organizer + co-host + Kari = 3, so full');
+    assert.equal((await member(ev, bade)).answer_set_by, 'Pål');
+    const [n] = await q(`select title, body from notifications where user_id = $1 and event_id = $2 and data ->> 'kind' = 'answer_set'`, [bade, ev]);
+    assert.equal(n.title, 'Pål satte svaret ditt på Badstu');
+    assert.equal(n.body, 'Det var fullt, så du står på ventelisten.');
+    const l = await member(ev, lise);
+    const [{ s: no }] = await q(`select set_member_answer($1, 'declined') s`, [l.id]);
+    assert.equal(no, 'declined');
+    assert.equal((await member(ev, lise)).answer_set_by, 'Pål');
+    await as(lise);
+    await q(`update event_members set status = 'attending', responded_at = now() where id = $1`, [l.id]);
+    assert.equal((await member(ev, lise)).answer_set_by, null, 'answering yourself removes «Satt av»');
+    await as(kari);
+    await assert.rejects(q(`select set_member_answer($1, 'declined')`, [b.id]), /not_organizer/);
+    await as(mester);
+    await q(`select set_member_answer($1, 'declined')`, [b.id]);
+    assert.equal((await member(ev, bade)).answer_set_by, 'Mester', 'co-hosts can too');
+  });
+
+  await check('the invitation shows price and places without names', async () => {
+    await as(null);
+    const [{ p }] = await q(`select get_invite_price($1) p`, [r.invite_token]);
+    assert.equal(p.price_ore, 150000);
+    assert.equal(p.price_mode, 'split');
+    assert.equal(p.max_participants, 3);
+    assert.equal(p.non_paying_places, 1);
+  });
+
+  await check('a series keeps the price and who doesn\'t pay in the next round', async () => {
+    await as(org);
+    const [{ r: first }] = await q(`select create_event($1) r`, [{ title: 'Badstu hver uke', category: 'sauna', date_mode: 'fixed', fixed_date: '2027-11-02', time_hint: 'evening', member_user_ids: [mester, kari] }]);
+    await q(`update events set price_ore = 25000, price_mode = 'per_person' where id = $1`, [first.event_id]);
+    await q(`update event_members set pays_share = false where event_id = $1 and user_id = $2`, [first.event_id, mester]);
+    const [{ s }] = await q(`select create_event_series($1, $2) s`, [first.event_id, { unit: 'week', count: 1, date_mode: 'fixed' }]);
+    await as(null);
+    await q(`select run_event_series('2027-11-03 10:00+00')`);
+    const [next] = await q(`select id, price_ore, price_mode from events where series_id = $1 and id <> $2`, [s, first.event_id]);
+    assert.ok(next, 'a next round was made');
+    assert.deepEqual([next.price_ore, next.price_mode], [25000, 'per_person']);
+    assert.equal((await member(next.id, mester)).pays_share, false);
+    assert.equal((await member(next.id, kari)).pays_share, true);
+    await as(org);
+    await q(`update events set price_ore = 30000 where id = $1`, [next.id]);
+    assert.equal((await q(`select price_ore from event_series where id = $1`, [s]))[0].price_ore, 30000, 'a new price carries on');
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

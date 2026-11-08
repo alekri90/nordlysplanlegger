@@ -27,6 +27,7 @@ import { CATEGORIES, thumb } from '@/lib/categories';
 import { formatLong, formatTime, today } from '@/lib/dates';
 import { addEventToCalendar } from '@/lib/eventActions';
 import { firstName, timeHintLabel } from '@/lib/eventText';
+import { describePrice } from '@/lib/price';
 import { repeatSummary } from '@/lib/recurrence';
 import { useIsInCalendar } from '@/state/calendarSync';
 import { useCreateDraft } from '@/state/createDraft';
@@ -163,6 +164,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
       ? `Fullt${waitlist.length ? ` · ${waitlist.length} på venteliste` : ''}`
       : `${e.placesTaken ?? 0} av ${e.maxParticipants} plasser tatt`
     : null;
+  const price = e.price ? describePrice(e.price, e) : null;
   const myQueue = mine?.status === 'waitlisted' ? waitlist.findIndex((m) => m.id === mine.id) + 1 : 0;
   const showInterest = !isOrganizer && !!mine && mine.role === 'guest' && e.status === 'draft';
   const interested = e.members.filter((m) => m.role === 'guest' && m.status === 'attending').length;
@@ -186,6 +188,8 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
               <InfoLine icon="calendar" text={time ? `${when} · ${time}` : when} />
               {place ? <InfoLine icon="map-pin" text={place} /> : null}
               {placesLine ? <InfoLine icon="users" text={placesLine} /> : null}
+              {price ? <InfoLine icon="tag" text={price.detail ? `${price.headline} · ${price.detail}` : price.headline} /> : null}
+              {price && mine?.paysShare === false ? <InfoLine icon="gift" text="Du deler ikke kostnaden" /> : null}
               {e.series && e.series.status !== 'ended' ? (
                 <InfoLine icon="repeat" text={`${repeatSummary(e.series, e.selectedDate)}${e.series.status === 'paused' ? ' · på pause' : ''}`} />
               ) : null}
@@ -394,7 +398,13 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
       ) : null}
 
       <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} title={e.title} token={e.inviteToken} organizerName={firstName(e.organizer.name)} />
-      <MemberSheet member={personMember} canRemove={isOrganizer} onClose={() => setPersonMember(null)} />
+      <MemberSheet
+        member={personMember ? (e.members.find((m) => m.id === personMember.id) ?? null) : null}
+        canRemove={isOrganizer}
+        canSetAnswer={isOrganizer && (e.status === 'confirmed' || e.status === 'date_selected')}
+        hasPrice={!!e.price}
+        onClose={() => setPersonMember(null)}
+      />
       {isOwner ? (
         <Sheet visible={rolesOpen} onClose={() => setRolesOpen(false)} title="Medarrangører og plasser">
           {roles ? <SeriesPeopleEditor members={e.members} value={roles} onChange={setRoles} recurring={!!e.series} /> : null}
