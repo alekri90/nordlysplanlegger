@@ -6,7 +6,6 @@
         "components": [
           { "/": "/i/*", "comment": "Invitation links open the app when installed" },
           { "/": "/g/*", "comment": "Group invite links" },
-          { "/": "/a/*", "comment": "Date clearance links (Avklar med noen først)" },
           { "/": "/@*", "comment": "Profile links (nordlysplanlegger.vercel.app/@username)" }
         ]
       }

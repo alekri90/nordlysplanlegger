@@ -101,13 +101,13 @@ function ClearanceView({ c, fresh }: { c: DateClearance; fresh: boolean }) {
               <Icon name="clock" size={20} color="textSecondary" />
               <Text variant="body" style={{ flex: 1 }}>
                 {c.keyUserId
-                  ? `${key} har fått beskjed. Du får varsel når hen har svart.`
+                  ? `${key} har fått beskjed i appen. Virker det ikke for hen, send lenken. Den åpnes i nettleseren.`
                   : fresh
                     ? `Send lenken til ${key}, så kan hen krysse av dagene. Hen trenger ikke appen.`
                     : `Venter på svar fra ${key}. Har hen ikke fått lenken? Send den her.`}
               </Text>
             </View>
-            {!c.keyUserId ? <ShareGrid url={url} title={c.title} message={clearanceMessage(c.title, url, me ? firstName(me.name) : undefined, key)} /> : null}
+            <ShareGrid url={url} title={c.title} message={clearanceMessage(c.title, url, me ? firstName(me.name) : undefined, key)} />
           </Card>
         ) : null}
 
