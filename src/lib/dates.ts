@@ -151,3 +151,16 @@ export function formatTime(time?: string | null): string | null {
   if (!time) return null;
   return time.slice(0, 5);
 }
+
+/** «Alle tirsdager» as a toggle: every visible day on that weekday is chosen. */
+export function hasWholeWeekday(chosen: string[], wd: number, available: string[]): boolean {
+  const days = available.filter((d) => weekday(d) === wd);
+  return days.length > 0 && days.every((d) => chosen.includes(d));
+}
+
+/** Adds every visible day on that weekday, or removes them all if they're already chosen. */
+export function toggleWeekday(chosen: string[], wd: number, available: string[]): string[] {
+  const days = available.filter((d) => weekday(d) === wd);
+  if (hasWholeWeekday(chosen, wd, available)) return chosen.filter((d) => !days.includes(d));
+  return [...new Set([...chosen, ...days])].sort();
+}

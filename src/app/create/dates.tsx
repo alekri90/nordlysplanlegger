@@ -13,11 +13,13 @@ import { BottomBar, Button, Chip, PageTitle, Screen, ScreenScroll, Text, useToas
 import { useStartPoll } from '@/data/hooks';
 import { useBusyItems } from '@/lib/calendarBusy';
 import { conflictsFor } from '@/lib/calendarConflicts';
-import { addMonths, monthDates, monthKey, monthName, today, weekday } from '@/lib/dates';
+import { addMonths, hasWholeWeekday, monthDates, monthKey, monthName, today, toggleWeekday, weekday } from '@/lib/dates';
 import { haptics } from '@/lib/haptics';
 import { applyQuickPick, periodDates, periodMonths, QUICK_PICKS, suggestedMonth, type Period, type QuickPick } from '@/lib/period';
 import { useCreateDraft } from '@/state/createDraft';
 import { gutter, spacing } from '@/theme';
+
+const WEEKDAY_PLURALS = ['Mandager', 'Tirsdager', 'Onsdager', 'Torsdager', 'Fredager', 'Lørdager', 'Søndager'];
 
 /**
  * Step 3 — which days could work? Pick a period, tap days (or use a quick pick), choose a time.
@@ -68,6 +70,7 @@ export default function CreateDates() {
   };
 
   const count = draft.optionDates.length;
+  const visibleDates = [...selectable].filter((d) => months.some((m) => d.startsWith(m)));
   const isPeriodSelected = (p: Period) =>
     p.kind === draft.period.kind && (p.kind !== 'month' || (draft.period.kind === 'month' && draft.period.month === p.month));
 
@@ -130,6 +133,24 @@ export default function CreateDates() {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
           {QUICK_PICKS.map((q) => (
             <Chip key={q.id} label={q.label} selected={activePick === q.id} onPress={() => quickPick(q.id)} />
+          ))}
+        </View>
+        <Text variant="footnote" color="textSecondary" style={{ marginTop: spacing.lg, marginBottom: spacing.sm }}>
+          Alle i perioden
+        </Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          {WEEKDAY_PLURALS.map((label, wd) => (
+            <Chip
+              key={label}
+              label={label}
+              selected={hasWholeWeekday(draft.optionDates, wd, visibleDates)}
+              onPress={() => {
+                haptics.light();
+                setActivePick(null);
+                draft.set({ optionDates: toggleWeekday(draft.optionDates, wd, visibleDates) });
+              }}
+              accessibilityHint={`Velger eller fjerner alle ${label.toLowerCase()} i perioden`}
+            />
           ))}
         </View>
 

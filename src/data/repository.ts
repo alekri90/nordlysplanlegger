@@ -108,7 +108,7 @@ export interface Repository {
   /** Organizer side: invite friends to an event that already exists. Returns how many were added. */
   addEventMembers(eventId: string, userIds: string[]): Promise<number>;
   /** Organizer side: people without an account get personal links. */
-  addEventGuests(eventId: string, names: string[]): Promise<GuestInvite[]>;
+  addEventGuests(eventId: string, names: string[], guests?: { guestId: string; name: string }[]): Promise<GuestInvite[]>;
   /** The invitation has been seen in the app (the organizer sees it, and a reminder follows if nobody answers). */
   markEventOpened(eventId: string): Promise<void>;
   /** Organizer only, single events (recurring ones use the series). */

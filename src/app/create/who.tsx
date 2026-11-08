@@ -143,7 +143,7 @@ export default function CreateWho() {
     <Screen>
       <StepHeader step={draft.source === 'event' ? 1 : 3} total={draft.source === 'event' ? 2 : draft.clearance ? 5 : 4} />
       <ScreenScroll bottomInset={220}>
-        <PageTitle title="Hvem skal være med?" subtitle={draft.clearance ? 'De inviteres når dagene er avklart.' : undefined} />
+        <PageTitle title="Hvem skal være med?" subtitle={draft.clearance ? 'Velg nå eller senere. Ingen blir invitert før dagene er avklart.' : undefined} />
 
         {selectedGroup ? (
           <Animated.View entering={FadeIn.duration(220)}>
@@ -300,7 +300,7 @@ export default function CreateWho() {
         <SelectedSummary ids={[...draft.memberIds, ...draft.guestIds]} names={draft.guestNames} />
         <Button
           variant="ink"
-          title={draft.clearance ? 'Fortsett' : draft.spontaneous ? (count ? `Spør hvem som er gira · ${count}` : 'Lag lenke – hvem er gira?') : count ? `Send invitasjon · ${count + 1} personer` : 'Lag invitasjonslenke'}
+          title={draft.clearance ? (count ? `Fortsett · ${count} valgt` : 'Velg senere') : draft.spontaneous ? (count ? `Spør hvem som er gira · ${count}` : 'Lag lenke – hvem er gira?') : count ? `Send invitasjon · ${count + 1} personer` : 'Lag invitasjonslenke'}
           icon={draft.clearance ? 'arrow-right' : 'send'}
           loading={createEvent.isPending}
           onPress={draft.clearance ? () => router.push('/create/clear') : send}

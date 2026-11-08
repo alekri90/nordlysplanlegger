@@ -682,9 +682,9 @@ export const supabaseRepository: Repository = {
     return data as number;
   },
 
-  async addEventGuests(eventId, names) {
-    if (!names.length) return [];
-    const { data, error } = await getSupabase().rpc('add_event_guests', { p_event_id: eventId, p_guest_ids: [], p_names: names });
+  async addEventGuests(eventId, names, guests = []) {
+    if (!names.length && !guests.length) return [];
+    const { data, error } = await getSupabase().rpc('add_event_guests', { p_event_id: eventId, p_guest_ids: guests.map((g) => g.guestId), p_names: names });
     fail(error);
     return (data as { guest_id: string; name: string; token: string }[]).map((g) => ({ guestId: g.guest_id, name: g.name, token: g.token }));
   },

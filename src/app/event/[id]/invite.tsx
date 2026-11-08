@@ -7,9 +7,10 @@ import { ShareSheet } from '@/components/event/ShareSheet';
 import { PeoplePicker } from '@/components/people/PeoplePicker';
 import { SelectedSummary } from '@/components/people/SelectedSummary';
 import { AvatarStack, BottomBar, Button, Card, Divider, Icon, Header, ListRow, PageSkeleton, PressableScale, Screen, ScreenScroll, SectionHeader, Sheet, Text, useToast } from '@/components/ui';
-import { repo } from '@/data';
-import { queryClient, useAddEventMembers, useEvent, useGroups } from '@/data/hooks';
-import type { Group, GuestInvite } from '@/data/types';
+import { inviteToEvents, queryClient, useDateClearance, useEvent, useGroups } from '@/data/hooks';
+import type { Group, GuestInvite, PlannerEvent } from '@/data/types';
+import { okDates } from '@/lib/clearance';
+import { formatLong } from '@/lib/dates';
 import { firstName } from '@/lib/eventText';
 import { haptics } from '@/lib/haptics';
 import { useMe } from '@/state/session';
@@ -18,24 +19,38 @@ import { spacing, useColors } from '@/theme';
 /**
  * Invite more people to an event that already exists: friends and gjenger first (they get a
  * notification and the event shows up in the app), the link last for those without the app.
+ * With `clearance`: all the days from «Avklar med noen først» at once, with the people chosen
+ * in the create flow already ticked.
  */
 export default function InviteToEvent() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, clearance } = useLocalSearchParams<{ id: string; clearance?: string }>();
+  const event = useEvent(id);
+  const cl = useDateClearance(clearance);
+  if (!event.data || (clearance && cl.isLoading)) return <Screen><PageSkeleton /></Screen>;
+  const c = cl.data;
+  return (
+    <InviteForm
+      e={event.data}
+      eventIds={c?.eventIds.length ? c.eventIds : [event.data.id]}
+      initialUserIds={c ? c.draft.memberIds.filter((u) => u !== c.keyUserId) : []}
+      initialGuestNames={c?.draft.guestNames ?? []}
+      dates={c ? okDates(c.days) : []}
+    />
+  );
+}
+
+function InviteForm({ e, eventIds, initialUserIds, initialGuestNames, dates }: { e: PlannerEvent; eventIds: string[]; initialUserIds: string[]; initialGuestNames: string[]; dates: string[] }) {
   const colors = useColors();
   const toast = useToast();
   const me = useMe();
-  const event = useEvent(id);
   const groups = useGroups();
-  const add = useAddEventMembers(id);
-  const [userIds, setUserIds] = useState<string[]>([]);
-  const [guestNames, setGuestNames] = useState<string[]>([]);
-  const [links, setLinks] = useState<GuestInvite[]>([]);
+  const existingIds = useMemo(() => e.members.map((m) => m.userId).filter((x): x is string => !!x), [e.members]);
+  const [userIds, setUserIds] = useState<string[]>(() => initialUserIds.filter((u) => !existingIds.includes(u)));
+  const [guestNames, setGuestNames] = useState<string[]>(initialGuestNames);
+  const [links, setLinks] = useState<{ eventId: string; guests: GuestInvite[] }[]>([]);
   const [sending, setSending] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-
-  const e = event.data;
-  const existingIds = useMemo(() => (e?.members ?? []).map((m) => m.userId).filter((x): x is string => !!x), [e?.members]);
-  if (!e) return <Screen><PageSkeleton /></Screen>;
+  const many = eventIds.length > 1;
 
   const toggle = (personId: string) => setUserIds((ids) => (ids.includes(personId) ? ids.filter((x) => x !== personId) : [...ids, personId]));
   const newFrom = (g: Group) => g.members.filter((m) => !m.isGuest && m.id !== me?.id && !existingIds.includes(m.id)).map((m) => m.id);
@@ -49,13 +64,12 @@ export default function InviteToEvent() {
   const send = async () => {
     setSending(true);
     try {
-      const added = userIds.length ? await add.mutateAsync(userIds) : 0;
-      const guests = await repo.addEventGuests(e.id, guestNames);
+      const { added, links: made } = await inviteToEvents(eventIds, userIds, guestNames);
       queryClient.invalidateQueries();
       haptics.success();
-      if (added) toast({ message: `${added === 1 ? 'Invitasjonen' : `${added} invitasjoner`} er sendt`, tone: 'success', icon: 'send' });
+      if (added) toast({ message: many ? `${added === 1 ? 'Én person' : `${added} personer`} er invitert til alle ${eventIds.length} gangene` : `${added === 1 ? 'Invitasjonen' : `${added} invitasjoner`} er sendt`, tone: 'success', icon: 'send' });
       // Those without an account only get it when their link is sent.
-      if (guests.length) setLinks(guests);
+      if (made.length) setLinks(made);
       else router.back();
     } catch (err) {
       toast({ message: err instanceof Error ? err.message : 'Kunne ikke invitere', tone: 'error' });
@@ -69,7 +83,7 @@ export default function InviteToEvent() {
       <Header back="close" title="Inviter" />
       <ScreenScroll bottomInset={220}>
         <Text variant="subhead" color="textSecondary" style={{ marginBottom: spacing.lg }}>
-          {e.title} · {e.members.length} invitert. Venner får beskjed i appen med en gang.
+          {many ? `${e.title} · ${eventIds.length} ganger. Alle du velger, blir invitert til alle gangene.` : `${e.title} · ${e.members.length} invitert. Venner får beskjed i appen med en gang.`}
         </Text>
         <PeoplePicker
           selectedIds={userIds}
@@ -126,7 +140,16 @@ export default function InviteToEvent() {
         <Button variant="ghost" title="Del lenke til andre" icon="link" onPress={() => setShareOpen(true)} style={{ marginTop: spacing.xs }} />
       </BottomBar>
       <Sheet visible={links.length > 0} onClose={() => router.back()} title="Send lenkene">
-        <PersonalLinks guests={links} title={e.title} organizerName={firstName(e.organizer.name)} />
+        {links.map((l, i) => (
+          <View key={l.eventId} style={{ marginTop: i ? spacing.lg : 0 }}>
+            {many ? (
+              <Text variant="footnote" color="textSecondary" style={{ marginBottom: spacing.sm }}>
+                {dates[eventIds.indexOf(l.eventId)] ? formatLong(dates[eventIds.indexOf(l.eventId)]) : `Gang ${eventIds.indexOf(l.eventId) + 1}`}
+              </Text>
+            ) : null}
+            <PersonalLinks guests={l.guests} title={e.title} organizerName={firstName(e.organizer.name)} />
+          </View>
+        ))}
         <Button title="Ferdig" variant="ink" style={{ marginTop: spacing.lg }} onPress={() => router.back()} />
       </Sheet>
       <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} title={e.title} token={e.inviteToken} organizerName={firstName(e.organizer.name)} />

@@ -649,10 +649,10 @@ export const demoRepository: Repository = {
     return added;
   },
 
-  async addEventGuests(eventId, names) {
+  async addEventGuests(eventId, names, guests = []) {
     await wait(200);
     const e = findEvent(eventId);
-    return names.map((name) => addGuestToEvent(e, uid('guest'), name.trim().slice(0, 60)));
+    return [...guests.map((g) => addGuestToEvent(e, g.guestId, g.name)), ...names.map((name) => addGuestToEvent(e, uid('guest'), name.trim().slice(0, 60)))];
   },
 
   async markEventOpened(eventId) {

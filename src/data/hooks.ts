@@ -5,7 +5,7 @@ import { useIsSignedIn } from '@/state/session';
 import { repo } from './index';
 import type { GuestResponseInput, ProfilePatch } from './repository';
 import { firstEventInput, nextEventInput, okDates, type ClearanceInviteMode } from '@/lib/clearance';
-import type { AddMembersInput, CreateClearanceInput, CreateEventInput, CreateGroupInput, DateClearance, EventPatch, GroupPatch, GroupRole, MyPhone, NotificationPreferences, ReportInput } from './types';
+import type { AddMembersInput, CreateClearanceInput, CreateEventInput, CreateGroupInput, DateClearance, EventPatch, GuestInvite, GroupPatch, GroupRole, MyPhone, NotificationPreferences, ReportInput } from './types';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -436,16 +436,26 @@ export function useCancelDateClearance() {
 
 /**
  * The key person has answered: make the event(s) from what the organizer chose in the create flow.
- * A key person with an account joins as co-host (and doesn't share the cost when there is a price).
+ * `inviteNow: false` makes them without inviting anyone yet (the organizer invites later).
+ * The key person is on every event: with an account as co-host, otherwise as a guest who said yes.
+ * Either way they don't share the cost when there is a price.
  */
-export async function inviteFromClearance(c: DateClearance, mode: ClearanceInviteMode) {
+export async function inviteFromClearance(c: DateClearance, mode: ClearanceInviteMode, inviteNow = true) {
   const dates = okDates(c.days);
   if (!dates.length) throw new Error('Ingen av dagene passet');
   const key = c.keyUserId;
-  const draft = key && !c.draft.memberIds.includes(key) ? { ...c.draft, memberIds: [...c.draft.memberIds, key] } : c.draft;
+  const keyGuestName = key ? null : c.keyName.trim().slice(0, 60);
+  const people = inviteNow ? c.draft : { ...c.draft, groupId: null, memberIds: [], guestIds: [], guestNames: [], saveAsGroupName: null };
+  const draft = {
+    ...people,
+    memberIds: key && !people.memberIds.includes(key) ? [...people.memberIds, key] : people.memberIds,
+    guestNames: keyGuestName ? [...(people.guestNames ?? []), keyGuestName] : people.guestNames,
+  };
   const first = await repo.createEvent(firstEventInput(draft, dates, mode));
   const made = [first];
   if (mode === 'each') for (const date of dates.slice(1)) made.push(await repo.createEvent(nextEventInput(draft, date, first)));
+  const keyGuestId = keyGuestName ? first.guests.find((g) => g.name === keyGuestName)?.guestId : undefined;
+  const fixed = mode === 'each' || dates.length === 1;
   for (const r of made) {
     if (draft.maxParticipants || draft.guestsCanInvite || draft.price) {
       await repo.updateEvent(r.eventId, {
@@ -454,12 +464,12 @@ export async function inviteFromClearance(c: DateClearance, mode: ClearanceInvit
         ...(draft.price && { price: draft.price }),
       });
     }
-    if (key) {
-      await repo.setEventPeople(r.eventId, { cohostIds: [key], reservedIds: [] });
-      if (draft.price) {
-        const m = (await repo.getEvent(r.eventId)).members.find((x) => x.userId === key);
-        if (m) await repo.setMemberPaysShare(m.id, false);
-      }
+    if (key) await repo.setEventPeople(r.eventId, { cohostIds: [key], reservedIds: [] });
+    if (draft.price || (keyGuestId && fixed)) {
+      const m = (await repo.getEvent(r.eventId)).members.find((x) => (key ? x.userId === key : x.person.id === keyGuestId));
+      if (m && draft.price) await repo.setMemberPaysShare(m.id, false);
+      // A key person without the app already said these days work.
+      if (m && keyGuestId && fixed) await repo.setMemberAnswer(m.id, 'attending');
     }
   }
   await repo.finishDateClearance(c.id, made.map((r) => r.eventId));
@@ -468,5 +478,28 @@ export async function inviteFromClearance(c: DateClearance, mode: ClearanceInvit
 
 export function useInviteFromClearance() {
   const qc = useQueryClient();
-  return useMutation({ mutationFn: ({ clearance, mode }: { clearance: DateClearance; mode: ClearanceInviteMode }) => inviteFromClearance(clearance, mode), onSuccess: () => invalidateAll(qc) });
+  return useMutation({
+    mutationFn: ({ clearance, mode, inviteNow = true }: { clearance: DateClearance; mode: ClearanceInviteMode; inviteNow?: boolean }) => inviteFromClearance(clearance, mode, inviteNow),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+/**
+ * Invite the same people to several events at once (all the days from a clearance). Guests without
+ * an account are made once and get a personal link for each event.
+ */
+export async function inviteToEvents(eventIds: string[], userIds: string[], guestNames: string[]) {
+  let added = 0;
+  const links: { eventId: string; guests: GuestInvite[] }[] = [];
+  let guests: { guestId: string; name: string }[] = [];
+  for (const [i, eventId] of eventIds.entries()) {
+    if (userIds.length) {
+      const n = await repo.addEventMembers(eventId, userIds);
+      if (i === 0) added = n;
+    }
+    const g = i === 0 ? await repo.addEventGuests(eventId, guestNames) : await repo.addEventGuests(eventId, [], guests);
+    if (i === 0) guests = g.map(({ guestId, name }) => ({ guestId, name }));
+    if (g.length) links.push({ eventId, guests: g });
+  }
+  return { added, links };
 }

@@ -60,7 +60,18 @@ function ClearanceView({ c, fresh }: { c: DateClearance; fresh: boolean }) {
   const invitees = c.draft.memberIds.length + (c.draft.guestIds?.length ?? 0) + (c.draft.guestNames?.length ?? 0);
   const url = clearanceUrl(c.token);
 
+  const later = async () => {
+    try {
+      const { count } = await invite.mutateAsync({ clearance: c, mode: ok.length > 1 ? mode : 'each', inviteNow: false });
+      haptics.success();
+      toast({ message: `${count === 1 ? 'Arrangementet er laget' : `${count} arrangementer er laget`}. Inviter når du vil.`, tone: 'success' });
+    } catch (e) {
+      toast({ message: e instanceof Error ? e.message : 'Noe gikk galt. Prøv igjen.', tone: 'error' });
+    }
+  };
+
   const go = async () => {
+    if (!invitees) return later();
     try {
       const { first, count } = await invite.mutateAsync({ clearance: c, mode: ok.length > 1 ? mode : 'each' });
       haptics.success();
@@ -81,7 +92,7 @@ function ClearanceView({ c, fresh }: { c: DateClearance; fresh: boolean }) {
   return (
     <Screen>
       <Header back="back" />
-      <ScreenScroll bottomInset={answered && c.status !== 'done' && ok.length ? 220 : 60}>
+      <ScreenScroll bottomInset={(answered && ok.length) || c.status === 'done' ? 220 : 60}>
         <PageTitle title={c.title} subtitle={`Avklares med ${c.keyName} · ${clearanceSummary(c.days, answered)}`} />
 
         {c.status === 'pending' ? (
@@ -133,7 +144,7 @@ function ClearanceView({ c, fresh }: { c: DateClearance; fresh: boolean }) {
         {c.status === 'done' ? (
           <Card style={{ marginTop: spacing.lg, paddingVertical: spacing.xs }}>
             <Text variant="footnote" color="textSecondary" style={{ paddingTop: spacing.sm }}>
-              Invitert
+              {c.eventIds.length === 1 ? 'Arrangementet' : `${c.eventIds.length} arrangementer`}
             </Text>
             {c.eventIds.map((eid, i) => (
               <ListRow key={eid} icon="calendar" title={c.eventIds.length > 1 ? `${c.title} · ${formatLong(ok[i] ?? ok[0])}` : c.title} chevron onPress={() => router.push(`/event/${eid}`)} />
@@ -150,16 +161,36 @@ function ClearanceView({ c, fresh }: { c: DateClearance; fresh: boolean }) {
         <BottomBar>
           <Button
             variant="ink"
-            icon="send"
+            icon={invitees ? 'send' : 'calendar'}
             title={
               invitees
                 ? mode === 'each' && ok.length > 1
                   ? `Inviter til ${ok.length} dager · ${invitees + 1} personer`
                   : `Inviter · ${invitees + 1} personer`
-                : 'Lag arrangementet'
+                : mode === 'each' && ok.length > 1
+                  ? `Lag ${ok.length} arrangementer`
+                  : 'Lag arrangementet'
             }
             loading={invite.isPending}
             onPress={go}
+          />
+          {invitees ? (
+            <Button variant="ghost" title="Lag nå, inviter senere" icon="clock" disabled={invite.isPending} onPress={later} style={{ marginTop: spacing.xs }} />
+          ) : (
+            <Text variant="caption" color="textSecondary" align="center" style={{ marginTop: spacing.sm }}>
+              Ingen blir invitert ennå. Det gjør du når du vil.
+            </Text>
+          )}
+        </BottomBar>
+      ) : null}
+
+      {c.status === 'done' && c.eventIds.length ? (
+        <BottomBar>
+          <Button
+            variant="ink"
+            icon="user-plus"
+            title={c.eventIds.length > 1 ? `Inviter til alle ${c.eventIds.length} gangene` : 'Inviter folk'}
+            onPress={() => router.push({ pathname: '/event/[id]/invite', params: { id: c.eventIds[0], clearance: c.id } })}
           />
         </BottomBar>
       ) : null}
