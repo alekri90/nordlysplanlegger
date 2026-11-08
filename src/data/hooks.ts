@@ -4,7 +4,8 @@ import { useEffect } from 'react';
 import { useIsSignedIn } from '@/state/session';
 import { repo } from './index';
 import type { GuestResponseInput, ProfilePatch } from './repository';
-import type { AddMembersInput, CreateEventInput, CreateGroupInput, EventPatch, GroupPatch, GroupRole, MyPhone, NotificationPreferences, ReportInput } from './types';
+import { firstEventInput, nextEventInput, okDates, type ClearanceInviteMode } from '@/lib/clearance';
+import type { AddMembersInput, CreateClearanceInput, CreateEventInput, CreateGroupInput, DateClearance, EventPatch, GroupPatch, GroupRole, MyPhone, NotificationPreferences, ReportInput } from './types';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -398,4 +399,74 @@ export function useSetNotificationPreferences() {
 export function useMarkNotificationsRead() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: () => repo.markNotificationsRead(), onSuccess: () => qc.invalidateQueries({ queryKey: keys.notifications }) });
+}
+
+// --- «Avklar med noen først» ------------------------------------------------
+
+export function useDateClearances() {
+  const signedIn = useIsSignedIn();
+  return useQuery({ queryKey: ['dateClearances'], queryFn: () => repo.listDateClearances(), enabled: signedIn });
+}
+
+export function useDateClearance(id: string | undefined) {
+  return useQuery({ queryKey: ['dateClearance', id], queryFn: () => repo.getDateClearance(id!), enabled: !!id });
+}
+
+export function useClearanceByToken(token: string | undefined) {
+  return useQuery({ queryKey: ['clearanceView', token], queryFn: () => repo.getClearanceByToken(token!), enabled: !!token });
+}
+
+export function useCreateDateClearance() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (input: CreateClearanceInput) => repo.createDateClearance(input), onSuccess: () => invalidateAll(qc) });
+}
+
+export function useAnswerDateClearance(token: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ okDates: ok, reply }: { okDates: string[]; reply?: string | null }) => repo.answerDateClearance(token, ok, reply),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+export function useCancelDateClearance() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (id: string) => repo.cancelDateClearance(id), onSuccess: () => invalidateAll(qc) });
+}
+
+/**
+ * The key person has answered: make the event(s) from what the organizer chose in the create flow.
+ * A key person with an account joins as co-host (and doesn't share the cost when there is a price).
+ */
+export async function inviteFromClearance(c: DateClearance, mode: ClearanceInviteMode) {
+  const dates = okDates(c.days);
+  if (!dates.length) throw new Error('Ingen av dagene passet');
+  const key = c.keyUserId;
+  const draft = key && !c.draft.memberIds.includes(key) ? { ...c.draft, memberIds: [...c.draft.memberIds, key] } : c.draft;
+  const first = await repo.createEvent(firstEventInput(draft, dates, mode));
+  const made = [first];
+  if (mode === 'each') for (const date of dates.slice(1)) made.push(await repo.createEvent(nextEventInput(draft, date, first)));
+  for (const r of made) {
+    if (draft.maxParticipants || draft.guestsCanInvite || draft.price) {
+      await repo.updateEvent(r.eventId, {
+        ...(draft.maxParticipants && { maxParticipants: draft.maxParticipants }),
+        ...(draft.guestsCanInvite && { guestsCanInvite: true }),
+        ...(draft.price && { price: draft.price }),
+      });
+    }
+    if (key) {
+      await repo.setEventPeople(r.eventId, { cohostIds: [key], reservedIds: [] });
+      if (draft.price) {
+        const m = (await repo.getEvent(r.eventId)).members.find((x) => x.userId === key);
+        if (m) await repo.setMemberPaysShare(m.id, false);
+      }
+    }
+  }
+  await repo.finishDateClearance(c.id, made.map((r) => r.eventId));
+  return { first, count: made.length };
+}
+
+export function useInviteFromClearance() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: ({ clearance, mode }: { clearance: DateClearance; mode: ClearanceInviteMode }) => inviteFromClearance(clearance, mode), onSuccess: () => invalidateAll(qc) });
 }

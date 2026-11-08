@@ -41,6 +41,8 @@ export type CreateDraft = {
   existingEventId: string | null;
   /** «Spontant»: today or tomorrow at a set time. */
   spontaneous: boolean;
+  /** «Avklar med noen først»: the days go to one person before anyone is invited. */
+  clearance: boolean;
   /** Places in total; null = no limit («Begrens antall plasser»). */
   maxParticipants: number | null;
   /** Everyone taking part can invite. Off: only the organizer and co-hosts. */
@@ -90,6 +92,7 @@ const initial = (): CreateDraft => ({
   guestsCanInvite: false,
   price: null,
   spontaneous: false,
+  clearance: false,
   source: 'new',
 });
 

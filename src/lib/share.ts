@@ -25,6 +25,11 @@ export function inviteMessage(title: string, url: string, organizerFirstName?: s
   return `Hei${toFirstName ? ` ${toFirstName}` : ''}! ${organizerFirstName ? `${organizerFirstName} vil` : 'Vi vil'} invitere deg til ${title} 🎉 Trykk på lenken og si hvilke dager du kan – du trenger ikke appen: ${url}`;
 }
 
+/** To the key person: «Hei Ola! Hvilke av disse dagene passer for «Badstu»? Kryss av her …» */
+export function clearanceMessage(title: string, url: string, organizerFirstName?: string, toFirstName?: string) {
+  return `Hei${toFirstName ? ` ${toFirstName}` : ''}! Hvilke av disse dagene passer for «${title}»? Kryss av her${organizerFirstName ? `, så får ${organizerFirstName} beskjed` : ''}: ${url}`;
+}
+
 export function groupInviteMessage(groupName: string, url: string, inviterFirstName?: string) {
   return `Hei! ${inviterFirstName ? `${inviterFirstName} vil` : 'Vi vil'} invitere deg til ${groupName} 🎉 Bli med her, så planlegger vi neste gang sammen: ${url}`;
 }

@@ -31,6 +31,11 @@ export function inviteUrl(token: string) {
   return `${env.webUrl}/i/${token}`;
 }
 
+/** «Avklar med noen først»: the key person's page. */
+export function clearanceUrl(token: string) {
+  return `${env.webUrl}/a/${token}`;
+}
+
 export function groupInviteUrl(token: string) {
   return `${env.webUrl}/g/${token}`;
 }

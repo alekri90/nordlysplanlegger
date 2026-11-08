@@ -13,6 +13,7 @@ const OPTIONS: { id: string; mode: DateMode; title: string; body: string; icon: 
   { id: 'fixed', mode: 'fixed', title: 'Fast dato', body: 'Du vet allerede når det skjer.', icon: 'calendar', route: '/create/fixed' },
   { id: 'undecided', mode: 'undecided', title: 'Ikke bestemt ennå', body: 'Inviter nå, finn dato senere.', icon: 'clock', route: '/create/who' },
   { id: 'spontaneous', mode: 'fixed', title: 'Spontant', body: 'I dag eller i morgen – hvem er gira?', icon: 'zap', route: '/create/spontaneous' },
+  { id: 'clearance', mode: 'poll', title: 'Avklar med noen først', body: 'Foreslå dager til én person, f.eks. badstumesteren. Gjengen inviteres når hen har svart.', icon: 'user-check', route: '/create/dates' },
 ];
 
 /** Step 2 — when? One tap moves on; no extra "Fortsett". */
@@ -30,7 +31,7 @@ export default function CreateWhen() {
             <Animated.View key={o.id} entering={FadeInDown.delay(i * 70).duration(320)}>
               <PressableScale
                 onPress={() => {
-                  set({ dateMode: o.mode, spontaneous: o.id === 'spontaneous' });
+                  set({ dateMode: o.mode, spontaneous: o.id === 'spontaneous', clearance: o.id === 'clearance' });
                   router.push(o.route);
                 }}
                 scaleTo={0.98}

@@ -3,6 +3,9 @@ import type {
   AddMembersInput,
   AppNotification,
   ClaimResult,
+  ClearanceView,
+  CreateClearanceInput,
+  DateClearance,
   CreateEventInput,
   CreateGroupInput,
   Discoverability,
@@ -122,6 +125,19 @@ export interface Repository {
   subscribeToEvent(eventId: string, onChange: () => void): () => void;
   /** Who you usually invite — only your own history in the app. */
   suggestInvitees(category?: string, title?: string): Promise<InviteSuggestion>;
+
+  // --- «Avklar med noen først» ----------------------------------------------
+  /** Sends the proposed days to the key person. Nothing is created yet. */
+  createDateClearance(input: CreateClearanceInput): Promise<{ id: string; token: string }>;
+  /** The organizer's own, newest first (not stopped ones). */
+  listDateClearances(): Promise<DateClearance[]>;
+  getDateClearance(id: string): Promise<DateClearance | null>;
+  /** The key person's page, through the link. */
+  getClearanceByToken(token: string): Promise<ClearanceView | null>;
+  answerDateClearance(token: string, okDates: string[], reply?: string | null): Promise<void>;
+  /** The events are made; the answer is locked. */
+  finishDateClearance(id: string, eventIds: string[]): Promise<void>;
+  cancelDateClearance(id: string): Promise<void>;
 
   // --- Invitations (work without an account) -------------------------------
   getInvite(token: string): Promise<InviteView | null>;

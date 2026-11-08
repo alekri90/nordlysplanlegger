@@ -344,6 +344,65 @@ export interface CreateEventInput {
   spontaneous?: boolean;
 }
 
+/**
+ * What the organizer chose in the create flow, kept with a date clearance until they invite.
+ * The dates come from the key person's answer.
+ */
+export type ClearanceDraft = Omit<CreateEventInput, 'dateMode' | 'optionDates' | 'fixedDate' | 'periodLabel' | 'spontaneous'> & {
+  maxParticipants?: number | null;
+  guestsCanInvite?: boolean;
+  price?: Price | null;
+};
+
+export interface ClearanceDay {
+  date: ISODate;
+  /** null: not answered yet. */
+  ok: boolean | null;
+}
+
+/** «Avklar med noen først»: days proposed to one person before anyone is invited. */
+export interface DateClearance {
+  id: string;
+  token: string;
+  keyUserId: string | null;
+  keyName: string;
+  title: string;
+  note: string | null;
+  status: 'pending' | 'answered' | 'done' | 'cancelled';
+  reply: string | null;
+  answeredAt: string | null;
+  days: ClearanceDay[];
+  draft: ClearanceDraft;
+  eventIds: string[];
+  createdAt: string;
+}
+
+/** The key person's page (works without an account): what is asked, never who is invited. */
+export interface ClearanceView {
+  token: string;
+  title: string;
+  category: CategoryId;
+  coverImageUrl: string | null;
+  timeHint: TimeHint;
+  startTime: string | null;
+  placeName: string | null;
+  note: string | null;
+  keyName: string;
+  status: DateClearance['status'];
+  reply: string | null;
+  organizer: { name: string; avatarUrl: string | null };
+  days: ClearanceDay[];
+}
+
+export interface CreateClearanceInput {
+  /** A friend in the app; otherwise only a name, and the organizer shares the link. */
+  keyUserId?: string | null;
+  keyName: string;
+  note?: string | null;
+  dates: ISODate[];
+  draft: ClearanceDraft;
+}
+
 /** An update from the organizer on an event ("Vi møtes ved inngangen"). */
 export interface EventMessage {
   id: string;

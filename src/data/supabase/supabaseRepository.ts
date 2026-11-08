@@ -12,6 +12,8 @@ import type {
   AppNotification,
   CategoryId,
   ClaimResult,
+  ClearanceDraft,
+  DateClearance,
   Discoverability,
   EventMember,
   EventMessage,
@@ -111,6 +113,40 @@ const EVENT_SELECT = `
   images:event_images(url, kind),
   series:event_series(id, interval_unit, interval_count, date_mode, weekdays, requires_confirmation, confirmation_lead_days, auto_invite_group, status)
 `;
+
+type ClearanceRow = {
+  id: string;
+  token: string;
+  key_user_id: string | null;
+  key_name: string;
+  title: string;
+  note: string | null;
+  status: DateClearance['status'];
+  reply: string | null;
+  answered_at: string | null;
+  draft: ClearanceDraft;
+  event_ids: string[];
+  created_at: string;
+  days: { date: string; ok: boolean | null }[];
+};
+
+const CLEARANCE_SELECT = 'id, token, key_user_id, key_name, title, note, status, reply, answered_at, draft, event_ids, created_at, days:date_clearance_days(date, ok)';
+
+const toClearance = (r: ClearanceRow): DateClearance => ({
+  id: r.id,
+  token: r.token,
+  keyUserId: r.key_user_id,
+  keyName: r.key_name,
+  title: r.title,
+  note: r.note,
+  status: r.status,
+  reply: r.reply,
+  answeredAt: r.answered_at,
+  days: [...(r.days ?? [])].sort((a, b) => (a.date < b.date ? -1 : 1)),
+  draft: r.draft,
+  eventIds: r.event_ids ?? [],
+  createdAt: r.created_at,
+});
 
 const toPerson = (p: ProfileRow | null | undefined, fallbackName = 'Gjest', fallbackId = ''): Person => ({
   id: p?.id ?? fallbackId,
@@ -734,6 +770,86 @@ export const supabaseRepository: Repository = {
       const { error } = await getSupabase().from('event_images').insert({ event_id: eventId, url, kind: 'memory', uploaded_by: userId });
       fail(error);
     }
+  },
+
+  async createDateClearance(input) {
+    const userId = await requireUserId();
+    const d = input.draft;
+    const cover = isLocalUri(d.coverImageUrl) ? await uploadImage('covers', userId, d.coverImageUrl) : d.coverImageUrl;
+    const draft: ClearanceDraft = { ...d, coverImageUrl: cover };
+    const { data, error } = await getSupabase().rpc('create_date_clearance', {
+      p: {
+        key_user_id: input.keyUserId ?? null,
+        key_name: input.keyName.trim(),
+        title: d.title.trim(),
+        category: d.category,
+        cover_image_url: cover,
+        time_hint: d.timeHint,
+        start_time: d.startTime ?? null,
+        place_name: d.location?.name ?? null,
+        note: input.note?.trim() || null,
+        dates: input.dates,
+        draft,
+      },
+    });
+    fail(error);
+    return data as { id: string; token: string };
+  },
+
+  async listDateClearances() {
+    const userId = await requireUserId();
+    const { data, error } = await getSupabase()
+      .from('date_clearances')
+      .select(CLEARANCE_SELECT)
+      .eq('organizer_id', userId)
+      .neq('status', 'cancelled')
+      .order('created_at', { ascending: false })
+      .limit(30);
+    fail(error);
+    return ((data ?? []) as unknown as ClearanceRow[]).map(toClearance);
+  },
+
+  async getDateClearance(id) {
+    const { data, error } = await getSupabase().from('date_clearances').select(CLEARANCE_SELECT).eq('id', id).maybeSingle();
+    fail(error);
+    return data ? toClearance(data as unknown as ClearanceRow) : null;
+  },
+
+  async getClearanceByToken(token) {
+    const { data, error } = await getSupabase().rpc('get_date_clearance', { p_token: token });
+    fail(error);
+    if (!data) return null;
+    const category = (data.category as CategoryId) ?? 'hangout';
+    return {
+      token,
+      title: data.title,
+      category,
+      coverImageUrl: data.cover_image_url ?? defaultCover(category),
+      timeHint: data.time_hint ?? 'evening',
+      startTime: toTime(data.start_time),
+      placeName: data.place_name,
+      note: data.note,
+      keyName: data.key_name,
+      status: data.status,
+      reply: data.reply,
+      organizer: { name: data.organizer?.name ?? 'Arrangøren', avatarUrl: data.organizer?.avatar_url ?? null },
+      days: data.days ?? [],
+    };
+  },
+
+  async answerDateClearance(token, okDates, reply) {
+    const { error } = await getSupabase().rpc('answer_date_clearance', { p_token: token, p_ok_dates: okDates, p_reply: reply?.trim() || null });
+    fail(error);
+  },
+
+  async finishDateClearance(id, eventIds) {
+    const { error } = await getSupabase().rpc('finish_date_clearance', { p_id: id, p_event_ids: eventIds });
+    fail(error);
+  },
+
+  async cancelDateClearance(id) {
+    const { error } = await getSupabase().rpc('cancel_date_clearance', { p_id: id });
+    fail(error);
   },
 
   async getInvite(token) {

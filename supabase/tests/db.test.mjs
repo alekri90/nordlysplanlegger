@@ -1214,5 +1214,73 @@ console.log('\nPrice, who pays, and answers set by the organizer');
   });
 }
 
+console.log('\nClearing dates with someone before inviting');
+{
+  const org = await newUser('avklar@example.com', { display_name: 'Alex Avklar', username: 'alexavklar' });
+  const ola = await newUser('ola-badstu@example.com', { display_name: 'Ola Badstu', username: 'olabadstu' });
+  const stranger = await newUser('fremmed@example.com', { display_name: 'Frida Fremmed', username: 'fridafremmed' });
+  await as(org); await q(`select send_friend_request($1)`, [ola]);
+  await as(ola); await q(`select send_friend_request($1)`, [org]);
+  const asUser = async (u, sql, args) => { await as(u); await db.exec('set role authenticated'); try { return await q(sql, args); } finally { await db.exec('reset role'); } };
+  const asAnon = async (sql, args) => { await as(null); await db.exec('set role anon'); try { return await q(sql, args); } finally { await db.exec('reset role'); } };
+  const req = (over = {}) => ({ key_user_id: ola, key_name: '', title: 'Badstu', category: 'sauna', time_hint: 'exact', start_time: '18:00', place_name: 'Sørenga', note: 'Passer disse?', dates: ['2030-01-08', '2030-01-10', '2030-01-15'], draft: { memberIds: ['x'], price: { mode: 'split', amountOre: 250000 } }, ...over });
+  let made;
+
+  await check('the organizer asks a friend; the friend is told, and nothing is created', async () => {
+    const before = (await q(`select count(*)::int n from events where organizer_id = $1`, [org]))[0].n;
+    [{ r: made }] = await asUser(org, `select create_date_clearance($1) r`, [req()]);
+    assert.ok(made.token && made.id);
+    const [n] = await q(`select title, data ->> 'url' url from notifications where user_id = $1 and data ->> 'kind' = 'clearance_request'`, [ola]);
+    assert.equal(n.title, 'Alex lurer på hvilke dager som passer');
+    assert.equal(n.url, `/a/${made.token}`);
+    assert.equal((await q(`select count(*)::int n from events where organizer_id = $1`, [org]))[0].n, before, 'no events yet');
+    const [c] = await q(`select key_name from date_clearances where id = $1`, [made.id]);
+    assert.equal(c.key_name, 'Ola Badstu', 'the friend\'s name is used');
+  });
+
+  await check('only friends, at least one day, nothing in the past, and only through the function', async () => {
+    await assert.rejects(asUser(org, `select create_date_clearance($1)`, [req({ key_user_id: stranger })]), /not_friend/);
+    await assert.rejects(asUser(org, `select create_date_clearance($1)`, [req({ dates: [] })]), /bad_dates/);
+    await assert.rejects(asUser(org, `select create_date_clearance($1)`, [req({ dates: ['2020-01-01'] })]), /date_in_past/);
+    await assert.rejects(asUser(org, `select create_date_clearance($1)`, [req({ key_user_id: null, key_name: ' ' })]), /key_name_required/);
+    await assert.rejects(asAnon(`select create_date_clearance($1)`, [req()]));
+    await assert.rejects(asUser(org, `insert into date_clearances (organizer_id, key_name, title) values ($1, 'x', 'y')`, [org]));
+    await assert.rejects(asUser(org, `update date_clearances set status = 'done' where id = $1`, [made.id]));
+  });
+
+  await check('the key person sees the request through the link without an account, but not who is invited', async () => {
+    const [{ c }] = await asAnon(`select get_date_clearance($1) c`, [made.token]);
+    assert.equal(c.title, 'Badstu');
+    assert.equal(c.organizer.name, 'Alex');
+    assert.equal(c.note, 'Passer disse?');
+    assert.deepEqual(c.days.map((d) => d.date), ['2030-01-08', '2030-01-10', '2030-01-15']);
+    assert.equal(c.draft, undefined, 'the guest list stays with the organizer');
+    assert.equal((await asAnon(`select get_date_clearance('feil') c`))[0].c, null);
+    assert.equal((await asUser(stranger, `select count(*)::int n from date_clearances`))[0].n, 0, 'others can\'t read it');
+    assert.equal((await asUser(ola, `select count(*)::int n from date_clearances`))[0].n, 1, 'the key person can in the app');
+  });
+
+  await check('the key person answers per day; the organizer is told and can change it until they invite', async () => {
+    await asAnon(`select answer_date_clearance($1, $2, $3)`, [made.token, ['2030-01-08', '2030-01-15'], 'Torsdag er jeg bortreist']);
+    const [n] = await q(`select title, body, data ->> 'url' url from notifications where user_id = $1 and data ->> 'kind' = 'clearance_answered'`, [org]);
+    assert.equal(n.title, 'Ola har svart på Badstu');
+    assert.equal(n.body, '2 av 3 dager passer.');
+    assert.equal(n.url, `/avklaring/${made.id}`);
+    const days = await asUser(org, `select date::text d, ok from date_clearance_days where clearance_id = $1 order by date`, [made.id]);
+    assert.deepEqual(days.map((d) => d.ok), [true, false, true]);
+    await asAnon(`select answer_date_clearance($1, $2)`, [made.token, ['2030-01-08', '2030-01-10', '2030-01-15']]);
+    assert.equal((await q(`select count(*)::int n from date_clearance_days where clearance_id = $1 and ok`, [made.id]))[0].n, 3);
+  });
+
+  await check('the organizer invites (marks it done); after that the answer is locked, and only they can finish or stop it', async () => {
+    await assert.rejects(asUser(ola, `select finish_date_clearance($1, '{}')`, [made.id]), /not_found/);
+    await asUser(org, `select finish_date_clearance($1, '{}')`, [made.id]);
+    await assert.rejects(asAnon(`select answer_date_clearance($1, '{}')`, [made.token]), /already_done/);
+    const [{ r: other }] = await asUser(org, `select create_date_clearance($1) r`, [req({ key_user_id: null, key_name: 'Mormor' })]);
+    await asUser(org, `select cancel_date_clearance($1)`, [other.id]);
+    assert.equal((await asAnon(`select get_date_clearance($1) c`, [other.token]))[0].c, null, 'a stopped request is gone from the link');
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

@@ -89,11 +89,11 @@ export default function CreateDates() {
 
   return (
     <Screen>
-      <StepHeader step={draft.source === 'event' ? 0 : 2} total={draft.source === 'event' ? 2 : 4} />
+      <StepHeader step={draft.source === 'event' ? 0 : 2} total={draft.source === 'event' ? 2 : draft.clearance ? 5 : 4} />
       <ScreenScroll bottomInset={140}>
         <PageTitle
-          title="Hvilke dager passer?"
-          subtitle={draft.source === 'group' ? `Vi har foreslått dager for ${draft.title}. Juster om du vil.` : 'Velg aktuelle dager, så får gjestene markere hva som ikke passer.'}
+          title={draft.clearance ? 'Hvilke dager vil du foreslå?' : 'Hvilke dager passer?'}
+          subtitle={draft.clearance ? 'Velg alle dagene du vil sjekke. Den du spør, krysser av hvilke som passer.' : draft.source === 'group' ? `Vi har foreslått dager for ${draft.title}. Juster om du vil.` : 'Velg aktuelle dager, så får gjestene markere hva som ikke passer.'}
         />
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingHorizontal: gutter }} style={{ marginHorizontal: -gutter }}>
@@ -139,7 +139,7 @@ export default function CreateDates() {
 
         {!draft.existingEventId ? <PlaceDetails style={{ marginTop: spacing.xl }} /> : null}
 
-        {!draft.existingEventId ? (
+        {!draft.existingEventId && !draft.clearance ? (
           <RepeatSection
             enabled={draft.repeat.enabled}
             onToggle={(enabled) =>

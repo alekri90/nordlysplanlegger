@@ -220,6 +220,9 @@ function demoRecount(e: PlannerEvent) {
   e.nonPayingPlaces = e.price ? placed.filter((m) => m.paysShare === false).length : null;
 }
 
+type DemoClearance = import('../types').DateClearance & { organizerId: string };
+const clearances: DemoClearance[] = [];
+
 const seriesPeople = new Map<string, import('../types').SeriesPeople>();
 const eventReserved = new Map<string, string[]>();
 let demoPhone: import('../types').MyPhone = { phone: null, discoverable: true };
@@ -797,6 +800,99 @@ export const demoRepository: Repository = {
       .slice(0, 8)
       .map((c) => ({ ...c.person, times: c.times }));
     return clone({ groupId: (byTitle ?? byCategory)?.id ?? null, people });
+  },
+
+  async createDateClearance(input) {
+    await wait(300);
+    const id = uid('cl');
+    const key = input.keyUserId ? directory().get(input.keyUserId) : undefined;
+    const c: DemoClearance = {
+      id,
+      token: uid('avklar'),
+      organizerId: meId(),
+      keyUserId: input.keyUserId ?? null,
+      keyName: input.keyName.trim() || key?.name || 'Gjest',
+      title: input.draft.title,
+      note: input.note?.trim() || null,
+      status: 'pending',
+      reply: null,
+      answeredAt: null,
+      days: [...new Set(input.dates)].sort().map((date) => ({ date, ok: null })),
+      draft: clone(input.draft),
+      eventIds: [],
+      createdAt: now(),
+    };
+    clearances.unshift(c);
+    if (c.keyUserId) {
+      notify(c.keyUserId, { type: 'invited', title: `${state.me.name.split(' ')[0]} lurer på hvilke dager som passer`, body: c.title, url: `/a/${c.token}` });
+    }
+    return { id, token: c.token };
+  },
+
+  async listDateClearances() {
+    await wait(120);
+    return clone(clearances.filter((c) => c.organizerId === meId() && c.status !== 'cancelled'));
+  },
+
+  async getDateClearance(id) {
+    await wait(120);
+    const c = clearances.find((x) => x.id === id && (x.organizerId === meId() || x.keyUserId === meId()));
+    return c ? clone(c) : null;
+  },
+
+  async getClearanceByToken(token) {
+    await wait(200);
+    const c = clearances.find((x) => x.token === token && x.status !== 'cancelled');
+    if (!c) return null;
+    const organizer = freshPerson(directory().get(c.organizerId) ?? state.me);
+    return clone({
+      token,
+      title: c.title,
+      category: c.draft.category,
+      coverImageUrl: c.draft.coverImageUrl,
+      timeHint: c.draft.timeHint,
+      startTime: c.draft.startTime ?? null,
+      placeName: c.draft.location?.name ?? null,
+      note: c.note,
+      keyName: c.keyName,
+      status: c.status,
+      reply: c.reply,
+      organizer: { name: organizer.name.split(' ')[0], avatarUrl: organizer.avatarUrl ?? null },
+      days: c.days,
+    });
+  },
+
+  async answerDateClearance(token, okDates, reply) {
+    await wait(300);
+    const c = clearances.find((x) => x.token === token && x.status !== 'cancelled');
+    if (!c) throw new Error('not_found');
+    if (c.status === 'done') throw new Error('already_done');
+    for (const d of c.days) d.ok = okDates.includes(d.date);
+    c.status = 'answered';
+    c.answeredAt = now();
+    c.reply = reply?.trim() || null;
+    const ok = c.days.filter((d) => d.ok).length;
+    notify(c.organizerId, {
+      type: 'response_received',
+      title: `${c.keyName.split(' ')[0]} har svart på ${c.title}`,
+      body: ok === c.days.length ? 'Alle dagene passer.' : ok ? `${ok} av ${c.days.length} dager passer.` : 'Ingen av dagene passet.',
+      url: `/avklaring/${c.id}`,
+    });
+  },
+
+  async finishDateClearance(id, eventIds) {
+    await wait(120);
+    const c = clearances.find((x) => x.id === id && x.organizerId === meId());
+    if (!c || c.status === 'done' || c.status === 'cancelled') throw new Error('not_found');
+    c.status = 'done';
+    c.eventIds = eventIds;
+  },
+
+  async cancelDateClearance(id) {
+    await wait(120);
+    const c = clearances.find((x) => x.id === id && x.organizerId === meId());
+    if (!c || c.status === 'done' || c.status === 'cancelled') throw new Error('not_found');
+    c.status = 'cancelled';
   },
 
   async getInvite(token) {

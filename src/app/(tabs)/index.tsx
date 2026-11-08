@@ -6,6 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { EventCard } from '@/components/event/EventCard';
 import { splitEvents } from '@/components/event/EventSections';
 import { GroupBubble } from '@/components/group/GroupBubble';
+import { ClearanceCards } from '@/components/event/ClearanceCards';
 import { Button, Card, EmptyState, ErrorState, EventListSkeleton, Icon, IconButton, PressableScale, Screen, SectionHeader, Skeleton, Text } from '@/components/ui';
 import { useEvents, useGroups, useNotifications } from '@/data/hooks';
 import type { Group } from '@/data/types';
@@ -125,6 +126,8 @@ export default function Home() {
                 </View>
               </View>
             ) : null}
+
+            <ClearanceCards />
 
             <View style={{ marginTop: spacing.xxl }}>
               <SectionHeader title="Neste" action={upcoming.length > NEXT_LIMIT ? 'Se alle' : undefined} onAction={() => router.push('/(tabs)/calendar')} />
