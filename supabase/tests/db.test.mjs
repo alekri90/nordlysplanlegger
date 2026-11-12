@@ -1282,5 +1282,142 @@ console.log('\nClearing dates with someone before inviting');
   });
 }
 
+console.log('\nActivity types: Aufguss with a sauna master');
+{
+  const org = await newUser('aufguss@example.com', { display_name: 'Alex Aufguss', username: 'alexaufguss' });
+  const ola = await newUser('mester-ola@example.com', { display_name: 'Ola Mester', username: 'olamester' });
+  const kari = await newUser('mester-kari@example.com', { display_name: 'Kari Mester', username: 'karimester' });
+  const deltager = await newUser('deltager@example.com', { display_name: 'Dina Deltager', username: 'dinadeltager' });
+  const stranger = await newUser('fremmed2@example.com', { display_name: 'Frode Fremmed', username: 'frodefremmed' });
+  for (const u of [ola, kari, deltager]) {
+    await as(org); await q(`select send_friend_request($1)`, [u]);
+    await as(u); await q(`select send_friend_request($1)`, [org]);
+  }
+  const asUser = async (u, sql, args) => { await as(u); await db.exec('set role authenticated'); try { return await q(sql, args); } finally { await db.exec('reset role'); } };
+  const asAnon = async (sql, args) => { await as(null); await db.exec('set role anon'); try { return await q(sql, args); } finally { await db.exec('reset role'); } };
+  const status = async (dateId) => (await q(`select role_date_status($1) s`, [dateId]))[0].s;
+  const dateId = async (requestId, date) => (await q(`select id from role_request_dates where request_id = $1 and date = $2`, [requestId, date]))[0].id;
+  const days = ['2030-02-05', '2030-02-07', '2030-02-12'];
+  const events = [];
+  for (const [i, d] of days.entries()) {
+    const [{ r }] = await asUser(org, `select create_event($1) r`, [{ title: 'Aufguss', category: 'sauna', date_mode: 'fixed', fixed_date: d, time_hint: 'evening', member_user_ids: i === 0 ? [deltager] : [] }]);
+    events.push(r.event_id);
+  }
+  const req = (over = {}) => ({
+    activity_type: 'aufguss', role_key: 'sauna_master', role_label: 'badstumester', title: 'Aufguss', time_hint: 'evening', place_name: 'Sørenga', mode: 'each',
+    dates: days.map((date, i) => ({ date, event_id: events[i] })), candidates: [{ user_id: ola, name: '' }], ...over,
+  });
+  let made;
+  let olaToken;
+
+  await check('participant places, role places and the venue capacity hold together', async () => {
+    await asUser(org, `update events set activity_type = 'aufguss', role_places = 1, venue_capacity = 11, max_participants = 10, price_ore = 250000, price_mode = 'split' where id = any($1)`, [events]);
+    await assert.rejects(asUser(org, `update events set max_participants = 11 where id = $1`, [events[0]]), /events_venue_capacity/);
+    const [e] = await q(`select places_taken(e) p from events e where id = $1`, [events[0]]);
+    assert.equal(e.p, 1, 'only the organizer has a place so far; the sauna master is not a participant');
+  });
+
+  await check('saved venues are private to the organizer', async () => {
+    await asUser(org, `insert into activity_venues (activity_type, name, capacity) values ('aufguss', 'Sørenga badstue', 11)`);
+    await assert.rejects(asUser(org, `insert into activity_venues (activity_type, name) values ('aufguss', ' sørenga badstue ')`));
+    assert.equal((await asUser(org, `select count(*)::int n from activity_venues`))[0].n, 1);
+    assert.equal((await asUser(stranger, `select count(*)::int n from activity_venues`))[0].n, 0);
+    assert.equal((await asAnon(`select count(*)::int n from activity_venues`))[0].n, 0);
+    await assert.rejects(asAnon(`insert into activity_venues (owner_id, activity_type, name) values ($1, 'aufguss', 'x')`, [org]));
+  });
+
+  await check('one request for all dates; the friend is told; only for own events and friends', async () => {
+    [{ r: made }] = await asUser(org, `select create_role_request($1) r`, [req()]);
+    olaToken = made.candidates[0].token;
+    assert.equal(made.candidates[0].name, 'Ola Mester');
+    const [n] = await q(`select title, body, data ->> 'url' url from notifications where user_id = $1 and data ->> 'kind' = 'role_request'`, [ola]);
+    assert.equal(n.title, 'Alex spør om du kan være badstumester');
+    assert.equal(n.body, 'Aufguss · 3 datoer å se på');
+    assert.equal(n.url, `/r/${olaToken}`);
+    await assert.rejects(asUser(org, `select create_role_request($1)`, [req({ candidates: [{ user_id: stranger }] })]), /not_friend/);
+    await assert.rejects(asUser(stranger, `select create_role_request($1)`, [req({ candidates: [{ name: 'X' }] })]), /not_organizer/);
+    await assert.rejects(asUser(org, `select create_role_request($1)`, [req({ dates: [{ date: '2020-01-01' }] })]), /date_in_past/);
+    await assert.rejects(asAnon(`select create_role_request($1)`, [req()]));
+    await assert.rejects(asUser(org, `update role_request_dates set assigned_candidate_id = null`));
+  });
+
+  await check('before an answer the events are provisional, also on the invitation', async () => {
+    const [e] = await asUser(org, `select activity_role(e) a from events e where id = $1`, [events[0]]);
+    assert.equal(e.a.status, 'pending');
+    assert.equal(e.a.request_id, made.id, 'the organizer can open the request');
+    const [m] = await asUser(deltager, `select activity_role(e) a from events e where id = $1`, [events[0]]);
+    assert.equal(m.a.status, 'pending');
+    assert.equal(m.a.request_id, null);
+    const [{ token }] = await q(`select token from event_invites where event_id = $1 and guest_profile_id is null`, [events[0]]);
+    const [{ v }] = await asAnon(`select get_invite_activity($1) v`, [token]);
+    assert.equal(v.activity_type, 'aufguss');
+    assert.equal(v.role.status, 'pending');
+  });
+
+  await check('the sauna master answers per date through the link; alone on a date, «Kan» gives the role', async () => {
+    const [{ v }] = await asAnon(`select get_role_request($1) v`, [olaToken]);
+    assert.equal(v.role_label, 'badstumester');
+    assert.equal(v.organizer.name, 'Alex');
+    assert.equal(v.dates.length, 3);
+    assert.equal(v.candidates, undefined, 'no one else is shown');
+    const [a, b] = v.dates;
+    await asAnon(`select answer_role_request($1, $2, $3)`, [olaToken, { [a.id]: true, [b.id]: false }, 'Den 12. vet jeg ikke ennå']);
+    const st = [];
+    for (const d of days) st.push(await status(await dateId(made.id, d)));
+    assert.deepEqual(st, ['confirmed', 'unavailable', 'pending']);
+    const [n] = await q(`select body, data ->> 'url' url from notifications where user_id = $1 and data ->> 'kind' = 'role_answered' order by created_at desc limit 1`, [org]);
+    assert.equal(n.body, 'Kan 1 av 3 datoer.');
+    assert.equal(n.url, `/rolle/${made.id}`);
+    const [p] = await q(`select title, body from notifications where user_id = $1 and data ->> 'kind' = 'role_confirmed'`, [deltager]);
+    assert.equal(p.title, 'Aufguss 05.02 er bekreftet');
+    assert.equal(p.body, 'Badstumester er klar: Ola.');
+    assert.ok((await q(`select 1 from notifications where user_id = $1 and data ->> 'kind' = 'role_assigned'`, [ola])).length, 'Ola is told');
+    const [e] = await asUser(deltager, `select activity_role(e) a from events e where id = $1`, [events[0]]);
+    assert.deepEqual([e.a.status, e.a.name], ['confirmed', 'Ola']);
+  });
+
+  await check('with two asked, nobody gets it automatically; the organizer picks one who can', async () => {
+    const third = await dateId(made.id, '2030-02-12');
+    const [{ r: more }] = await asUser(org, `select add_role_candidates($1, $2, $3) r`, [made.id, [{ user_id: kari }], [third]]);
+    const kariToken = more.candidates[0].token;
+    const [{ v }] = await asAnon(`select get_role_request($1) v`, [kariToken]);
+    assert.equal(v.dates.length, 1, 'Kari is only asked about the open date');
+    await asAnon(`select answer_role_request($1, $2)`, [olaToken, { [third]: true }]);
+    await asAnon(`select answer_role_request($1, $2)`, [kariToken, { [third]: true }]);
+    assert.equal(await status(third), 'choose');
+    const olaId = (await q(`select id from role_request_candidates where token = $1`, [olaToken]))[0].id;
+    await assert.rejects(asUser(ola, `select assign_role($1, $2)`, [third, more.candidates[0].id]), /not_found/);
+    await asUser(org, `select assign_role($1, $2)`, [third, more.candidates[0].id]);
+    assert.equal(await status(third), 'confirmed');
+    const first = await dateId(made.id, '2030-02-07');
+    await assert.rejects(asUser(org, `select assign_role($1, $2)`, [first, olaId]), /candidate_cannot/, 'only someone who said «Kan»');
+    const [{ v: olaView }] = await asAnon(`select get_role_request($1) v`, [olaToken]);
+    const d = olaView.dates.find((x) => x.id === third);
+    assert.deepEqual([d.taken, d.mine], [true, false], 'Ola sees the date is taken');
+  });
+
+  await check('saying «Kan ikke» on a date you had frees it, and the organizer is told', async () => {
+    const first = await dateId(made.id, '2030-02-05');
+    await asAnon(`select answer_role_request($1, $2)`, [olaToken, { [first]: false }]);
+    assert.equal(await status(first), 'unavailable');
+    const [n] = await q(`select body from notifications where user_id = $1 and data ->> 'kind' = 'role_answered' order by created_at desc limit 1`, [org]);
+    assert.match(n.body, /Kan likevel ikke 1 dato hen hadde/);
+  });
+
+  await check('cancelling an event shows on the request and tells the one with the role; the request can be stopped', async () => {
+    const third = await dateId(made.id, '2030-02-12');
+    await asUser(org, `update events set status = 'cancelled' where id = $1`, [events[2]]);
+    assert.equal(await status(third), 'cancelled');
+    assert.ok((await q(`select 1 from notifications where user_id = $1 and data ->> 'kind' = 'role_cancelled'`, [kari])).length);
+    const mine = (await asUser(ola, `select my_role_requests() r`))[0].r;
+    assert.equal(mine.length, 1);
+    assert.equal(mine[0].title, 'Aufguss');
+    await asUser(org, `select cancel_role_request($1)`, [made.id]);
+    assert.equal((await asAnon(`select get_role_request($1) v`, [olaToken]))[0].v, null);
+    assert.equal((await asUser(stranger, `select count(*)::int n from role_requests`))[0].n, 0);
+    assert.equal((await asAnon(`select count(*)::int n from role_request_candidates`))[0].n, 0, 'the links are never readable directly');
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

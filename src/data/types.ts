@@ -205,6 +205,131 @@ export interface PlannerEvent {
   nonPayingPlaces?: number | null;
   /** Set when this is one time of a recurring event. */
   series?: EventSeriesInfo | null;
+  /** A concrete activity type ('aufguss'); null for a general activity. */
+  activityType?: string | null;
+  /** People in a role (the sauna master) on top of the participant places. */
+  rolePlaces?: number;
+  /** How many the venue holds in total, roles included; null = unknown. */
+  venueCapacity?: number | null;
+  /** Who has the role, and whether it is confirmed yet. */
+  activityRole?: EventActivityRole | null;
+}
+
+// ---------------------------------------------------------------------------
+// Activity types: a role confirmed per date (the sauna master), saved venues
+// ---------------------------------------------------------------------------
+
+/**
+ * confirmed: someone has the role · choose: someone can, the organizer picks · unavailable: everyone
+ * asked said no · pending: waiting for answers · cancelled: the event is cancelled.
+ */
+export type RoleDateStatus = 'confirmed' | 'choose' | 'unavailable' | 'pending' | 'cancelled';
+
+export interface EventActivityRole {
+  roleLabel: string;
+  /** Only on the organizer side: the request to open. */
+  requestId: string | null;
+  /** 'partly': alternative dates where some have the role. */
+  status: RoleDateStatus | 'partly';
+  /** First name of the one with the role (for the chosen date). */
+  name: string | null;
+  dates: { date: ISODate; status: RoleDateStatus; name: string | null }[];
+}
+
+export interface Venue {
+  id: string;
+  activityType: string;
+  name: string;
+  /** In total, roles included; null = unknown. */
+  capacity: number | null;
+}
+
+export interface RoleCandidate {
+  id: string;
+  userId: string | null;
+  name: string;
+  /** Their personal link. */
+  token: string;
+  reply: string | null;
+  answeredAt: string | null;
+}
+
+export interface RoleRequestDate {
+  id: string;
+  date: ISODate;
+  eventId: string | null;
+  assignedCandidateId: string | null;
+  eventCancelled: boolean;
+  /** Everyone asked about this date. answer: true «Kan» · false «Kan ikke» · null not answered. */
+  answers: { candidateId: string; answer: boolean | null }[];
+}
+
+/** One request to one or more people (sauna masters) about a set of dates. */
+export interface RoleRequest {
+  id: string;
+  activityType: string;
+  roleKey: string;
+  roleLabel: string;
+  title: string;
+  timeHint: TimeHint;
+  startTime: string | null;
+  placeName: string | null;
+  note: string | null;
+  /** each: every date is its own event · poll: alternative dates for one event. */
+  mode: 'each' | 'poll';
+  status: 'open' | 'cancelled';
+  createdAt: string;
+  dates: RoleRequestDate[];
+  candidates: RoleCandidate[];
+}
+
+/** The page for the one asked (works without an account). */
+export interface RoleRequestView {
+  token: string;
+  activityType: string;
+  roleLabel: string;
+  title: string;
+  timeHint: TimeHint;
+  startTime: string | null;
+  placeName: string | null;
+  note: string | null;
+  name: string;
+  reply: string | null;
+  answeredAt: string | null;
+  organizer: { name: string; avatarUrl: string | null };
+  dates: { id: string; date: ISODate; answer: boolean | null; mine: boolean; taken: boolean; cancelled: boolean }[];
+}
+
+export interface CreateRoleRequestInput {
+  activityType: string;
+  roleKey: string;
+  roleLabel: string;
+  title: string;
+  timeHint: TimeHint;
+  startTime: string | null;
+  placeName: string | null;
+  note: string | null;
+  mode: 'each' | 'poll';
+  dates: { date: ISODate; eventId: string | null }[];
+  /** Friends in the app (they get a notice), or names (the organizer shares their link). */
+  candidates: { userId?: string | null; name: string }[];
+}
+
+export interface CreatedRoleRequest {
+  id: string;
+  candidates: { id: string; userId: string | null; name: string; token: string }[];
+}
+
+/** Requests sent to me in the app. */
+export interface MyRoleRequest {
+  token: string;
+  title: string;
+  roleLabel: string;
+  organizerName: string;
+  /** Dates still waiting for my answer. */
+  open: number;
+  /** Coming dates where I have the role. */
+  mine: number;
 }
 
 export interface GroupDefaults {
@@ -310,6 +435,8 @@ export interface InviteView {
   respondents: Person[];
   /** Places and price, without names. */
   pricing?: InvitePricing | null;
+  /** A concrete activity type, and whether its role is confirmed yet (else the event is provisional). */
+  activity?: { activityType: string; rolePlaces: number; venueCapacity: number | null; role: EventActivityRole | null } | null;
   myResponse?: {
     memberId: string;
     name: string;
@@ -468,6 +595,9 @@ export interface EventPatch {
   guestsCanInvite?: boolean;
   /** null removes the price. */
   price?: Price | null;
+  activityType?: string | null;
+  rolePlaces?: number;
+  venueCapacity?: number | null;
 }
 
 /** Co-hosts and fixed places on a single (not recurring) event. Organizer only. */

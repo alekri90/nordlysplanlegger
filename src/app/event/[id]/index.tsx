@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { RepeatEditor } from '@/components/create/RepeatEditor';
 import { ActionButton } from '@/components/event/ActionButton';
+import { ActivityRoleCard } from '@/components/event/ActivityRoleCard';
 import { CalendarConflict } from '@/components/event/CalendarConflict';
 import { confirmDecline } from '@/components/event/confirmDecline';
 import { EventHero } from '@/components/event/EventHero';
@@ -27,7 +28,8 @@ import { CATEGORIES, thumb } from '@/lib/categories';
 import { formatLong, formatTime, today } from '@/lib/dates';
 import { addEventToCalendar } from '@/lib/eventActions';
 import { firstName, timeHintLabel } from '@/lib/eventText';
-import { describePrice } from '@/lib/price';
+import { activityType } from '@/lib/activities';
+import { describePrice, describeSharedPrice } from '@/lib/price';
 import { repeatSummary } from '@/lib/recurrence';
 import { useIsInCalendar } from '@/state/calendarSync';
 import { useCreateDraft } from '@/state/createDraft';
@@ -159,12 +161,17 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
   const showRsvp = !isOrganizer && !!mine && (e.status === 'confirmed' || e.status === 'date_selected');
   const waitlist = e.members.filter((m) => m.status === 'waitlisted').sort((a, b) => (a.waitlistedAt ?? '').localeCompare(b.waitlistedAt ?? ''));
   const full = !!e.maxParticipants && (e.placesTaken ?? 0) >= e.maxParticipants;
+  const activity = activityType(e.activityType);
   const placesLine = e.maxParticipants
     ? full
-      ? `Fullt${waitlist.length ? ` · ${waitlist.length} på venteliste` : ''}`
-      : `${e.placesTaken ?? 0} av ${e.maxParticipants} plasser tatt`
+      ? `Fullt${waitlist.length ? ` · ${waitlist.length} på venteliste` : ''}${activity ? ` · + ${activity.role.lower}` : ''}`
+      : activity
+        ? `${e.placesTaken ?? 0} av ${e.maxParticipants} deltagerplasser tatt · + ${activity.role.lower}`
+        : `${e.placesTaken ?? 0} av ${e.maxParticipants} plasser tatt`
     : null;
-  const price = e.price ? describePrice(e.price, e) : null;
+  // A shared total (Aufguss): total, how many share it, and per person — an estimate until full.
+  const shared = activity && e.price?.mode === 'split' ? describeSharedPrice(e.price.amountOre, e) : null;
+  const price = shared ? { headline: shared.headline, detail: [shared.detail, shared.now].filter(Boolean).join(' · ') } : e.price ? describePrice(e.price, e) : null;
   const myQueue = mine?.status === 'waitlisted' ? waitlist.findIndex((m) => m.id === mine.id) + 1 : 0;
   const showInterest = !isOrganizer && !!mine && mine.role === 'guest' && e.status === 'draft';
   const interested = e.members.filter((m) => m.role === 'guest' && m.status === 'attending').length;
@@ -196,6 +203,8 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
               {!isOrganizer ? <InfoLine icon="user" text={`Arrangert av ${firstName(e.organizer.name)}`} /> : null}
             </View>
           </Animated.View>
+
+          {activity && e.status !== 'cancelled' ? <ActivityRoleCard activity={e.activityType} role={e.activityRole} isOrganizer={isOrganizer} style={{ marginTop: spacing.xl }} /> : null}
 
           {isPast && e.series?.status === 'active' ? (
             <Card muted style={{ marginTop: spacing.xl, flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>

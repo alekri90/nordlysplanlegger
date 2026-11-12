@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { periodLabelFor } from '@/lib/dates';
+import { dateStatus } from '@/lib/roleRequest';
 import { normalizeUsername, usernameFormatProblem } from '@/lib/username';
 import type { ProfilePatch, Repository } from '../repository';
 import type {
@@ -177,7 +178,69 @@ function presentEvent(e: PlannerEvent): PlannerEvent {
   const c = clone(e);
   c.organizer = freshPerson(c.organizer);
   c.members = c.members.map((m) => ({ ...m, person: freshPerson(m.person) }));
+  c.activityRole = e.activityType ? demoActivityRole(e, e.organizer.id === meId() || !!e.members.find((m) => m.userId === meId())?.isCohost) : null;
   return c;
+}
+
+// --- Activity types: venues and role requests (mirrors role_requests in the database) ---
+type DemoRoleRequest = import('../types').RoleRequest & { organizerId: string };
+const roleRequests: DemoRoleRequest[] = [];
+const venues: (import('../types').Venue & { ownerId: string })[] = [];
+
+function demoSyncCancelled(r: DemoRoleRequest) {
+  for (const d of r.dates) d.eventCancelled = !!d.eventId && state.events.find((e) => e.id === d.eventId)?.status === 'cancelled';
+}
+
+/** The role on an event, like activity_role() in the database. */
+function demoActivityRole(e: PlannerEvent, organizer: boolean): import('../types').EventActivityRole | null {
+  const r = roleRequests.find((x) => x.status === 'open' && x.dates.some((d) => d.eventId === e.id));
+  if (!r) return null;
+  demoSyncCancelled(r);
+  const ds = r.dates
+    .filter((d) => d.eventId === e.id)
+    .map((d) => ({ date: d.date, status: dateStatus(d), name: r.candidates.find((c) => c.id === d.assignedCandidateId)?.name.split(' ')[0] ?? null }));
+  const chosen = ds.find((d) => d.date === e.selectedDate) ?? (ds.length === 1 ? ds[0] : null);
+  return {
+    roleLabel: r.roleLabel,
+    requestId: organizer ? r.id : null,
+    status: chosen ? chosen.status : ds.some((d) => d.status === 'confirmed') ? 'partly' : 'pending',
+    name: chosen?.name ?? null,
+    dates: ds,
+  };
+}
+
+function demoRoleAssigned(r: DemoRoleRequest, d: import('../types').RoleRequestDate) {
+  const c = r.candidates.find((x) => x.id === d.assignedCandidateId);
+  if (!c) return;
+  const day = d.date.slice(8, 10) + '.' + d.date.slice(5, 7);
+  if (c.userId && c.userId !== r.organizerId) notify(c.userId, { type: 'event_updated', title: `Du er ${r.roleLabel} ${day}`, body: r.title, url: `/r/${c.token}` });
+  const e = r.mode === 'each' && d.eventId ? state.events.find((x) => x.id === d.eventId) : undefined;
+  for (const m of e?.members ?? []) {
+    if (m.userId && m.role !== 'organizer' && m.status !== 'declined') {
+      notify(m.userId, { type: 'event_updated', title: `${r.title} ${day} er bekreftet`, body: `${r.roleLabel[0].toUpperCase()}${r.roleLabel.slice(1)} er klar: ${c.name.split(' ')[0]}.`, url: `/event/${e!.id}` });
+    }
+  }
+}
+
+function demoCandidates(r: DemoRoleRequest, input: { userId?: string | null; name: string }[], dateIds: string[]) {
+  const out: import('../types').CreatedRoleRequest['candidates'] = [];
+  const myName = state.me.name.split(' ')[0];
+  for (const p of input) {
+    if (p.userId && !isFriend(meId(), p.userId)) {
+      throw new Error('not_friend');
+    }
+    const name = (p.userId ? p.name.trim() || directory().get(p.userId)?.name : p.name.trim()) || '';
+    if (!name) throw new Error('name_required');
+    let c = p.userId ? r.candidates.find((x) => x.userId === p.userId) : undefined;
+    if (!c) {
+      c = { id: uid('cand'), userId: p.userId ?? null, name, token: uid('rolle'), reply: null, answeredAt: null };
+      r.candidates.push(c);
+    }
+    for (const d of r.dates) if (dateIds.includes(d.id) && !d.answers.some((a) => a.candidateId === c!.id)) d.answers.push({ candidateId: c.id, answer: null });
+    if (c.userId) notify(c.userId, { type: 'invited', title: `${myName} spør om du kan være ${r.roleLabel}`, body: `${r.title} · ${dateIds.length} ${dateIds.length === 1 ? 'dato' : 'datoer'} å se på`, url: `/r/${c.token}` });
+    out.push({ id: c.id, userId: c.userId, name: c.name, token: c.token });
+  }
+  return out;
 }
 
 function presentGroup(g: Group): Group {
@@ -547,7 +610,13 @@ export const demoRepository: Repository = {
       ...(patch.maxParticipants !== undefined && { maxParticipants: patch.maxParticipants }),
       ...(patch.guestsCanInvite !== undefined && { guestsCanInvite: patch.guestsCanInvite }),
       ...(patch.price !== undefined && { price: patch.price }),
+      ...(patch.activityType !== undefined && { activityType: patch.activityType }),
+      ...(patch.rolePlaces !== undefined && { rolePlaces: patch.rolePlaces }),
+      ...(patch.venueCapacity !== undefined && { venueCapacity: patch.venueCapacity }),
     });
+    if (e.activityType && e.venueCapacity && e.maxParticipants && e.maxParticipants + (e.rolePlaces ?? 0) > e.venueCapacity) {
+      throw new Error(`Det er bare plass til ${e.venueCapacity} totalt`);
+    }
     demoPromote(e);
     demoRecount(e);
   },
@@ -895,6 +964,185 @@ export const demoRepository: Repository = {
     c.status = 'cancelled';
   },
 
+  async listVenues(activityType) {
+    await wait(100);
+    return clone(venues.filter((v) => v.ownerId === meId() && v.activityType === activityType).sort((a, b) => a.name.localeCompare(b.name)).map(({ ownerId: _o, ...v }) => v));
+  },
+
+  async saveVenue(venue) {
+    await wait(150);
+    const name = venue.name.trim();
+    let v = venues.find((x) => x.ownerId === meId() && (x.id === venue.id || (x.activityType === venue.activityType && x.name.toLowerCase() === name.toLowerCase())));
+    if (v) Object.assign(v, { name, capacity: venue.capacity ?? null });
+    else {
+      v = { id: uid('venue'), ownerId: meId(), activityType: venue.activityType, name, capacity: venue.capacity ?? null };
+      venues.push(v);
+    }
+    const { ownerId: _o, ...out } = v;
+    return clone(out);
+  },
+
+  async deleteVenue(id) {
+    await wait(100);
+    const i = venues.findIndex((v) => v.id === id && v.ownerId === meId());
+    if (i >= 0) venues.splice(i, 1);
+  },
+
+  async createRoleRequest(input) {
+    await wait(250);
+    if (!input.dates.length) throw new Error('bad_dates');
+    if (!input.candidates.length) throw new Error('bad_candidates');
+    const r: DemoRoleRequest = {
+      id: uid('rr'),
+      organizerId: meId(),
+      activityType: input.activityType,
+      roleKey: input.roleKey,
+      roleLabel: input.roleLabel,
+      title: input.title,
+      timeHint: input.timeHint,
+      startTime: input.startTime,
+      placeName: input.placeName,
+      note: input.note?.trim() || null,
+      mode: input.mode,
+      status: 'open',
+      createdAt: now(),
+      dates: [...input.dates].sort((a, b) => (a.date < b.date ? -1 : 1)).map((d) => ({ id: uid('rd'), date: d.date, eventId: d.eventId, assignedCandidateId: null, eventCancelled: false, answers: [] })),
+      candidates: [],
+    };
+    roleRequests.unshift(r);
+    const candidates = demoCandidates(r, input.candidates, r.dates.map((d) => d.id));
+    return { id: r.id, candidates };
+  },
+
+  async listRoleRequests() {
+    await wait(120);
+    const mine = roleRequests.filter((r) => r.organizerId === meId() && r.status === 'open');
+    mine.forEach(demoSyncCancelled);
+    return clone(mine.map(({ organizerId: _o, ...r }) => r));
+  },
+
+  async getRoleRequest(id) {
+    await wait(120);
+    const r = roleRequests.find((x) => x.id === id && x.organizerId === meId());
+    if (!r) return null;
+    demoSyncCancelled(r);
+    const { organizerId: _o, ...out } = r;
+    return clone(out);
+  },
+
+  async getRoleRequestByToken(token) {
+    await wait(200);
+    const r = roleRequests.find((x) => x.status === 'open' && x.candidates.some((c) => c.token === token));
+    if (!r) return null;
+    demoSyncCancelled(r);
+    const c = r.candidates.find((x) => x.token === token)!;
+    const organizer = freshPerson(directory().get(r.organizerId) ?? state.me);
+    return clone({
+      token,
+      activityType: r.activityType,
+      roleLabel: r.roleLabel,
+      title: r.title,
+      timeHint: r.timeHint,
+      startTime: r.startTime,
+      placeName: r.placeName,
+      note: r.note,
+      name: c.name,
+      reply: c.reply,
+      answeredAt: c.answeredAt,
+      organizer: { name: organizer.name.split(' ')[0], avatarUrl: organizer.avatarUrl ?? null },
+      dates: r.dates
+        .filter((d) => d.answers.some((a) => a.candidateId === c.id))
+        .map((d) => ({
+          id: d.id,
+          date: d.date,
+          answer: d.answers.find((a) => a.candidateId === c.id)!.answer,
+          mine: d.assignedCandidateId === c.id,
+          taken: !!d.assignedCandidateId && d.assignedCandidateId !== c.id,
+          cancelled: d.eventCancelled,
+        })),
+    });
+  },
+
+  async answerRoleRequest(token, answers, reply) {
+    await wait(300);
+    const r = roleRequests.find((x) => x.status === 'open' && x.candidates.some((c) => c.token === token));
+    if (!r) throw new Error('not_found');
+    demoSyncCancelled(r);
+    const c = r.candidates.find((x) => x.token === token)!;
+    let dropped = 0;
+    for (const [dateId, answer] of Object.entries(answers)) {
+      const d = r.dates.find((x) => x.id === dateId);
+      const a = d?.answers.find((x) => x.candidateId === c.id);
+      if (!d || !a || d.eventCancelled) continue;
+      a.answer = answer;
+      if (answer !== true && d.assignedCandidateId === c.id) {
+        d.assignedCandidateId = null;
+        dropped++;
+      } else if (answer === true && !d.assignedCandidateId && d.answers.length === 1) {
+        d.assignedCandidateId = c.id;
+        demoRoleAssigned(r, d);
+      }
+    }
+    c.reply = reply?.trim() || null;
+    c.answeredAt = now();
+    const mine = r.dates.filter((d) => d.answers.some((a) => a.candidateId === c.id));
+    const ok = mine.filter((d) => d.answers.find((a) => a.candidateId === c.id)?.answer === true).length;
+    notify(r.organizerId, {
+      type: 'response_received',
+      title: `${c.name.split(' ')[0]} har svart på ${r.title}`,
+      body: (ok === 0 ? 'Kan ingen av datoene.' : ok === mine.length ? 'Kan alle datoene.' : `Kan ${ok} av ${mine.length} datoer.`) + (dropped ? ` Kan likevel ikke ${dropped} ${dropped === 1 ? 'dato' : 'datoer'} hen hadde.` : ''),
+      url: `/rolle/${r.id}`,
+    });
+  },
+
+  async assignRole(dateId, candidateId) {
+    await wait(150);
+    const r = roleRequests.find((x) => x.organizerId === meId() && x.status === 'open' && x.dates.some((d) => d.id === dateId));
+    const d = r?.dates.find((x) => x.id === dateId);
+    if (!r || !d) throw new Error('not_found');
+    if (candidateId && !d.answers.some((a) => a.candidateId === candidateId && a.answer === true)) throw new Error('candidate_cannot');
+    if (d.assignedCandidateId === candidateId) return;
+    d.assignedCandidateId = candidateId;
+    if (candidateId) demoRoleAssigned(r, d);
+  },
+
+  async addRoleCandidates(requestId, candidates, dateIds) {
+    await wait(200);
+    const r = roleRequests.find((x) => x.id === requestId && x.organizerId === meId() && x.status === 'open');
+    if (!r) throw new Error('not_found');
+    const ids = dateIds.filter((id) => r.dates.some((d) => d.id === id));
+    if (!ids.length) throw new Error('bad_dates');
+    return { id: r.id, candidates: demoCandidates(r, candidates, ids) };
+  },
+
+  async cancelRoleRequest(id) {
+    await wait(120);
+    const r = roleRequests.find((x) => x.id === id && x.organizerId === meId() && x.status === 'open');
+    if (!r) throw new Error('not_found');
+    r.status = 'cancelled';
+  },
+
+  async listMyRoleRequests() {
+    await wait(120);
+    const t = new Date().toISOString().slice(0, 10);
+    return roleRequests
+      .filter((r) => r.status === 'open')
+      .flatMap((r) => {
+        demoSyncCancelled(r);
+        const c = r.candidates.find((x) => x.userId === meId());
+        if (!c) return [];
+        const organizer = directory().get(r.organizerId) ?? state.me;
+        return [{
+          token: c.token,
+          title: r.title,
+          roleLabel: r.roleLabel,
+          organizerName: organizer.name.split(' ')[0],
+          open: r.dates.filter((d) => !d.eventCancelled && d.date >= t && d.answers.some((a) => a.candidateId === c.id && a.answer === null)).length,
+          mine: r.dates.filter((d) => d.assignedCandidateId === c.id && d.date >= t).length,
+        }];
+      });
+  },
+
   async getInvite(token) {
     await wait(260);
     const resolved = resolveToken(token);
@@ -927,6 +1175,7 @@ export const demoRepository: Repository = {
         .filter((m) => m.role === 'organizer' || ['responded', 'attending'].includes(m.status))
         .map((m) => ({ ...freshPerson(m.person), name: freshPerson(m.person).name.split(' ')[0] })),
       pricing: { price: e.price ?? null, maxParticipants: e.maxParticipants ?? null, placesTaken: e.placesTaken ?? null, payingPlaces: e.payingPlaces ?? null, nonPayingPlaces: e.nonPayingPlaces ?? null },
+      activity: e.activityType ? { activityType: e.activityType, rolePlaces: e.rolePlaces ?? 0, venueCapacity: e.venueCapacity ?? null, role: demoActivityRole(e, false) } : null,
       myResponse: me ? { memberId: me.id, name: me.person.name, status: me.status, unavailableOptionIds: me.unavailableOptionIds } : null,
     });
   },

@@ -4,8 +4,11 @@ import { useEffect } from 'react';
 import { useIsSignedIn } from '@/state/session';
 import { repo } from './index';
 import type { GuestResponseInput, ProfilePatch } from './repository';
+import { ACTIVITY_TYPES, type ActivityTypeId } from '@/lib/activities';
 import { firstEventInput, nextEventInput, okDates, type ClearanceInviteMode } from '@/lib/clearance';
-import type { AddMembersInput, CreateClearanceInput, CreateEventInput, CreateGroupInput, DateClearance, EventPatch, GuestInvite, GroupPatch, GroupRole, MyPhone, NotificationPreferences, ReportInput } from './types';
+import { periodLabelFor } from '@/lib/dates';
+import type { Price } from '@/lib/price';
+import type { AddMembersInput, CreateClearanceInput, CreateEventInput, CreateGroupInput, DateClearance, EventPatch, GuestInvite, GroupPatch, GroupRole, MyPhone, NotificationPreferences, ReportInput, Venue } from './types';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -502,4 +505,151 @@ export async function inviteToEvents(eventIds: string[], userIds: string[], gues
     if (g.length) links.push({ eventId, guests: g });
   }
   return { added, links };
+}
+
+// --- Activity types: venues and a role confirmed per date (Aufguss: the sauna master) ---------
+
+export function useVenues(activityType: string | null | undefined) {
+  const signedIn = useIsSignedIn();
+  return useQuery({ queryKey: ['venues', activityType], queryFn: () => repo.listVenues(activityType!), enabled: signedIn && !!activityType });
+}
+
+export function useSaveVenue() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (v: Omit<Venue, 'id'> & { id?: string }) => repo.saveVenue(v), onSuccess: () => qc.invalidateQueries({ queryKey: ['venues'] }) });
+}
+
+export function useDeleteVenue() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (id: string) => repo.deleteVenue(id), onSuccess: () => qc.invalidateQueries({ queryKey: ['venues'] }) });
+}
+
+export function useRoleRequests() {
+  const signedIn = useIsSignedIn();
+  return useQuery({ queryKey: ['roleRequests'], queryFn: () => repo.listRoleRequests(), enabled: signedIn });
+}
+
+export function useRoleRequest(id: string | undefined) {
+  return useQuery({ queryKey: ['roleRequest', id], queryFn: () => repo.getRoleRequest(id!), enabled: !!id });
+}
+
+export function useRoleRequestByToken(token: string | undefined) {
+  return useQuery({ queryKey: ['roleRequestView', token], queryFn: () => repo.getRoleRequestByToken(token!), enabled: !!token });
+}
+
+export function useMyRoleRequests() {
+  const signedIn = useIsSignedIn();
+  return useQuery({ queryKey: ['myRoleRequests'], queryFn: () => repo.listMyRoleRequests(), enabled: signedIn });
+}
+
+export function useAnswerRoleRequest(token: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ answers, reply }: { answers: Record<string, boolean | null>; reply?: string | null }) => repo.answerRoleRequest(token, answers, reply),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+export function useAssignRole() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: ({ dateId, candidateId }: { dateId: string; candidateId: string | null }) => repo.assignRole(dateId, candidateId), onSuccess: () => invalidateAll(qc) });
+}
+
+export function useAddRoleCandidates() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ requestId, candidates, dateIds }: { requestId: string; candidates: { userId?: string | null; name: string }[]; dateIds: string[] }) =>
+      repo.addRoleCandidates(requestId, candidates, dateIds),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+export function useCancelRoleRequest() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (id: string) => repo.cancelRoleRequest(id), onSuccess: () => invalidateAll(qc) });
+}
+
+/** Everything the create flow collected for an activity type such as Aufguss. */
+export interface ActivityPlanInput {
+  activityType: ActivityTypeId;
+  /** each: every date is its own possible event · poll: alternative dates for one event. */
+  mode: 'each' | 'poll';
+  dates: string[];
+  /** Title, picture, time, place and the participants chosen (used only where they are invited now). */
+  event: Omit<CreateEventInput, 'dateMode' | 'optionDates' | 'fixedDate' | 'periodLabel' | 'spontaneous'>;
+  /** The dates where the participants are invited now; the others are made without invitations. */
+  inviteDates: string[];
+  maxParticipants: number | null;
+  price: Price | null;
+  guestsCanInvite: boolean;
+  venueCapacity: number | null;
+  candidates: { userId?: string | null; name: string }[];
+  note: string | null;
+}
+
+/**
+ * Makes the events (provisional until the role is confirmed), with places, price and the venue,
+ * invites the participants only where asked to, and sends one request about every date.
+ */
+export async function createActivityPlan(input: ActivityPlanInput) {
+  const type = ACTIVITY_TYPES[input.activityType];
+  const dates = [...new Set(input.dates)].sort();
+  if (!dates.length) throw new Error('Velg minst én dato');
+  if (!input.candidates.length) throw new Error(`Velg hvem som skal spørres som ${type.role.lower}`);
+  const nobody = { groupId: null, memberIds: [], guestIds: [], guestNames: [], saveAsGroupName: null };
+  const made: { date: string | null; eventId: string; inviteToken: string; guests: GuestInvite[]; invited: boolean }[] = [];
+  let firstInvited: { groupId?: string | null; guests: { guestId: string }[] } | null = null;
+  try {
+    if (input.mode === 'poll') {
+      const invited = input.inviteDates.length > 0;
+      const r = await repo.createEvent({ ...input.event, ...(invited ? {} : nobody), dateMode: 'poll', optionDates: dates, fixedDate: null, periodLabel: periodLabelFor(dates) });
+      made.push({ date: null, ...r, invited });
+    } else {
+      for (const date of dates) {
+        const invited = input.inviteDates.includes(date);
+        // The guests and group made for the first invited date are reused, not made again.
+        const people = !invited
+          ? nobody
+          : firstInvited
+            ? { groupId: firstInvited.groupId ?? input.event.groupId ?? null, guestIds: [...new Set([...(input.event.guestIds ?? []), ...firstInvited.guests.map((g) => g.guestId)])], guestNames: [], saveAsGroupName: null }
+            : {};
+        const r = await repo.createEvent({ ...input.event, ...people, dateMode: 'fixed', fixedDate: date, optionDates: [] });
+        if (invited && !firstInvited) firstInvited = r;
+        made.push({ date, ...r, invited });
+      }
+    }
+    for (const m of made) {
+      await repo.updateEvent(m.eventId, {
+        activityType: type.id,
+        rolePlaces: 1,
+        venueCapacity: input.venueCapacity,
+        ...(input.maxParticipants && { maxParticipants: input.maxParticipants }),
+        ...(input.price && { price: input.price }),
+        ...(input.guestsCanInvite && { guestsCanInvite: true }),
+      });
+    }
+    const request = await repo.createRoleRequest({
+      activityType: type.id,
+      roleKey: type.role.key,
+      roleLabel: type.role.lower,
+      title: input.event.title,
+      timeHint: input.event.timeHint,
+      startTime: input.event.startTime ?? null,
+      placeName: input.event.location?.name ?? null,
+      note: input.note,
+      mode: input.mode,
+      dates: dates.map((date) => ({ date, eventId: (made.find((m) => m.date === date) ?? made[0]).eventId })),
+      candidates: input.candidates,
+    });
+    return { requestId: request.id, candidates: request.candidates, events: made };
+  } catch (e) {
+    // Nothing half-made: events without a request are taken away again.
+    await Promise.all(made.map((m) => repo.cancelEvent(m.eventId).catch(() => {})));
+    throw e;
+  }
+}
+
+export function useCreateActivityPlan() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (input: ActivityPlanInput) => createActivityPlan(input), onSuccess: () => invalidateAll(qc) });
 }

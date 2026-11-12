@@ -65,6 +65,7 @@ const config: ExpoConfig = {
           { scheme: 'https', host: webHost, pathPrefix: '/i/' },
           { scheme: 'https', host: webHost, pathPrefix: '/g/' },
           { scheme: 'https', host: webHost, pathPrefix: '/a/' },
+          { scheme: 'https', host: webHost, pathPrefix: '/r/' },
           { scheme: 'https', host: webHost, pathPrefix: '/@' },
         ],
         category: ['BROWSABLE', 'DEFAULT'],

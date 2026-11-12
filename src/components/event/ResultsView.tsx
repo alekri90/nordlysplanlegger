@@ -14,6 +14,8 @@ import { repeatSummary } from '@/lib/recurrence';
 import { shortNames } from '@/lib/names';
 import { hasResponded, rankDateOptions, responseProgress } from '@/lib/ranking';
 import { spacing } from '@/theme';
+import { activityType } from '@/lib/activities';
+import { ActivityRoleCard } from './ActivityRoleCard';
 import { CalendarConflict } from './CalendarConflict';
 import { DateResultRow } from './DateResultRow';
 import { EventMessages } from './EventMessages';
@@ -50,6 +52,11 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
   const everyoneCan = best?.everyoneCan ?? false;
   const short = useMemo(() => shortNames(event.members.map((m) => ({ id: m.id, name: m.person.name }))), [event.members]);
   const nameOf = (memberId: string) => short.get(memberId) ?? '';
+
+  // Alternative dates for an Aufguss: which of them have a confirmed sauna master.
+  const activity = activityType(event.activityType);
+  const roleOn = (date: string) => event.activityRole?.dates.find((d) => d.date === date) ?? null;
+  const selectedRole = selected ? roleOn(selected.option.date) : null;
 
   const pending = event.members.filter((m) => !hasResponded(m));
   const respondents = event.members.filter((m) => hasResponded(m) && m.status !== 'declined');
@@ -94,6 +101,8 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
           ) : null}
         </Animated.View>
 
+        {activity ? <ActivityRoleCard activity={event.activityType} role={event.activityRole} isOrganizer style={{ marginBottom: spacing.lg }} /> : null}
+
         {scores.length ? (
           <View style={{ gap: spacing.sm }}>
             {(showAll ? scores : scores.slice(0, VISIBLE)).map((s, i) => (
@@ -104,6 +113,15 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
                 selected={selected?.option.id === s.option.id}
                 onPress={() => setSelectedId(s.option.id)}
                 unavailableNames={s.unavailableMemberIds.map(nameOf)}
+                footer={
+                  activity && roleOn(s.option.date)
+                    ? roleOn(s.option.date)!.status === 'confirmed'
+                      ? `${activity.role.label}: ${roleOn(s.option.date)!.name ?? ''}`
+                      : roleOn(s.option.date)!.status === 'unavailable'
+                        ? `Ingen ${activity.role.lower} kan`
+                        : `${activity.role.label} ikke bekreftet`
+                    : undefined
+                }
               />
             ))}
             {scores.length > VISIBLE ? (
@@ -180,6 +198,14 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
       >
         <TimePicker hint={time.hint} time={time.time} allowHints={false} onChange={(hint, t) => setTime({ hint, time: t })} />
         <CalendarConflict when={selected ? { date: selected.option.date, startTime: time.time, timeHint: time.hint, eventId: event.id } : null} style={{ marginTop: spacing.lg }} />
+        {activity && selectedRole && selectedRole.status !== 'confirmed' ? (
+          <Card muted style={{ marginTop: spacing.lg, flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+            <Icon name="alert-circle" size={18} color="warning" />
+            <Text variant="footnote" style={{ flex: 1 }}>
+              {activity.role.label} har ikke bekreftet denne datoen. Arrangementet blir stående som foreløpig til det er avklart.
+            </Text>
+          </Card>
+        ) : null}
         <Button variant="ink" title="Lås datoen" icon="lock" loading={lock.isPending || update.isPending} onPress={confirmLock} style={{ marginTop: spacing.xl }} />
         <Button variant="ghost" title="Ikke ennå" onPress={() => setConfirmOpen(false)} style={{ marginTop: spacing.xs }} />
       </Sheet>

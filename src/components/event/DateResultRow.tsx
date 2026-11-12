@@ -13,16 +13,18 @@ type Props = {
   onPress: () => void;
   /** Names of people who can't, for the expanded line. */
   unavailableNames: string[];
+  /** One more line, e.g. whether the sauna master has confirmed this date. */
+  footer?: string;
 };
 
 /** One candidate date in the results list. Best date is green + labelled + check icon. */
-export function DateResultRow({ score, index, selected, onPress, unavailableNames }: Props) {
+export function DateResultRow({ score, index, selected, onPress, unavailableNames, footer }: Props) {
   const colors = useColors();
   const best = score.isBest;
   const ratio = score.responded ? score.available / score.responded : 0;
   const label = `${formatMedium(score.option.date)}. ${score.available} av ${score.responded} kan.${best ? ' Beste dato.' : ''}${
     unavailableNames.length ? ` Kan ikke: ${unavailableNames.join(', ')}.` : ''
-  }`;
+  }${footer ? ` ${footer}.` : ''}`;
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 50).springify().damping(18)} layout={LinearTransition.springify().damping(20)}>
@@ -63,6 +65,11 @@ export function DateResultRow({ score, index, selected, onPress, unavailableName
             {score.available} av {score.responded} kan
             {unavailableNames.length ? ` · ${unavailableNames.join(', ')} kan ikke` : ''}
           </Text>
+          {footer ? (
+            <Text variant="footnote" color="textSecondary" numberOfLines={1}>
+              {footer}
+            </Text>
+          ) : null}
           <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.surfaceMuted, marginTop: 4, overflow: 'hidden' }}>
             <View style={{ width: `${Math.round(ratio * 100)}%`, height: 4, borderRadius: 2, backgroundColor: best ? colors.success : colors.borderStrong }} />
           </View>

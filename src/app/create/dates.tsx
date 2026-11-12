@@ -1,16 +1,17 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { CalendarLegend, MonthCalendar, type DayState } from '@/components/calendar/MonthCalendar';
-import { StepHeader } from '@/components/create/StepHeader';
+import { ACTIVITY_STEPS, StepHeader } from '@/components/create/StepHeader';
 import { RepeatEditor, RepeatSection } from '@/components/create/RepeatEditor';
 import { PlaceDetails } from '@/components/create/PlaceDetails';
 import { TimePicker } from '@/components/create/TimePicker';
 import { ConflictNote } from '@/components/event/CalendarConflict';
-import { BottomBar, Button, Chip, PageTitle, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
+import { BottomBar, Button, Chip, PageTitle, Screen, ScreenScroll, Segmented, Text, useToast } from '@/components/ui';
 import { useStartPoll } from '@/data/hooks';
+import { activityType, weekdaysIn } from '@/lib/activities';
 import { useBusyItems } from '@/lib/calendarBusy';
 import { conflictsFor } from '@/lib/calendarConflicts';
 import { addMonths, hasWholeWeekday, monthDates, monthKey, monthName, today, toggleWeekday, weekday } from '@/lib/dates';
@@ -28,6 +29,7 @@ const WEEKDAY_PLURALS = ['Mandager', 'Tirsdager', 'Onsdager', 'Torsdager', 'Fred
 export default function CreateDates() {
   const toast = useToast();
   const draft = useCreateDraft();
+  const type = activityType(draft.activityType);
   const startPoll = useStartPoll(draft.existingEventId ?? '');
   const [customMonth, setCustomMonth] = useState(suggestedMonth());
 
@@ -71,6 +73,16 @@ export default function CreateDates() {
 
   const count = draft.optionDates.length;
   const visibleDates = [...selectable].filter((d) => months.some((m) => d.startsWith(m)));
+
+  // «Aufguss tirsdager og torsdager»: those weekdays are picked for the period to begin with.
+  const named = useRef(false);
+  useEffect(() => {
+    if (named.current || !type || draft.optionDates.length) return;
+    named.current = true;
+    const wds = weekdaysIn(draft.title);
+    if (wds.length) draft.set({ optionDates: wds.reduce((acc, wd) => toggleWeekday(acc, wd, visibleDates), [] as string[]) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type]);
   const isPeriodSelected = (p: Period) =>
     p.kind === draft.period.kind && (p.kind !== 'month' || (draft.period.kind === 'month' && draft.period.month === p.month));
 
@@ -87,17 +99,30 @@ export default function CreateDates() {
       }
       return;
     }
-    router.push('/create/who');
+    router.push(type ? '/create/role' : '/create/who');
   };
 
   return (
     <Screen>
-      <StepHeader step={draft.source === 'event' ? 0 : 2} total={draft.source === 'event' ? 2 : draft.clearance ? 5 : 4} />
+      <StepHeader step={draft.source === 'event' ? 0 : 2} total={draft.source === 'event' ? 2 : type ? ACTIVITY_STEPS : draft.clearance ? 5 : 4} />
       <ScreenScroll bottomInset={140}>
         <PageTitle
-          title={draft.clearance ? 'Hvilke dager vil du foreslå?' : 'Hvilke dager passer?'}
-          subtitle={draft.clearance ? 'Velg alle dagene du vil sjekke. Den du spør, krysser av hvilke som passer.' : draft.source === 'group' ? `Vi har foreslått dager for ${draft.title}. Juster om du vil.` : 'Velg aktuelle dager, så får gjestene markere hva som ikke passer.'}
+          title={type ? 'Hvilke datoer vil du forespørre?' : draft.clearance ? 'Hvilke dager vil du foreslå?' : 'Hvilke dager passer?'}
+          subtitle={type ? (draft.activityMode === 'each' ? `Hver dato blir et eget arrangement, foreløpig til ${type.role.lower} har sagt ja.` : `Alternative datoer for ett arrangement. ${type.role.label} svarer på hver av dem.`) : draft.clearance ? 'Velg alle dagene du vil sjekke. Den du spør, krysser av hvilke som passer.' : draft.source === 'group' ? `Vi har foreslått dager for ${draft.title}. Juster om du vil.` : 'Velg aktuelle dager, så får gjestene markere hva som ikke passer.'}
         />
+
+        {type ? (
+          <View style={{ marginBottom: spacing.lg }}>
+            <Segmented<'each' | 'poll'>
+              value={draft.activityMode}
+              onChange={(activityMode) => draft.set({ activityMode })}
+              items={[
+                { id: 'each', label: 'Hver dato for seg' },
+                { id: 'poll', label: 'Alternativer for ett' },
+              ]}
+            />
+          </View>
+        ) : null}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingHorizontal: gutter }} style={{ marginHorizontal: -gutter }}>
           {periods.map((p) => (
@@ -158,9 +183,9 @@ export default function CreateDates() {
           <TimePicker hint={draft.timeHint} time={draft.startTime} onChange={(timeHint, startTime) => draft.set({ timeHint, startTime })} />
         </View>
 
-        {!draft.existingEventId ? <PlaceDetails style={{ marginTop: spacing.xl }} /> : null}
+        {!draft.existingEventId ? <PlaceDetails style={{ marginTop: spacing.xl }} detailsOnly={!!type} /> : null}
 
-        {!draft.existingEventId && !draft.clearance ? (
+        {!draft.existingEventId && !draft.clearance && !type ? (
           <RepeatSection
             enabled={draft.repeat.enabled}
             onToggle={(enabled) =>
@@ -183,7 +208,7 @@ export default function CreateDates() {
       <BottomBar>
         <Button
           variant="ink"
-          title={count === 0 ? 'Velg minst én dag' : draft.existingEventId ? `Send til gjengen · ${count} ${count === 1 ? 'dag' : 'dager'}` : `Fortsett · ${count} ${count === 1 ? 'dag' : 'dager'}`}
+          title={count === 0 ? 'Velg minst én dag' : type ? `Fortsett · ${count} ${count === 1 ? 'dato' : draft.activityMode === 'each' ? 'arrangementer' : 'datoer'}` : draft.existingEventId ? `Send til gjengen · ${count} ${count === 1 ? 'dag' : 'dager'}` : `Fortsett · ${count} ${count === 1 ? 'dag' : 'dager'}`}
           disabled={count === 0}
           loading={startPoll.isPending}
           onPress={next}

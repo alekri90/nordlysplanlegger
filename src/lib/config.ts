@@ -32,6 +32,11 @@ export function inviteUrl(token: string) {
 }
 
 /** «Avklar med noen først»: the key person's page. */
+/** The page where someone asked for a role (sauna master) answers per date. */
+export function roleRequestUrl(token: string) {
+  return `${env.webUrl}/r/${token}`;
+}
+
 export function clearanceUrl(token: string) {
   return `${env.webUrl}/a/${token}`;
 }

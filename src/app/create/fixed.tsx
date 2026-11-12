@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { MonthCalendar, type DayState } from '@/components/calendar/MonthCalendar';
-import { StepHeader } from '@/components/create/StepHeader';
+import { ACTIVITY_STEPS, StepHeader } from '@/components/create/StepHeader';
 import { RepeatEditor, RepeatSection } from '@/components/create/RepeatEditor';
 import { PlaceDetails } from '@/components/create/PlaceDetails';
 import { TimePicker } from '@/components/create/TimePicker';
@@ -12,12 +12,14 @@ import { BottomBar, Button, Card, Icon, PageTitle, PressableScale, Screen, Scree
 import { useBusyItems } from '@/lib/calendarBusy';
 import { conflictsFor } from '@/lib/calendarConflicts';
 import { addMonths, formatLong, monthDates, monthKey, today } from '@/lib/dates';
+import { activityType } from '@/lib/activities';
 import { useCreateDraft } from '@/state/createDraft';
 import { spacing } from '@/theme';
 
 /** Step 3b — the date is already known. One day, one time. */
 export default function CreateFixed() {
   const draft = useCreateDraft();
+  const type = activityType(draft.activityType);
   const t = today();
   const [month, setMonth] = useState(draft.fixedDate ? monthKey(draft.fixedDate) : monthKey(t));
 
@@ -30,7 +32,7 @@ export default function CreateFixed() {
 
   return (
     <Screen>
-      <StepHeader step={2} />
+      <StepHeader step={2} total={type ? ACTIVITY_STEPS : undefined} />
       <ScreenScroll bottomInset={140}>
         {draft.datePreset && draft.fixedDate ? (
           <>
@@ -72,18 +74,18 @@ export default function CreateFixed() {
         </View>
         <ConflictNote busy={busy} when={draft.fixedDate ? moment(draft.fixedDate) : null} style={{ marginTop: spacing.lg }} />
 
-        <PlaceDetails style={{ marginTop: spacing.xl }} />
+        <PlaceDetails style={{ marginTop: spacing.xl }} detailsOnly={!!type} />
 
-        <RepeatSection enabled={draft.repeat.enabled} onToggle={(enabled) => draft.set({ repeat: { ...draft.repeat, enabled, dateMode: 'fixed' } })}>
+        {type ? null : <RepeatSection enabled={draft.repeat.enabled} onToggle={(enabled) => draft.set({ repeat: { ...draft.repeat, enabled, dateMode: 'fixed' } })}>
           <RepeatEditor value={draft.repeat} poll={false} firstDate={draft.fixedDate} onChange={(patch) => draft.set({ repeat: { ...draft.repeat, ...patch } })} />
-        </RepeatSection>
+        </RepeatSection>}
       </ScreenScroll>
       <BottomBar>
         <Button
           variant="ink"
           title={draft.fixedDate ? `Fortsett · ${formatLong(draft.fixedDate)}` : 'Velg en dag'}
           disabled={!draft.fixedDate}
-          onPress={() => router.push('/create/who')}
+          onPress={() => router.push(type ? '/create/role' : '/create/who')}
         />
       </BottomBar>
     </Screen>

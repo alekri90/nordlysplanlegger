@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
+import { ActivitySuggestions } from '@/components/create/ActivitySuggestions';
 import { CoverPicker } from '@/components/create/CoverPicker';
 import { StepHeader } from '@/components/create/StepHeader';
 import { BottomBar, Button, Divider, Icon, Input, PageTitle, PressableScale, Screen, ScreenScroll, Sheet, Text } from '@/components/ui';
@@ -54,6 +55,7 @@ export default function CreateWhat() {
           autoCapitalize="sentences"
           accessibilityLabel="Hva skal dere gjøre?"
         />
+        {draft.source !== 'event' ? <ActivitySuggestions text={draft.title} chosen={draft.activityType} onChoose={draft.chooseActivity} /> : null}
 
         <View style={{ marginTop: spacing.sm }}>
           <LinkRow icon={<Ionicons name="bulb-outline" size={18} color={colors.primary} />} label="Trenger du inspirasjon?" onPress={() => router.push('/create/inspiration')} />

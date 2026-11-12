@@ -23,7 +23,9 @@ import { spacing, useColors } from '@/theme';
  * in the create flow already ticked.
  */
 export default function InviteToEvent() {
-  const { id, clearance } = useLocalSearchParams<{ id: string; clearance?: string }>();
+  // events/dates: several events at once (the confirmed dates of an Aufguss request).
+  const { id, clearance, events, dates } = useLocalSearchParams<{ id: string; clearance?: string; events?: string; dates?: string }>();
+  const many = events ? events.split(',').filter(Boolean) : [];
   const event = useEvent(id);
   const cl = useDateClearance(clearance);
   if (!event.data || (clearance && cl.isLoading)) return <Screen><PageSkeleton /></Screen>;
@@ -31,10 +33,10 @@ export default function InviteToEvent() {
   return (
     <InviteForm
       e={event.data}
-      eventIds={c?.eventIds.length ? c.eventIds : [event.data.id]}
+      eventIds={c?.eventIds.length ? c.eventIds : many.length ? many : [event.data.id]}
       initialUserIds={c ? c.draft.memberIds.filter((u) => u !== c.keyUserId) : []}
       initialGuestNames={c?.draft.guestNames ?? []}
-      dates={c ? okDates(c.days) : []}
+      dates={c ? okDates(c.days) : dates ? dates.split(',').filter(Boolean) : []}
     />
   );
 }

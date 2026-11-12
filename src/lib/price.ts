@@ -94,3 +94,46 @@ export function describePrice(price: Price, c: PriceCounts): { headline: string;
   }
   return { headline: `${formatKr(price.amountOre)} deles på de som kommer`, detail: now };
 }
+
+/**
+ * A total price shared by the participants (activity types such as Aufguss): the total, how many
+ * share it, and per person. Someone in a role (the sauna master) is never among those who share.
+ * Until every place is taken, the price per person at full places is an estimate.
+ */
+export interface SharedPrice {
+  totalOre: number;
+  /** Who share it: the participant places when the number isn't known yet, else those coming. */
+  sharers: number;
+  perPersonOre: number;
+  /** Based on full places, not on who is coming. */
+  estimate: boolean;
+  /** With the people coming now (when it differs from the estimate). */
+  now: { sharers: number; perPersonOre: number } | null;
+}
+
+export function sharedPrice(totalOre: number, c: { maxParticipants?: number | null; payingPlaces?: number | null }): SharedPrice {
+  const max = c.maxParticipants ?? null;
+  const paying = c.payingPlaces ?? 0;
+  if (!max) {
+    const sharers = Math.max(1, paying);
+    return { totalOre, sharers, perPersonOre: roundUpToKroner(totalOre / sharers), estimate: false, now: null };
+  }
+  const full = paying >= max;
+  return {
+    totalOre,
+    sharers: max,
+    perPersonOre: roundUpToKroner(totalOre / max),
+    estimate: !full,
+    now: !full && paying > 0 ? { sharers: paying, perPersonOre: roundUpToKroner(totalOre / paying) } : null,
+  };
+}
+
+/** «2 500 kr totalt · delt på 10 deltagere» and «Ca. 250 kr per person (estimat ved fulle plasser)». */
+export function describeSharedPrice(totalOre: number, c: { maxParticipants?: number | null; payingPlaces?: number | null }): { headline: string; detail: string; now: string | null } {
+  const s = sharedPrice(totalOre, c);
+  return {
+    headline: s.estimate ? `Ca. ${formatKr(s.perPersonOre)} per person` : `${formatKr(s.perPersonOre)} per person`,
+    detail: `${formatKr(s.totalOre)} totalt · delt på ${s.sharers} ${s.sharers === 1 ? 'deltager' : 'deltagere'}${s.estimate ? ' · estimat ved fulle plasser' : ''}`,
+    now: s.now ? `Med ${s.now.sharers} påmeldt nå: ${formatKr(s.now.perPersonOre)} per person` : null,
+  };
+}

@@ -18,7 +18,8 @@ import { CATEGORIES } from '@/lib/categories';
 import { formatLong, formatTime } from '@/lib/dates';
 import { firstName, inviteSubtitle, optionsSummary, timeHintLabel } from '@/lib/eventText';
 import { getGuestName } from '@/lib/guestIdentity';
-import { describePrice } from '@/lib/price';
+import { activityType } from '@/lib/activities';
+import { describePrice, describeSharedPrice } from '@/lib/price';
 import { useMe } from '@/state/session';
 import { gutter, radius, spacing, useColors } from '@/theme';
 
@@ -80,7 +81,12 @@ function InvitationView({ invite }: { invite: InviteView }) {
       ? 'Fullt · venteliste'
       : `${pricing.maxParticipants - (pricing.placesTaken ?? 0)} av ${pricing.maxParticipants} plasser ledige`
     : null;
-  const price = pricing?.price ? describePrice(pricing.price, pricing) : null;
+  // An activity type (Aufguss): the role comes on top of the places, and the shared total is an estimate until full.
+  const activity = activityType(invite.activity?.activityType);
+  const role = invite.activity?.role ?? null;
+  const provisional = !!activity && !!role && role.status !== 'confirmed' && role.status !== 'cancelled';
+  const shared = activity && pricing?.price?.mode === 'split' ? describeSharedPrice(pricing.price.amountOre, pricing) : null;
+  const price = shared ? { headline: shared.headline, detail: shared.detail } : pricing?.price ? describePrice(pricing.price, pricing) : null;
 
   const tiles: { icon: IconName; label: string }[] = [
     isDated
@@ -154,6 +160,20 @@ function InvitationView({ invite }: { invite: InviteView }) {
               </View>
             ))}
           </View>
+
+          {activity && role ? (
+            <View
+              accessible
+              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.md, padding: spacing.md, borderRadius: radius.lg, backgroundColor: provisional ? 'rgba(255,190,90,0.14)' : 'rgba(120,220,160,0.12)' }}
+            >
+              <Icon name={provisional ? 'clock' : 'award'} size={18} tint={provisional ? '#FFC870' : '#8EE3B0'} />
+              <Text variant="footnote" style={{ color: 'rgba(255,255,255,0.9)', flex: 1 }}>
+                {provisional
+                  ? `Foreløpig – venter på at ${activity.role.definite} bekrefter. Du får beskjed når det er klart.`
+                  : `${activity.role.label}: ${role.name ?? ''}. Kommer i tillegg til deltagerne og deler ikke kostnaden.`}
+              </Text>
+            </View>
+          ) : null}
 
           {price ? (
             <View accessible style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, justifyContent: 'center' }}>

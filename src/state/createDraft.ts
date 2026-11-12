@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import type { CategoryId, DateMode, Group, PlannerEvent, TimeHint } from '@/data/types';
+import { activityType, type ActivityTypeId } from '@/lib/activities';
 import { defaultCover, defaultCoverFor, suggestCategory } from '@/lib/categories';
 import { weekday } from '@/lib/dates';
 import type { Price } from '@/lib/price';
@@ -53,12 +54,27 @@ export type CreateDraft = {
   repeat: RepeatConfig & { enabled: boolean };
   /** Where the flow started — used to keep it as short as possible. */
   source: 'new' | 'group' | 'event';
+  /** A concrete activity type (Aufguss) with its own steps; null = a general activity as before. */
+  activityType: ActivityTypeId | null;
+  /** each: every date is its own possible event · poll: alternative dates for one event. */
+  activityMode: 'each' | 'poll';
+  /** The venue (sauna), saved or new; capacity counts the roles too. */
+  venue: { id?: string; name: string; capacity: number | null } | null;
+  /** Who is asked to take the role (sauna master): friends, or names that get a link. */
+  roleCandidates: { userId: string | null; name: string }[];
+  roleNote: string;
+  /** Invite the participants now (the default for every date) … */
+  inviteNow: boolean;
+  /** … unless changed for a single date: date → now (true) / later (false). */
+  inviteOverrides: Record<string, boolean>;
 };
 
 type Actions = {
   reset: () => void;
   set: (patch: Partial<CreateDraft>) => void;
   setTitle: (title: string) => void;
+  /** Choose (or drop) a concrete activity type, keeping what was typed. */
+  chooseActivity: (id: ActivityTypeId | null) => void;
   toggleDate: (date: string) => void;
   prefillFromGroup: (group: Group, me?: string) => void;
   prefillFromEvent: (event: PlannerEvent, me?: string) => void;
@@ -94,14 +110,40 @@ const initial = (): CreateDraft => ({
   spontaneous: false,
   clearance: false,
   source: 'new',
+  activityType: null,
+  activityMode: 'each',
+  venue: null,
+  roleCandidates: [],
+  roleNote: '',
+  inviteNow: false,
+  inviteOverrides: {},
 });
 
 export const useCreateDraft = create<CreateDraft & Actions>((set, get) => ({
   ...initial(),
   reset: () => set(initial()),
   set: (patch) => set(patch),
+  chooseActivity: (id) => {
+    const { title, coverTouched, coverImageUrl, maxParticipants } = get();
+    const type = activityType(id);
+    const category = type ? type.category : suggestCategory(title);
+    set({
+      activityType: type?.id ?? null,
+      category,
+      coverImageUrl: coverTouched ? coverImageUrl : defaultCoverFor(title, category),
+      maxParticipants: type?.requiresPlaces ? (maxParticipants ?? type.defaultPlaces) : null,
+      ...(!type && { venue: null, roleCandidates: [], roleNote: '', price: null }),
+      clearance: false,
+      spontaneous: false,
+      repeat: { ...get().repeat, enabled: false },
+    });
+  },
   setTitle: (title) => {
-    const { coverTouched, category: previous, coverImageUrl } = get();
+    const { coverTouched, category: previous, coverImageUrl, activityType: chosen } = get();
+    if (chosen) {
+      set({ title, coverImageUrl: coverTouched ? coverImageUrl : defaultCoverFor(title, previous) });
+      return;
+    }
     // Keep a theme or photo the user chose; otherwise follow the title ("Halloweenfest" → a pumpkin, not just "Fest").
     const category = coverTouched ? previous : suggestCategory(title);
     set({ title, category, coverImageUrl: coverTouched ? coverImageUrl : defaultCoverFor(title, category) });

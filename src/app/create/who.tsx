@@ -8,12 +8,14 @@ import { GuestsCanInviteSetting } from '@/components/event/GuestsCanInviteSettin
 import { PlacesSetting } from '@/components/event/PlacesSetting';
 import { PriceSetting } from '@/components/event/PriceSetting';
 import { repo } from '@/data';
-import { StepHeader } from '@/components/create/StepHeader';
+import { InviteTiming, datesInvitedNow } from '@/components/create/InviteTiming';
+import { ACTIVITY_STEPS, StepHeader } from '@/components/create/StepHeader';
 import { PeoplePicker } from '@/components/people/PeoplePicker';
 import { PersonRow } from '@/components/people/PersonRow';
 import { SelectedSummary } from '@/components/people/SelectedSummary';
 import { AvatarStack, BottomBar, Button, Card, Divider, Icon, Input, ListRow, PageTitle, PressableScale, Screen, ScreenScroll, SectionHeader, Text, Toggle, useToast } from '@/components/ui';
-import { useCreateEvent, useCreateEventSeries, useGroups, useInviteSuggestions } from '@/data/hooks';
+import { useCreateActivityPlan, useCreateEvent, useCreateEventSeries, useGroups, useInviteSuggestions, useSaveVenue } from '@/data/hooks';
+import { activityType } from '@/lib/activities';
 import type { Group, Person } from '@/data/types';
 import { periodLabelFor } from '@/lib/dates';
 import { firstName } from '@/lib/eventText';
@@ -37,7 +39,16 @@ export default function CreateWho() {
   const suggestion = useInviteSuggestions(draft.category, draft.title);
   const createEvent = useCreateEvent();
   const createSeries = useCreateEventSeries();
+  const plan = useCreateActivityPlan();
+  const saveVenue = useSaveVenue();
   const awaitingAuth = useRef(false);
+  const type = activityType(draft.activityType);
+  // An activity type: every date its own event (or alternatives for one); participants now or later.
+  const activityDates = type ? (draft.dateMode === 'fixed' ? (draft.fixedDate ? [draft.fixedDate] : []) : [...draft.optionDates].sort()) : [];
+  const activityMode: 'each' | 'poll' = draft.dateMode === 'fixed' ? 'each' : draft.activityMode;
+  const eventDates = activityMode === 'each' ? activityDates : [];
+  const nowDates = type ? (activityMode === 'each' ? datesInvitedNow(eventDates, draft.inviteNow, draft.inviteOverrides) : draft.inviteNow ? activityDates : []) : [];
+  const showPeople = !type || nowDates.length > 0;
   const [moreOpen, setMoreOpen] = useState(!!draft.maxParticipants || draft.guestsCanInvite || draft.saveAsGroup);
 
   const groupList = groups.data ?? [];
@@ -72,12 +83,60 @@ export default function CreateWho() {
     draft.set({ memberIds: [...new Set([...draft.memberIds, ...usual.map((p) => p.id)])] });
   };
 
+  const sendActivity = async () => {
+    if (!type) return;
+    let venue = draft.venue;
+    if (venue && !venue.id) {
+      try {
+        const v = await saveVenue.mutateAsync({ activityType: type.id, name: venue.name, capacity: venue.capacity });
+        venue = { id: v.id, name: v.name, capacity: v.capacity };
+      } catch {
+        // Saving it for next time is a bonus; the plan goes out anyway.
+      }
+    }
+    try {
+      const r = await plan.mutateAsync({
+        activityType: type.id,
+        mode: activityMode,
+        dates: activityDates,
+        event: {
+          title: draft.title.trim(),
+          category: draft.category,
+          coverImageUrl: draft.coverImageUrl,
+          timeHint: draft.timeHint,
+          startTime: draft.startTime,
+          groupId: draft.groupId,
+          memberIds: draft.memberIds,
+          guestIds: draft.guestIds,
+          guestNames: draft.guestNames,
+          saveAsGroupName: !draft.groupId && draft.saveAsGroup && draft.groupName.trim() ? draft.groupName.trim() : null,
+          location: venue ? { name: venue.name } : null,
+          description: draft.details.trim() || null,
+        },
+        inviteDates: nowDates,
+        maxParticipants: draft.maxParticipants,
+        price: draft.price,
+        guestsCanInvite: draft.guestsCanInvite,
+        venueCapacity: venue?.capacity ?? null,
+        candidates: draft.roleCandidates,
+        note: draft.roleNote.trim() || null,
+      });
+      haptics.success();
+      draft.reset();
+      router.dismissAll();
+      router.push({ pathname: '/rolle/[id]', params: { id: r.requestId, fresh: '1' } });
+    } catch (e) {
+      toast({ message: e instanceof Error ? e.message : 'Kunne ikke sende. Prøv igjen.', tone: 'error' });
+    }
+  };
+
   const send = async () => {
     if (!signedIn) {
       awaitingAuth.current = true;
       router.push({ pathname: '/auth', params: { reason: 'send' } });
       return;
     }
+    if (type) return sendActivity();
     try {
       const result = await createEvent.mutateAsync({
         title: draft.title.trim(),
@@ -141,9 +200,21 @@ export default function CreateWho() {
 
   return (
     <Screen>
-      <StepHeader step={draft.source === 'event' ? 1 : 3} total={draft.source === 'event' ? 2 : draft.clearance ? 5 : 4} />
+      <StepHeader step={type ? 5 : draft.source === 'event' ? 1 : 3} total={type ? ACTIVITY_STEPS : draft.source === 'event' ? 2 : draft.clearance ? 5 : 4} />
       <ScreenScroll bottomInset={220}>
-        <PageTitle title="Hvem skal være med?" subtitle={draft.clearance ? 'Velg nå eller senere. Ingen blir invitert før dagene er avklart.' : undefined} />
+        <PageTitle
+          title={type ? 'Deltagere' : 'Hvem skal være med?'}
+          subtitle={type ? `Forespørselen til ${type.role.lower} sendes uansett. Velg om deltagerne skal inviteres nå eller senere.` : draft.clearance ? 'Velg nå eller senere. Ingen blir invitert før dagene er avklart.' : undefined}
+        />
+
+        {type ? (
+          <View style={{ marginBottom: spacing.xl }}>
+            <InviteTiming inviteNow={draft.inviteNow} overrides={draft.inviteOverrides} dates={eventDates} roleLabel={type.role.lower} onChange={(patch) => draft.set(patch)} />
+          </View>
+        ) : null}
+
+        {showPeople ? (
+        <>
 
         {selectedGroup ? (
           <Animated.View entering={FadeIn.duration(220)}>
@@ -250,6 +321,9 @@ export default function CreateWho() {
           />
         </View>
 
+        </>
+        ) : null}
+
         {hasMore ? (
           <View style={{ marginTop: spacing.xl }}>
             <PressableScale
@@ -265,7 +339,11 @@ export default function CreateWho() {
             </PressableScale>
             {moreOpen ? (
               <Animated.View entering={FadeIn.duration(200)} style={{ gap: spacing.md, marginTop: spacing.sm }}>
-                {!draft.existingEventId ? (
+                {type ? (
+                  <Card style={{ paddingVertical: spacing.xs }}>
+                    <GuestsCanInviteSetting value={draft.guestsCanInvite} onChange={(guestsCanInvite) => draft.set({ guestsCanInvite })} />
+                  </Card>
+                ) : !draft.existingEventId ? (
                   <Card style={{ paddingVertical: spacing.xs }}>
                     <PlacesSetting value={draft.maxParticipants} onChange={(maxParticipants) => draft.set({ maxParticipants })} />
                     <Divider />
@@ -297,12 +375,14 @@ export default function CreateWho() {
         ) : null}
       </ScreenScroll>
       <BottomBar>
-        <SelectedSummary ids={[...draft.memberIds, ...draft.guestIds]} names={draft.guestNames} />
+        {showPeople ? <SelectedSummary ids={[...draft.memberIds, ...draft.guestIds]} names={draft.guestNames} /> : null}
         <Button
           variant="ink"
-          title={draft.clearance ? (count ? `Fortsett · ${count} valgt` : 'Velg senere') : draft.spontaneous ? (count ? `Spør hvem som er gira · ${count}` : 'Lag lenke – hvem er gira?') : count ? `Send invitasjon · ${count + 1} personer` : 'Lag invitasjonslenke'}
+          title={type
+            ? `Send forespørsel til ${draft.roleCandidates.map((c) => firstName(c.name)).slice(0, 2).join(' og ')}${nowDates.length ? (count ? ` · inviter ${count}` : ' · lag invitasjon') : ''}`
+            : draft.clearance ? (count ? `Fortsett · ${count} valgt` : 'Velg senere') : draft.spontaneous ? (count ? `Spør hvem som er gira · ${count}` : 'Lag lenke – hvem er gira?') : count ? `Send invitasjon · ${count + 1} personer` : 'Lag invitasjonslenke'}
           icon={draft.clearance ? 'arrow-right' : 'send'}
-          loading={createEvent.isPending}
+          loading={createEvent.isPending || plan.isPending}
           onPress={draft.clearance ? () => router.push('/create/clear') : send}
         />
       </BottomBar>

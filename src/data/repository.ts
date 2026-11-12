@@ -5,7 +5,13 @@ import type {
   ClaimResult,
   ClearanceView,
   CreateClearanceInput,
+  CreatedRoleRequest,
+  CreateRoleRequestInput,
   DateClearance,
+  MyRoleRequest,
+  RoleRequest,
+  RoleRequestView,
+  Venue,
   CreateEventInput,
   CreateGroupInput,
   Discoverability,
@@ -138,6 +144,28 @@ export interface Repository {
   /** The events are made; the answer is locked. */
   finishDateClearance(id: string, eventIds: string[]): Promise<void>;
   cancelDateClearance(id: string): Promise<void>;
+
+  // --- Activity types: venues and a role confirmed per date (the sauna master) ---
+  listVenues(activityType: string): Promise<Venue[]>;
+  /** New when there's no id. A name already saved is updated. */
+  saveVenue(venue: Omit<Venue, 'id'> & { id?: string }): Promise<Venue>;
+  deleteVenue(id: string): Promise<void>;
+  /** One request about all the dates; the events already exist. */
+  createRoleRequest(input: CreateRoleRequestInput): Promise<CreatedRoleRequest>;
+  /** The organizer's own open requests, newest first. */
+  listRoleRequests(): Promise<RoleRequest[]>;
+  getRoleRequest(id: string): Promise<RoleRequest | null>;
+  /** The page for the one asked, through their link. */
+  getRoleRequestByToken(token: string): Promise<RoleRequestView | null>;
+  /** Per date id: true «Kan» · false «Kan ikke» · null not answered. Dates left out stay as they are. */
+  answerRoleRequest(token: string, answers: Record<string, boolean | null>, reply?: string | null): Promise<void>;
+  /** The organizer gives the role for a date to one who can (null: nobody). */
+  assignRole(dateId: string, candidateId: string | null): Promise<void>;
+  /** Ask someone else about some of the dates. */
+  addRoleCandidates(requestId: string, candidates: { userId?: string | null; name: string }[], dateIds: string[]): Promise<CreatedRoleRequest>;
+  cancelRoleRequest(id: string): Promise<void>;
+  /** Requests sent to me in the app. */
+  listMyRoleRequests(): Promise<MyRoleRequest[]>;
 
   // --- Invitations (work without an account) -------------------------------
   getInvite(token: string): Promise<InviteView | null>;

@@ -30,6 +30,10 @@ export function clearanceMessage(title: string, url: string, organizerFirstName?
   return `Hei${toFirstName ? ` ${toFirstName}` : ''}! Hvilke av disse dagene passer for «${title}»? Kryss av her${organizerFirstName ? `, så får ${organizerFirstName} beskjed` : ''}: ${url}`;
 }
 
+export function roleRequestMessage(title: string, url: string, roleLabel: string, count: number, organizerFirstName?: string, toFirstName?: string) {
+  return `Hei${toFirstName ? ` ${toFirstName}` : ''}! Kan du være ${roleLabel} på «${title}»? Det gjelder ${count === 1 ? 'én dato' : `${count} datoer`} – svar på hver av dem her${organizerFirstName ? `, så får ${organizerFirstName} beskjed` : ''}: ${url}`;
+}
+
 export function groupInviteMessage(groupName: string, url: string, inviterFirstName?: string) {
   return `Hei! ${inviterFirstName ? `${inviterFirstName} vil` : 'Vi vil'} invitere deg til ${groupName} 🎉 Bli med her, så planlegger vi neste gang sammen: ${url}`;
 }

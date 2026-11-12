@@ -27,6 +27,8 @@ const select = (name) => {
 const checks = {
   events: `events?select=${encodeURIComponent(select('EVENT_SELECT'))}&limit=1`,
   groups: `groups?select=${encodeURIComponent(select('GROUP_SELECT'))}&limit=1`,
+  roleRequests: `role_requests?select=${encodeURIComponent(select('ROLE_REQUEST_SELECT'))}&limit=1`,
+  venues: 'activity_venues?select=id,activity_type,name,capacity&limit=1',
   notifications: `notifications?select=${encodeURIComponent('id, type, title, body, data, created_at, read_at, actor:profiles!notifications_actor_id_fkey(id, display_name, avatar_url)')}&limit=1`,
   profile: 'profiles?select=id,display_name,avatar_url,username,bio,discoverability,onboarded_at&limit=1',
   prefs: 'notification_preferences?select=*&limit=1',

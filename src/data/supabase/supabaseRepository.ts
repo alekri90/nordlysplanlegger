@@ -13,7 +13,11 @@ import type {
   CategoryId,
   ClaimResult,
   ClearanceDraft,
+  CreatedRoleRequest,
   DateClearance,
+  EventActivityRole,
+  RoleDateStatus,
+  RoleRequest,
   Discoverability,
   EventMember,
   EventMessage,
@@ -66,6 +70,10 @@ type EventRow = {
   price_mode: PriceMode | null;
   paying_places: number | null;
   non_paying_places: number | null;
+  activity_type: string | null;
+  role_places: number | null;
+  venue_capacity: number | null;
+  activity_role: ActivityRoleRow | null;
   organizer: ProfileRow | null;
   location: { name: string; address: string | null; details_pending: boolean } | null;
   options: { id: string; date: string }[];
@@ -102,7 +110,7 @@ type EventRow = {
 const EVENT_SELECT = `
   id, title, category, cover_image_url, status, date_mode, group_id, period_label, time_hint,
   start_time, selected_date, selected_option_id, description, created_at, locked_at, max_participants, places_taken, guests_can_invite, spontaneous,
-  price_ore, price_mode, paying_places, non_paying_places,
+  price_ore, price_mode, paying_places, non_paying_places, activity_type, role_places, venue_capacity, activity_role,
   organizer:profiles!events_organizer_id_fkey(id, display_name, avatar_url, username),
   location:event_locations(name, address, details_pending),
   options:event_date_options!event_date_options_event_id_fkey(id, date),
@@ -146,6 +154,75 @@ const toClearance = (r: ClearanceRow): DateClearance => ({
   draft: r.draft,
   eventIds: r.event_ids ?? [],
   createdAt: r.created_at,
+});
+
+type ActivityRoleRow = {
+  role_label: string;
+  request_id: string | null;
+  status: EventActivityRole['status'];
+  name: string | null;
+  dates: { date: string; status: RoleDateStatus; name: string | null }[] | null;
+};
+
+const toActivityRole = (r: ActivityRoleRow | null | undefined): EventActivityRole | null =>
+  r ? { roleLabel: r.role_label, requestId: r.request_id ?? null, status: r.status, name: r.name || null, dates: (r.dates ?? []).map((d) => ({ date: d.date, status: d.status, name: d.name || null })) } : null;
+
+type RoleRequestRow = {
+  id: string;
+  activity_type: string;
+  role_key: string;
+  role_label: string;
+  title: string;
+  time_hint: PlannerEvent['timeHint'] | null;
+  start_time: string | null;
+  place_name: string | null;
+  note: string | null;
+  mode: RoleRequest['mode'];
+  status: RoleRequest['status'];
+  created_at: string;
+  dates: { id: string; date: string; event_id: string | null; assigned_candidate_id: string | null; event: { status: string } | null; answers: { candidate_id: string; answer: boolean | null }[] }[];
+  candidates: { id: string; user_id: string | null; name: string; token: string; reply: string | null; answered_at: string | null; created_at: string }[];
+};
+
+const ROLE_REQUEST_SELECT = `
+  id, activity_type, role_key, role_label, title, time_hint, start_time, place_name, note, mode, status, created_at,
+  dates:role_request_dates!role_request_dates_request_id_fkey(id, date, event_id, assigned_candidate_id,
+    event:events!role_request_dates_event_id_fkey(status),
+    answers:role_request_answers!role_request_answers_date_id_fkey(candidate_id, answer)),
+  candidates:role_request_candidates!role_request_candidates_request_id_fkey(id, user_id, name, token, reply, answered_at, created_at)
+`;
+
+const toRoleRequest = (r: RoleRequestRow): RoleRequest => ({
+  id: r.id,
+  activityType: r.activity_type,
+  roleKey: r.role_key,
+  roleLabel: r.role_label,
+  title: r.title,
+  timeHint: r.time_hint ?? 'evening',
+  startTime: r.start_time ? r.start_time.slice(0, 5) : null,
+  placeName: r.place_name,
+  note: r.note,
+  mode: r.mode,
+  status: r.status,
+  createdAt: r.created_at,
+  dates: [...(r.dates ?? [])]
+    .sort((a, b) => (a.date < b.date ? -1 : 1))
+    .map((d) => ({
+      id: d.id,
+      date: d.date,
+      eventId: d.event_id,
+      assignedCandidateId: d.assigned_candidate_id,
+      eventCancelled: d.event?.status === 'cancelled',
+      answers: (d.answers ?? []).map((a) => ({ candidateId: a.candidate_id, answer: a.answer })),
+    })),
+  candidates: [...(r.candidates ?? [])]
+    .sort((a, b) => (a.created_at < b.created_at ? -1 : 1))
+    .map((c) => ({ id: c.id, userId: c.user_id, name: c.name, token: c.token, reply: c.reply, answeredAt: c.answered_at })),
+});
+
+const toCreatedRequest = (d: { id: string; candidates: { id: string; user_id: string | null; name: string; token: string }[] }): CreatedRoleRequest => ({
+  id: d.id,
+  candidates: (d.candidates ?? []).map((c) => ({ id: c.id, userId: c.user_id, name: c.name, token: c.token })),
 });
 
 const toPerson = (p: ProfileRow | null | undefined, fallbackName = 'Gjest', fallbackId = ''): Person => ({
@@ -196,6 +273,10 @@ function toEvent(r: EventRow): PlannerEvent {
     price: r.price_ore !== null && r.price_mode ? { mode: r.price_mode, amountOre: r.price_ore } : null,
     payingPlaces: r.paying_places,
     nonPayingPlaces: r.non_paying_places,
+    activityType: r.activity_type,
+    rolePlaces: r.role_places ?? 0,
+    venueCapacity: r.venue_capacity,
+    activityRole: toActivityRole(r.activity_role),
     spontaneous: r.spontaneous,
     inviteToken: r.invites?.find((i) => !i.revoked_at)?.token ?? '',
     photos: (r.images ?? []).filter((i) => i.kind === 'memory').map((i) => i.url),
@@ -576,6 +657,9 @@ export const supabaseRepository: Repository = {
     if (patch.timeHint !== undefined) update.time_hint = patch.timeHint;
     if (patch.maxParticipants !== undefined) update.max_participants = patch.maxParticipants;
     if (patch.guestsCanInvite !== undefined) update.guests_can_invite = patch.guestsCanInvite;
+    if (patch.activityType !== undefined) update.activity_type = patch.activityType;
+    if (patch.rolePlaces !== undefined) update.role_places = patch.rolePlaces;
+    if (patch.venueCapacity !== undefined) update.venue_capacity = patch.venueCapacity;
     if (patch.price !== undefined) {
       update.price_ore = patch.price?.amountOre ?? null;
       update.price_mode = patch.price?.mode ?? null;
@@ -852,6 +936,130 @@ export const supabaseRepository: Repository = {
     fail(error);
   },
 
+  async listVenues(activityType) {
+    const { data, error } = await getSupabase().from('activity_venues').select('id, activity_type, name, capacity').eq('activity_type', activityType).order('name');
+    fail(error);
+    return (data ?? []).map((v) => ({ id: v.id, activityType: v.activity_type, name: v.name, capacity: v.capacity }));
+  },
+
+  async saveVenue(venue) {
+    const sb = getSupabase();
+    const row = { activity_type: venue.activityType, name: venue.name.trim(), capacity: venue.capacity ?? null };
+    let id = venue.id;
+    if (!id) {
+      const { data: same } = await sb.from('activity_venues').select('id, name').eq('activity_type', venue.activityType);
+      id = (same ?? []).find((v) => v.name.trim().toLowerCase() === row.name.toLowerCase())?.id;
+    }
+    const { data, error } = id
+      ? await sb.from('activity_venues').update(row).eq('id', id).select('id, activity_type, name, capacity').single()
+      : await sb.from('activity_venues').insert(row).select('id, activity_type, name, capacity').single();
+    fail(error);
+    return { id: data!.id, activityType: data!.activity_type, name: data!.name, capacity: data!.capacity };
+  },
+
+  async deleteVenue(id) {
+    const { error } = await getSupabase().from('activity_venues').delete().eq('id', id);
+    fail(error);
+  },
+
+  async createRoleRequest(input) {
+    const { data, error } = await getSupabase().rpc('create_role_request', {
+      p: {
+        activity_type: input.activityType,
+        role_key: input.roleKey,
+        role_label: input.roleLabel,
+        title: input.title.trim(),
+        time_hint: input.timeHint,
+        start_time: input.startTime ?? null,
+        place_name: input.placeName ?? null,
+        note: input.note?.trim() || null,
+        mode: input.mode,
+        dates: input.dates.map((d) => ({ date: d.date, event_id: d.eventId })),
+        candidates: input.candidates.map((c) => ({ user_id: c.userId ?? null, name: c.name.trim() })),
+      },
+    });
+    fail(error);
+    return toCreatedRequest(data);
+  },
+
+  async listRoleRequests() {
+    const userId = await requireUserId();
+    const { data, error } = await getSupabase()
+      .from('role_requests')
+      .select(ROLE_REQUEST_SELECT)
+      .eq('organizer_id', userId)
+      .eq('status', 'open')
+      .order('created_at', { ascending: false })
+      .limit(30);
+    fail(error);
+    return ((data ?? []) as unknown as RoleRequestRow[]).map(toRoleRequest);
+  },
+
+  async getRoleRequest(id) {
+    const { data, error } = await getSupabase().from('role_requests').select(ROLE_REQUEST_SELECT).eq('id', id).maybeSingle();
+    fail(error);
+    return data ? toRoleRequest(data as unknown as RoleRequestRow) : null;
+  },
+
+  async getRoleRequestByToken(token) {
+    const { data, error } = await getSupabase().rpc('get_role_request', { p_token: token });
+    fail(error);
+    if (!data) return null;
+    return {
+      token,
+      activityType: data.activity_type,
+      roleLabel: data.role_label,
+      title: data.title,
+      timeHint: data.time_hint ?? 'evening',
+      startTime: toTime(data.start_time),
+      placeName: data.place_name,
+      note: data.note,
+      name: data.name,
+      reply: data.reply,
+      answeredAt: data.answered_at,
+      organizer: { name: data.organizer?.name ?? 'Arrangøren', avatarUrl: data.organizer?.avatar_url ?? null },
+      dates: (data.dates ?? []).map((d: { id: string; date: string; answer: boolean | null; mine: boolean; taken: boolean; cancelled: boolean }) => ({ ...d })),
+    };
+  },
+
+  async answerRoleRequest(token, answers, reply) {
+    const { error } = await getSupabase().rpc('answer_role_request', { p_token: token, p_answers: answers, p_reply: reply?.trim() || null });
+    fail(error);
+  },
+
+  async assignRole(dateId, candidateId) {
+    const { error } = await getSupabase().rpc('assign_role', { p_date_id: dateId, p_candidate_id: candidateId });
+    fail(error);
+  },
+
+  async addRoleCandidates(requestId, candidates, dateIds) {
+    const { data, error } = await getSupabase().rpc('add_role_candidates', {
+      p_request_id: requestId,
+      p_candidates: candidates.map((c) => ({ user_id: c.userId ?? null, name: c.name.trim() })),
+      p_date_ids: dateIds,
+    });
+    fail(error);
+    return toCreatedRequest(data);
+  },
+
+  async cancelRoleRequest(id) {
+    const { error } = await getSupabase().rpc('cancel_role_request', { p_id: id });
+    fail(error);
+  },
+
+  async listMyRoleRequests() {
+    const { data, error } = await getSupabase().rpc('my_role_requests');
+    fail(error);
+    return ((data ?? []) as { token: string; title: string; role_label: string; organizer_name: string; open: number; mine: number }[]).map((r) => ({
+      token: r.token,
+      title: r.title,
+      roleLabel: r.role_label,
+      organizerName: r.organizer_name,
+      open: r.open,
+      mine: r.mine,
+    }));
+  },
+
   async getInvite(token) {
     const sb = getSupabase();
     const secret = await getGuestSecret();
@@ -870,6 +1078,11 @@ export const supabaseRepository: Repository = {
               nonPayingPlaces: p.non_paying_places,
             }
           : null,
+      () => null,
+    );
+    const activity = await sb.rpc('get_invite_activity', { p_token: token }).then(
+      ({ data: a }): InviteView['activity'] =>
+        a ? { activityType: a.activity_type, rolePlaces: a.role_places ?? 0, venueCapacity: a.venue_capacity ?? null, role: toActivityRole(a.role) } : null,
       () => null,
     );
     const e = data.event;
@@ -898,6 +1111,7 @@ export const supabaseRepository: Repository = {
       invitedCount: data.invited_count ?? 0,
       respondents: (data.respondents ?? []).map((p: { id: string; name: string; avatar_url: string | null }) => ({ id: p.id, name: p.name, avatarUrl: p.avatar_url })),
       pricing,
+      activity,
       myResponse: data.my_response
         ? {
             memberId: data.my_response.member_id,

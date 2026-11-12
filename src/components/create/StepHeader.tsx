@@ -3,6 +3,8 @@ import { router } from 'expo-router';
 import { Header, ProgressDots } from '@/components/ui';
 
 export const CREATE_STEPS = 4;
+/** An activity type: what, when, days, venue and role, places and price, participants. */
+export const ACTIVITY_STEPS = 6;
 
 /** Back on every step, close on the first; progress dots in the middle. */
 export function StepHeader({ step, total = CREATE_STEPS }: { step: number; total?: number }) {
