@@ -204,12 +204,12 @@ export default function CreateWho() {
       <ScreenScroll bottomInset={220}>
         <PageTitle
           title={type ? 'Deltagere' : 'Hvem skal være med?'}
-          subtitle={type ? `Forespørselen til ${type.role.lower} sendes uansett. Velg om deltagerne skal inviteres nå eller senere.` : draft.clearance ? 'Velg nå eller senere. Ingen blir invitert før dagene er avklart.' : undefined}
+          subtitle={type ? `Forespørselen til ${type.role.definite} sendes uansett. Velg om deltagerne skal inviteres nå eller senere.` : draft.clearance ? 'Velg nå eller senere. Ingen blir invitert før dagene er avklart.' : undefined}
         />
 
         {type ? (
           <View style={{ marginBottom: spacing.xl }}>
-            <InviteTiming inviteNow={draft.inviteNow} overrides={draft.inviteOverrides} dates={eventDates} roleLabel={type.role.lower} onChange={(patch) => draft.set(patch)} />
+            <InviteTiming inviteNow={draft.inviteNow} overrides={draft.inviteOverrides} dates={eventDates} roleLabel={type.role.lower} roleDefinite={type.role.definite} onChange={(patch) => draft.set(patch)} />
           </View>
         ) : null}
 

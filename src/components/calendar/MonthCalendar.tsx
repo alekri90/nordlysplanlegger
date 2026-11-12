@@ -40,9 +40,11 @@ type Props = {
   dayHint?: string;
   /** Days with something in the phone's calendar get a small dot. */
   isBusy?: (date: string) => boolean;
+  /** Days with a plan in the app already (when choosing days): a ring, like «planlagt» in Kalender. */
+  hasPlan?: (date: string) => boolean;
 };
 
-const Day = memo(function Day({ date, state, busy, onPress, hint }: { date: string; state: DayState; busy?: boolean; onPress?: (d: string) => void; hint?: string }) {
+const Day = memo(function Day({ date, state, busy, plan, onPress, hint }: { date: string; state: DayState; busy?: boolean; plan?: boolean; onPress?: (d: string) => void; hint?: string }) {
   const colors = useColors();
   const scale = useSharedValue(1);
   const isToday = date === today();
@@ -75,7 +77,7 @@ const Day = memo(function Day({ date, state, busy, onPress, hint }: { date: stri
         onPress?.(date);
       }}
       accessibilityRole="button"
-      accessibilityLabel={`${formatLong(date)}, ${STATE_LABEL[state]}${busy ? ', noe i kalenderen' : ''}`}
+      accessibilityLabel={`${formatLong(date)}, ${STATE_LABEL[state]}${plan ? ', har noe planlagt' : ''}${busy ? ', noe i kalenderen' : ''}`}
       accessibilityHint={interactive ? hint : undefined}
       accessibilityState={{ disabled: !interactive, selected: state === 'unavailable' || state === 'selected' || state === 'candidate' }}
       style={{ flex: 1, aspectRatio: 1, padding: 3, maxHeight: 54 }}
@@ -88,8 +90,8 @@ const Day = memo(function Day({ date, state, busy, onPress, hint }: { date: stri
             backgroundColor: look.bg,
             alignItems: 'center',
             justifyContent: 'center',
-            borderWidth: isToday && state === 'idle' ? 1.5 : 0,
-            borderColor: colors.borderStrong,
+            borderWidth: plan && state !== 'disabled' ? 2 : isToday && state === 'idle' ? 1.5 : 0,
+            borderColor: plan && state !== 'disabled' ? colors.primary : colors.borderStrong,
           },
           animated,
         ]}
@@ -122,7 +124,7 @@ const Day = memo(function Day({ date, state, busy, onPress, hint }: { date: stri
 });
 
 /** Monday-first month grid. Simple on purpose: tap a day, see its state change. */
-export function MonthCalendar({ month, getState, onPressDay, onPrev, onNext, dayHint, isBusy }: Props) {
+export function MonthCalendar({ month, getState, onPressDay, onPrev, onNext, dayHint, isBusy, hasPlan }: Props) {
   const dates = monthDates(month);
   const leading = weekday(dates[0]);
   const cells: (string | null)[] = [...Array(leading).fill(null), ...dates];
@@ -149,7 +151,7 @@ export function MonthCalendar({ month, getState, onPressDay, onPrev, onNext, day
         <View key={wi} style={{ flexDirection: 'row' }}>
           {week.map((date, di) =>
             date ? (
-              <Day key={date} date={date} state={getState(date)} busy={isBusy?.(date)} onPress={onPressDay} hint={dayHint} />
+              <Day key={date} date={date} state={getState(date)} busy={isBusy?.(date)} plan={hasPlan?.(date)} onPress={onPressDay} hint={dayHint} />
             ) : (
               <View key={`e${di}`} style={{ flex: 1, aspectRatio: 1, maxHeight: 54 }} />
             ),
@@ -161,9 +163,9 @@ export function MonthCalendar({ month, getState, onPressDay, onPrev, onNext, day
 }
 
 /** Small legend row so status is never communicated by colour alone. */
-export function CalendarLegend({ items, style }: { items: { state: DayState | 'busy'; label: string }[]; style?: StyleProp<ViewStyle> }) {
+export function CalendarLegend({ items, style }: { items: { state: DayState | 'busy' | 'plan'; label: string }[]; style?: StyleProp<ViewStyle> }) {
   const colors = useColors();
-  const swatch: Partial<Record<DayState | 'busy', string>> = {
+  const swatch: Partial<Record<DayState | 'busy' | 'plan', string>> = {
     candidate: colors.primarySoft,
     unavailable: colors.primary,
     selected: colors.ink,
@@ -173,7 +175,18 @@ export function CalendarLegend({ items, style }: { items: { state: DayState | 'b
     <View style={[{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, justifyContent: 'center', marginTop: spacing.md }, style]}>
       {items.map((i) => (
         <View key={i.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <View style={{ width: 14, height: 14, borderRadius: 4, backgroundColor: swatch[i.state] ?? colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}>
+          <View
+            style={{
+              width: 14,
+              height: 14,
+              borderRadius: 4,
+              backgroundColor: i.state === 'plan' ? 'transparent' : (swatch[i.state] ?? colors.surfaceMuted),
+              borderWidth: i.state === 'plan' ? 2 : 0,
+              borderColor: colors.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
             {i.state === 'unavailable' ? <Icon name="x" size={9} tint="#fff" /> : null}
             {i.state === 'busy' ? <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: colors.text }} /> : null}
           </View>

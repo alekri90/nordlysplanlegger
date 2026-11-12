@@ -1366,10 +1366,11 @@ console.log('\nActivity types: Aufguss with a sauna master');
     for (const d of days) st.push(await status(await dateId(made.id, d)));
     assert.deepEqual(st, ['confirmed', 'unavailable', 'pending']);
     const [n] = await q(`select body, data ->> 'url' url from notifications where user_id = $1 and data ->> 'kind' = 'role_answered' order by created_at desc limit 1`, [org]);
-    assert.equal(n.body, 'Kan 1 av 3 datoer.');
+    assert.equal(n.body, 'Kan 1 av 3 datoer. 1 dato er bekreftet.');
     assert.equal(n.url, `/rolle/${made.id}`);
     const [p] = await q(`select title, body from notifications where user_id = $1 and data ->> 'kind' = 'role_confirmed'`, [deltager]);
-    assert.equal(p.title, 'Aufguss 05.02 er bekreftet');
+    assert.equal(p.title, 'Aufguss med Ola 05.02 er bekreftet');
+    assert.equal((await q(`select title from events where id = $1`, [events[0]]))[0].title, 'Aufguss med Ola', 'the event is named after the sauna master');
     assert.equal(p.body, 'Badstumester er klar: Ola.');
     assert.ok((await q(`select 1 from notifications where user_id = $1 and data ->> 'kind' = 'role_assigned'`, [ola])).length, 'Ola is told');
     const [e] = await asUser(deltager, `select activity_role(e) a from events e where id = $1`, [events[0]]);
@@ -1416,6 +1417,84 @@ console.log('\nActivity types: Aufguss with a sauna master');
     assert.equal((await asAnon(`select get_role_request($1) v`, [olaToken]))[0].v, null);
     assert.equal((await asUser(stranger, `select count(*)::int n from role_requests`))[0].n, 0);
     assert.equal((await asAnon(`select count(*)::int n from role_request_candidates`))[0].n, 0, 'the links are never readable directly');
+  });
+}
+
+console.log('\nAufguss: invite later, the sauna master sees the event, themes');
+{
+  const org = await newUser('aufguss2@example.com', { display_name: 'Alex To', username: 'alexto' });
+  const ola = await newUser('mester2@example.com', { display_name: 'Ola To', username: 'olato' });
+  const stranger = await newUser('fremmed3@example.com', { display_name: 'Frida Fremmed', username: 'fridafremmed' });
+  await as(org); await q(`select send_friend_request($1)`, [ola]);
+  await as(ola); await q(`select send_friend_request($1)`, [org]);
+  const asUser = async (u, sql, args) => { await as(u); await db.exec('set role authenticated'); try { return await q(sql, args); } finally { await db.exec('reset role'); } };
+  const asAnon = async (sql, args) => { await as(null); await db.exec('set role anon'); try { return await q(sql, args); } finally { await db.exec('reset role'); } };
+  const days = ['2030-03-05', '2030-03-07'];
+  const events = [];
+  for (const d of days) {
+    const [{ r }] = await asUser(org, `select create_event($1) r`, [{ title: 'Aufguss', category: 'sauna', date_mode: 'fixed', fixed_date: d, time_hint: 'evening', member_user_ids: [] }]);
+    await asUser(org, `insert into event_locations (event_id, name) values ($1, 'KOK Oslo')`, [r.event_id]);
+    events.push(r.event_id);
+  }
+  await asUser(org, `update events set activity_type = 'aufguss', role_places = 1 where id = any($1)`, [events]);
+  const [{ r: made }] = await asUser(org, `select create_role_request($1) r`, [{
+    activity_type: 'aufguss', role_key: 'sauna_master', role_label: 'badstumester', title: 'Aufguss', time_hint: 'evening', mode: 'each',
+    dates: days.map((date, i) => ({ date, event_id: events[i], invite_now: false })), candidates: [{ user_id: ola, name: '' }],
+  }]);
+  const token = made.candidates[0].token;
+  const role = async (u, id) => (await asUser(u, `select activity_role(e) a from events e where id = $1`, [id]))[0]?.a;
+  const sees = async (u, id) => (await asUser(u, `select count(*)::int n from events where id = $1`, [id]))[0].n === 1;
+  const [{ v }] = await asAnon(`select get_role_request($1) v`, [token]);
+  const [d1, d2] = v.dates;
+
+  await check('«inviter senere»: the events are held back until the sauna master says yes', async () => {
+    assert.equal((await role(org, events[0])).hold, true);
+    assert.equal(await sees(ola, events[0]), false, 'not his before he has the role');
+  });
+
+  await check('a yes confirms, renames, shows the event to the sauna master and tells the organizer to invite', async () => {
+    await asAnon(`select answer_role_request($1, $2)`, [token, { [d1.id]: true, [d2.id]: null }]);
+    const r = await role(org, events[0]);
+    assert.deepEqual([r.status, r.hold, r.mine], ['confirmed', false, false]);
+    assert.equal((await role(org, events[1])).hold, true, 'the unanswered date is still held');
+    assert.equal((await q(`select title from events where id = $1`, [events[0]]))[0].title, 'Aufguss med Ola');
+    const [n] = await q(`select body from notifications where user_id = $1 and data ->> 'kind' = 'role_answered' order by created_at desc limit 1`, [org]);
+    assert.equal(n.body, 'Kan 1 av 2 datoer. 1 dato er bekreftet. Du kan invitere deltagere nå.');
+    const [m] = await q(`select body, data ->> 'url' url from notifications where user_id = $1 and data ->> 'kind' = 'role_assigned'`, [ola]);
+    assert.equal(m.url, `/event/${events[0]}`);
+    assert.equal(await sees(ola, events[0]), true);
+    assert.equal(await sees(ola, events[1]), false);
+    assert.equal(await sees(stranger, events[0]), false);
+    const mine = await role(ola, events[0]);
+    assert.deepEqual([mine.mine, mine.token, mine.request_id], [true, token, null]);
+    assert.equal((await asUser(ola, `select count(*)::int n from event_locations where event_id = $1`, [events[0]]))[0].n, 1, 'he sees where');
+    assert.equal((await asUser(ola, `select count(*)::int n from event_members where event_id = $1`, [events[0]]))[0].n, 0, 'but not the guest list');
+    const [{ v: again }] = await asAnon(`select get_role_request($1) v`, [token]);
+    assert.equal(again.dates[0].event_id, events[0]);
+  });
+
+  await check('a theme from the sauna master (app or link) or the organizer; the other side is told', async () => {
+    await asUser(ola, `select set_activity_theme($1, $2)`, [events[0], ' Eukalyptus ']);
+    assert.equal((await q(`select activity_theme t from events where id = $1`, [events[0]]))[0].t, 'Eukalyptus');
+    assert.ok((await q(`select 1 from notifications where user_id = $1 and data ->> 'kind' = 'role_theme'`, [org])).length);
+    await asAnon(`select set_role_theme($1, $2, $3)`, [token, d1.id, 'Sitrus']);
+    assert.equal((await q(`select activity_theme t from events where id = $1`, [events[0]]))[0].t, 'Sitrus');
+    await assert.rejects(asAnon(`select set_role_theme($1, $2, $3)`, [token, d2.id, 'X']), /not_found/, 'not on a date that is not his');
+    await assert.rejects(asUser(stranger, `select set_activity_theme($1, $2)`, [events[0], 'X']), /not_allowed/);
+    await asUser(org, `select set_activity_theme($1, $2)`, [events[0], 'Mynte']);
+    assert.ok((await q(`select 1 from notifications where user_id = $1 and data ->> 'kind' = 'role_theme'`, [ola])).length);
+    const [{ token: invite }] = await q(`select token from event_invites where event_id = $1 and guest_profile_id is null`, [events[0]]);
+    const [{ v: inv }] = await asAnon(`select get_invite_activity($1) v`, [invite]);
+    assert.equal(inv.theme, 'Mynte');
+  });
+
+  await check('pulling out renames it back and hides it again; stopping the request removes held events', async () => {
+    await asAnon(`select answer_role_request($1, $2)`, [token, { [d1.id]: false }]);
+    assert.equal((await q(`select title from events where id = $1`, [events[0]]))[0].title, 'Aufguss');
+    assert.equal(await sees(ola, events[0]), false);
+    await asUser(org, `select cancel_role_request($1)`, [made.id]);
+    const st = await q(`select status from events where id = any($1) order by selected_date`, [events]);
+    assert.deepEqual(st.map((x) => x.status), ['cancelled', 'cancelled']);
   });
 }
 

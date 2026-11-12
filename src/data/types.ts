@@ -213,6 +213,8 @@ export interface PlannerEvent {
   venueCapacity?: number | null;
   /** Who has the role, and whether it is confirmed yet. */
   activityRole?: EventActivityRole | null;
+  /** A theme for the evening («Eukalyptus»), set by the organizer or the one with the role. */
+  activityTheme?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -233,6 +235,12 @@ export interface EventActivityRole {
   status: RoleDateStatus | 'partly';
   /** First name of the one with the role (for the chosen date). */
   name: string | null;
+  /** «Inviter senere»: held back (not shown as an event) until the role is confirmed. */
+  hold: boolean;
+  /** I have the role (the sauna master looking at their own event). */
+  mine: boolean;
+  /** My answer page, when I have the role. */
+  token: string | null;
   dates: { date: ISODate; status: RoleDateStatus; name: string | null }[];
 }
 
@@ -260,6 +268,9 @@ export interface RoleRequestDate {
   eventId: string | null;
   assignedCandidateId: string | null;
   eventCancelled: boolean;
+  /** Participants invited now (provisional) or later (held back until confirmed). */
+  inviteNow: boolean;
+  theme: string | null;
   /** Everyone asked about this date. answer: true «Kan» · false «Kan ikke» · null not answered. */
   answers: { candidateId: string; answer: boolean | null }[];
 }
@@ -297,7 +308,7 @@ export interface RoleRequestView {
   reply: string | null;
   answeredAt: string | null;
   organizer: { name: string; avatarUrl: string | null };
-  dates: { id: string; date: ISODate; answer: boolean | null; mine: boolean; taken: boolean; cancelled: boolean }[];
+  dates: { id: string; date: ISODate; answer: boolean | null; mine: boolean; taken: boolean; cancelled: boolean; theme: string | null; eventId: string | null }[];
 }
 
 export interface CreateRoleRequestInput {
@@ -310,7 +321,7 @@ export interface CreateRoleRequestInput {
   placeName: string | null;
   note: string | null;
   mode: 'each' | 'poll';
-  dates: { date: ISODate; eventId: string | null }[];
+  dates: { date: ISODate; eventId: string | null; inviteNow?: boolean }[];
   /** Friends in the app (they get a notice), or names (the organizer shares their link). */
   candidates: { userId?: string | null; name: string }[];
 }
@@ -436,7 +447,7 @@ export interface InviteView {
   /** Places and price, without names. */
   pricing?: InvitePricing | null;
   /** A concrete activity type, and whether its role is confirmed yet (else the event is provisional). */
-  activity?: { activityType: string; rolePlaces: number; venueCapacity: number | null; role: EventActivityRole | null } | null;
+  activity?: { activityType: string; rolePlaces: number; venueCapacity: number | null; theme: string | null; role: EventActivityRole | null } | null;
   myResponse?: {
     memberId: string;
     name: string;

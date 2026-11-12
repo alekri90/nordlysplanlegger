@@ -74,6 +74,7 @@ type EventRow = {
   role_places: number | null;
   venue_capacity: number | null;
   activity_role: ActivityRoleRow | null;
+  activity_theme: string | null;
   organizer: ProfileRow | null;
   location: { name: string; address: string | null; details_pending: boolean } | null;
   options: { id: string; date: string }[];
@@ -110,7 +111,7 @@ type EventRow = {
 const EVENT_SELECT = `
   id, title, category, cover_image_url, status, date_mode, group_id, period_label, time_hint,
   start_time, selected_date, selected_option_id, description, created_at, locked_at, max_participants, places_taken, guests_can_invite, spontaneous,
-  price_ore, price_mode, paying_places, non_paying_places, activity_type, role_places, venue_capacity, activity_role,
+  price_ore, price_mode, paying_places, non_paying_places, activity_type, role_places, venue_capacity, activity_role, activity_theme,
   organizer:profiles!events_organizer_id_fkey(id, display_name, avatar_url, username),
   location:event_locations(name, address, details_pending),
   options:event_date_options!event_date_options_event_id_fkey(id, date),
@@ -161,11 +162,25 @@ type ActivityRoleRow = {
   request_id: string | null;
   status: EventActivityRole['status'];
   name: string | null;
+  hold?: boolean | null;
+  mine?: boolean | null;
+  token?: string | null;
   dates: { date: string; status: RoleDateStatus; name: string | null }[] | null;
 };
 
 const toActivityRole = (r: ActivityRoleRow | null | undefined): EventActivityRole | null =>
-  r ? { roleLabel: r.role_label, requestId: r.request_id ?? null, status: r.status, name: r.name || null, dates: (r.dates ?? []).map((d) => ({ date: d.date, status: d.status, name: d.name || null })) } : null;
+  r
+    ? {
+        roleLabel: r.role_label,
+        requestId: r.request_id ?? null,
+        status: r.status,
+        name: r.name || null,
+        hold: !!r.hold,
+        mine: !!r.mine,
+        token: r.token ?? null,
+        dates: (r.dates ?? []).map((d) => ({ date: d.date, status: d.status, name: d.name || null })),
+      }
+    : null;
 
 type RoleRequestRow = {
   id: string;
@@ -180,14 +195,14 @@ type RoleRequestRow = {
   mode: RoleRequest['mode'];
   status: RoleRequest['status'];
   created_at: string;
-  dates: { id: string; date: string; event_id: string | null; assigned_candidate_id: string | null; event: { status: string } | null; answers: { candidate_id: string; answer: boolean | null }[] }[];
+  dates: { id: string; date: string; event_id: string | null; assigned_candidate_id: string | null; invite_now: boolean | null; event: { status: string; activity_theme?: string | null } | null; answers: { candidate_id: string; answer: boolean | null }[] }[];
   candidates: { id: string; user_id: string | null; name: string; token: string; reply: string | null; answered_at: string | null; created_at: string }[];
 };
 
 const ROLE_REQUEST_SELECT = `
   id, activity_type, role_key, role_label, title, time_hint, start_time, place_name, note, mode, status, created_at,
-  dates:role_request_dates!role_request_dates_request_id_fkey(id, date, event_id, assigned_candidate_id,
-    event:events!role_request_dates_event_id_fkey(status),
+  dates:role_request_dates!role_request_dates_request_id_fkey(id, date, event_id, assigned_candidate_id, invite_now,
+    event:events!role_request_dates_event_id_fkey(status, activity_theme),
     answers:role_request_answers!role_request_answers_date_id_fkey(candidate_id, answer)),
   candidates:role_request_candidates!role_request_candidates_request_id_fkey(id, user_id, name, token, reply, answered_at, created_at)
 `;
@@ -213,6 +228,8 @@ const toRoleRequest = (r: RoleRequestRow): RoleRequest => ({
       eventId: d.event_id,
       assignedCandidateId: d.assigned_candidate_id,
       eventCancelled: d.event?.status === 'cancelled',
+      inviteNow: d.invite_now ?? true,
+      theme: d.event?.activity_theme ?? null,
       answers: (d.answers ?? []).map((a) => ({ candidateId: a.candidate_id, answer: a.answer })),
     })),
   candidates: [...(r.candidates ?? [])]
@@ -277,6 +294,7 @@ function toEvent(r: EventRow): PlannerEvent {
     rolePlaces: r.role_places ?? 0,
     venueCapacity: r.venue_capacity,
     activityRole: toActivityRole(r.activity_role),
+    activityTheme: r.activity_theme ?? null,
     spontaneous: r.spontaneous,
     inviteToken: r.invites?.find((i) => !i.revoked_at)?.token ?? '',
     photos: (r.images ?? []).filter((i) => i.kind === 'memory').map((i) => i.url),
@@ -974,7 +992,7 @@ export const supabaseRepository: Repository = {
         place_name: input.placeName ?? null,
         note: input.note?.trim() || null,
         mode: input.mode,
-        dates: input.dates.map((d) => ({ date: d.date, event_id: d.eventId })),
+        dates: input.dates.map((d) => ({ date: d.date, event_id: d.eventId, invite_now: d.inviteNow ?? true })),
         candidates: input.candidates.map((c) => ({ user_id: c.userId ?? null, name: c.name.trim() })),
       },
     });
@@ -1018,7 +1036,18 @@ export const supabaseRepository: Repository = {
       reply: data.reply,
       answeredAt: data.answered_at,
       organizer: { name: data.organizer?.name ?? 'Arrangøren', avatarUrl: data.organizer?.avatar_url ?? null },
-      dates: (data.dates ?? []).map((d: { id: string; date: string; answer: boolean | null; mine: boolean; taken: boolean; cancelled: boolean }) => ({ ...d })),
+      dates: (data.dates ?? []).map(
+        (d: { id: string; date: string; answer: boolean | null; mine: boolean; taken: boolean; cancelled: boolean; theme?: string | null; event_id?: string | null }) => ({
+          id: d.id,
+          date: d.date,
+          answer: d.answer,
+          mine: d.mine,
+          taken: d.taken,
+          cancelled: d.cancelled,
+          theme: d.theme ?? null,
+          eventId: d.event_id ?? null,
+        }),
+      ),
     };
   },
 
@@ -1044,6 +1073,16 @@ export const supabaseRepository: Repository = {
 
   async cancelRoleRequest(id) {
     const { error } = await getSupabase().rpc('cancel_role_request', { p_id: id });
+    fail(error);
+  },
+
+  async setActivityTheme(eventId, theme) {
+    const { error } = await getSupabase().rpc('set_activity_theme', { p_event_id: eventId, p_theme: theme?.trim() || null });
+    fail(error);
+  },
+
+  async setRoleTheme(token, dateId, theme) {
+    const { error } = await getSupabase().rpc('set_role_theme', { p_token: token, p_date_id: dateId, p_theme: theme?.trim() || null });
     fail(error);
   },
 
@@ -1082,7 +1121,7 @@ export const supabaseRepository: Repository = {
     );
     const activity = await sb.rpc('get_invite_activity', { p_token: token }).then(
       ({ data: a }): InviteView['activity'] =>
-        a ? { activityType: a.activity_type, rolePlaces: a.role_places ?? 0, venueCapacity: a.venue_capacity ?? null, role: toActivityRole(a.role) } : null,
+        a ? { activityType: a.activity_type, rolePlaces: a.role_places ?? 0, venueCapacity: a.venue_capacity ?? null, theme: a.theme ?? null, role: toActivityRole(a.role) } : null,
       () => null,
     );
     const e = data.event;

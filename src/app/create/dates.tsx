@@ -4,6 +4,7 @@ import { ScrollView, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { CalendarLegend, MonthCalendar, type DayState } from '@/components/calendar/MonthCalendar';
+import { PlansNote, usePlannedDays, withoutOurs } from '@/components/calendar/usePlannedDays';
 import { ACTIVITY_STEPS, StepHeader } from '@/components/create/StepHeader';
 import { RepeatEditor, RepeatSection } from '@/components/create/RepeatEditor';
 import { PlaceDetails } from '@/components/create/PlaceDetails';
@@ -47,7 +48,12 @@ export default function CreateDates() {
   const chosen = useMemo(() => new Set(draft.optionDates), [draft.optionDates]);
   const [activePick, setActivePick] = useState<QuickPick | null>(null);
 
-  const busy = useBusyItems(months.length ? `${months[0]}-01` : null, months.length ? monthDates(months[months.length - 1]).at(-1) : null);
+  // The same insight as Kalender: what you have planned in the app (a ring) and the phone's calendar (a dot).
+  const planned = usePlannedDays([draft.existingEventId]);
+  const allBusy = useBusyItems(months.length ? `${months[0]}-01` : null, months.length ? monthDates(months[months.length - 1]).at(-1) : null);
+  const busy = useMemo(() => withoutOurs(allBusy, planned), [allBusy, planned]);
+  const hasPlan = (date: string) => selectable.has(date) && planned.has(date);
+  const anyPlan = months.some((m) => monthDates(m).some(hasPlan));
   const [lastDay, setLastDay] = useState<string | null>(null);
   const moment = (date: string) => ({ date, startTime: draft.startTime, timeHint: draft.timeHint, eventId: draft.existingEventId });
   const isBusy = (date: string) => selectable.has(date) && conflictsFor(busy, moment(date)).length > 0;
@@ -142,6 +148,7 @@ export default function CreateDates() {
                   draft.toggleDate(d);
                 }}
                 isBusy={isBusy}
+                hasPlan={hasPlan}
                 onPrev={draft.period.kind === 'custom' && customMonth > monthKey(today()) ? () => setCustomMonth(addMonths(customMonth, -1)) : undefined}
                 onNext={draft.period.kind === 'custom' ? () => setCustomMonth(addMonths(customMonth, 1)) : undefined}
                 dayHint="Trykk for å legge til eller fjerne som mulig dag"
@@ -149,8 +156,15 @@ export default function CreateDates() {
             </Animated.View>
           ))}
         </View>
-        <CalendarLegend items={[{ state: 'candidate', label: 'Mulig dag' }, ...(busy.length ? [{ state: 'busy' as const, label: 'Noe i kalenderen' }] : [])]} />
-        <ConflictNote busy={busy} when={lastDay && chosen.has(lastDay) ? moment(lastDay) : null} showDay style={{ marginTop: spacing.md }} />
+        <CalendarLegend
+          items={[
+            { state: 'candidate', label: 'Mulig dag' },
+            ...(anyPlan ? [{ state: 'plan' as const, label: 'Har noe planlagt' }] : []),
+            ...(busy.length ? [{ state: 'busy' as const, label: 'Noe i kalenderen' }] : []),
+          ]}
+        />
+        <PlansNote plans={lastDay && chosen.has(lastDay) ? planned.get(lastDay) : undefined} date={lastDay} showDay style={{ marginTop: spacing.md }} />
+        <ConflictNote busy={busy} when={lastDay && chosen.has(lastDay) ? moment(lastDay) : null} showDay style={{ marginTop: spacing.sm }} />
 
         <Text variant="title3" style={{ marginTop: spacing.xxl, marginBottom: spacing.md }}>
           Hurtigvalg

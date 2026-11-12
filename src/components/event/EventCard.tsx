@@ -52,6 +52,11 @@ export function EventCard({ event, meId, onPress, invite }: Props) {
         <Text variant="headline" style={{ color: '#fff' }} numberOfLines={2}>
           {event.title}
         </Text>
+        {event.activityTheme ? (
+          <Text variant="footnote" style={{ color: 'rgba(255,255,255,0.85)', marginTop: -3 }} numberOfLines={1}>
+            Tema: {event.activityTheme}
+          </Text>
+        ) : null}
         <Meta icon={event.series ? 'repeat' : 'calendar'} text={event.series ? `${dateLine} · ${repeatTag(event.series)}` : dateLine} />
         {invite ? (
           <Meta icon="user" text={`Fra ${event.organizer.name.split(' ')[0]}`} />

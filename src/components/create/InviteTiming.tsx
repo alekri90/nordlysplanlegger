@@ -15,6 +15,7 @@ export function InviteTiming({
   overrides,
   dates,
   roleLabel,
+  roleDefinite,
   onChange,
 }: {
   inviteNow: boolean;
@@ -22,6 +23,8 @@ export function InviteTiming({
   /** One per event; one or none for a single event. */
   dates: string[];
   roleLabel: string;
+  /** «badstumesteren» */
+  roleDefinite: string;
   onChange: (patch: { inviteNow?: boolean; inviteOverrides?: Record<string, boolean> }) => void;
 }) {
   const [perDate, setPerDate] = useState(Object.keys(overrides).length > 0);
@@ -29,12 +32,20 @@ export function InviteTiming({
   const on = (d: string) => overrides[d] ?? inviteNow;
   const nowCount = dates.filter(on).length;
 
+  const laterCount = dates.length - nowCount;
+  const steps = [
+    `${roleLabel[0].toUpperCase()}${roleLabel.slice(1)} får forespørselen og svarer per dato.`,
+    nowCount ? `${nowCount === dates.length ? (dates.length > 1 ? 'Alle datoene' : 'Datoen') : `${nowCount} ${nowCount === 1 ? 'dato' : 'datoer'}`}: deltagerne inviteres nå og ser at det er foreløpig.` : null,
+    laterCount ? `${laterCount === dates.length ? (dates.length > 1 ? 'Alle datoene' : 'Datoen') : `${laterCount} ${laterCount === 1 ? 'dato' : 'datoer'}`}: venter. Når ${roleDefinite} sier ja, dukker arrangementet opp og du kan invitere.` : null,
+  ].filter((s): s is string => !!s);
+
   return (
+    <View style={{ gap: spacing.md }}>
     <Card style={{ paddingVertical: spacing.xs }}>
       <ListRow
         icon="clock"
         title="Inviter deltagere senere"
-        subtitle="Lagres uten invitasjoner. Du åpner arrangementet og inviterer når du vil."
+        subtitle={`Ingen blir invitert ennå. Hver dato blir et arrangement i kalenderen din når ${roleDefinite} sier ja – da får du beskjed og inviterer.`}
         radio
         selected={!inviteNow}
         onPress={() => {
@@ -46,7 +57,7 @@ export function InviteTiming({
       <ListRow
         icon="send"
         title="Inviter deltagere nå"
-        subtitle={`De får invitasjonen nå, merket foreløpig til ${roleLabel} har bekreftet.`}
+        subtitle={`Deltagerne får invitasjonen med en gang, merket «Foreløpig» til ${roleDefinite} har sagt ja.`}
         radio
         selected={inviteNow}
         onPress={() => {
@@ -91,6 +102,20 @@ export function InviteTiming({
         </>
       ) : null}
     </Card>
+    <Card muted style={{ gap: spacing.sm }}>
+      <Text variant="subhead">Slik går det videre</Text>
+      {steps.map((s, i) => (
+        <View key={s} style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <Text variant="footnote" color="textSecondary" style={{ width: 16 }}>
+            {i + 1}.
+          </Text>
+          <Text variant="footnote" color="textSecondary" style={{ flex: 1 }}>
+            {s}
+          </Text>
+        </View>
+      ))}
+    </Card>
+    </View>
   );
 }
 

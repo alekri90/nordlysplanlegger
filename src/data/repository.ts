@@ -164,6 +164,10 @@ export interface Repository {
   /** Ask someone else about some of the dates. */
   addRoleCandidates(requestId: string, candidates: { userId?: string | null; name: string }[], dateIds: string[]): Promise<CreatedRoleRequest>;
   cancelRoleRequest(id: string): Promise<void>;
+  /** The theme for an Aufguss evening: the organizer or the one with the role. */
+  setActivityTheme(eventId: string, theme: string | null): Promise<void>;
+  /** The theme from the answer page (no account), on a date that is theirs. */
+  setRoleTheme(token: string, dateId: string, theme: string | null): Promise<void>;
   /** Requests sent to me in the app. */
   listMyRoleRequests(): Promise<MyRoleRequest[]>;
 

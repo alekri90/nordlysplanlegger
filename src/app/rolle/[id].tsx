@@ -3,11 +3,12 @@ import { useMemo, useState } from 'react';
 import { Platform, View } from 'react-native';
 
 import { ShareGrid } from '@/components/event/ShareSheet';
+import { ThemeSheet } from '@/components/event/ThemeSheet';
 import { confirmDestructive } from '@/components/people/PersonSheet';
 import { PersonRow } from '@/components/people/PersonRow';
 import { BottomBar, Button, Card, Divider, EmptyState, Header, Icon, Input, ListRow, PageSkeleton, PageTitle, PressableScale, Screen, ScreenScroll, SectionHeader, Sheet, Tag, Text, useToast, type IconName } from '@/components/ui';
 import { repo } from '@/data';
-import { queryClient, useAddRoleCandidates, useAssignRole, useCancelRoleRequest, useEvents, useFriends, useRoleRequest } from '@/data/hooks';
+import { queryClient, useAddRoleCandidates, useAssignRole, useCancelRoleRequest, useEvents, useFriends, useRoleRequest, useSetActivityTheme } from '@/data/hooks';
 import type { ColorTokens } from '@/theme/tokens';
 import type { PlannerEvent, RoleCandidate, RoleDateStatus, RoleRequest, RoleRequestDate } from '@/data/types';
 import { activityType } from '@/lib/activities';
@@ -19,6 +20,10 @@ import { assignedTo, dateStatus, dateStatusLabel, requestSummary, whoCan } from 
 import { roleRequestMessage } from '@/lib/share';
 import { useMe } from '@/state/session';
 import { spacing } from '@/theme';
+
+/** Invited later and nobody invited yet: held back until the role is confirmed, then ready to invite. */
+const guestsOf = (event?: PlannerEvent) => (event ? event.members.filter((m) => m.role !== 'organizer') : []);
+const isHeld = (d: RoleRequestDate, event?: PlannerEvent) => !d.inviteNow && guestsOf(event).length === 0;
 
 const STATUS_LOOK: Record<RoleDateStatus, { icon: IconName; color: keyof ColorTokens }> = {
   confirmed: { icon: 'check-circle', color: 'success' },
@@ -51,7 +56,7 @@ export default function RoleRequestPage() {
 function Overview({ r, fresh }: { r: RoleRequest; fresh: boolean }) {
   const toast = useToast();
   const me = useMe();
-  const events = useEvents();
+  const events = useEvents({ includeHeld: true });
   const assign = useAssignRole();
   const cancel = useCancelRoleRequest();
   const type = activityType(r.activityType);
@@ -59,11 +64,15 @@ function Overview({ r, fresh }: { r: RoleRequest; fresh: boolean }) {
   const [open, setOpen] = useState<RoleRequestDate | null>(null);
   const [share, setShare] = useState<RoleCandidate | null>(null);
   const [asking, setAsking] = useState(false);
+  const [themeFor, setThemeFor] = useState<RoleRequestDate | null>(null);
 
   const byId = useMemo(() => new Map((events.data ?? []).map((e) => [e.id, e])), [events.data]);
   const statuses = r.dates.map((d) => dateStatus(d, r.status === 'cancelled'));
   const confirmedEvents = [...new Set(r.dates.filter((_, i) => statuses[i] === 'confirmed').map((d) => d.eventId).filter((x): x is string => !!x))];
   const confirmedDates = r.dates.filter((_, i) => statuses[i] === 'confirmed').map((d) => d.date);
+  // Confirmed, invite later, nobody invited yet: ready for invitations.
+  const ready = r.mode === 'each' ? r.dates.filter((d, i) => statuses[i] === 'confirmed' && isHeld(d, d.eventId ? byId.get(d.eventId) : undefined)) : [];
+  const waiting = r.dates.filter((d, i) => (statuses[i] === 'pending' || statuses[i] === 'choose' || statuses[i] === 'unavailable') && isHeld(d, d.eventId ? byId.get(d.eventId) : undefined)).length;
   const openDates = r.dates.filter((_, i) => statuses[i] === 'pending' || statuses[i] === 'unavailable');
   const asked = (c: RoleCandidate) => r.dates.filter((d) => d.answers.some((a) => a.candidateId === c.id)).length;
 
@@ -89,17 +98,42 @@ function Overview({ r, fresh }: { r: RoleRequest; fresh: boolean }) {
   };
 
   const stop = () =>
-    confirmDestructive('Avbryte forespørselen?', `Lenkene til ${r.roleLabel} slutter å virke. Arrangementene blir liggende til du avlyser dem.`, 'Avbryt forespørselen', async () => {
+    confirmDestructive(
+      'Avbryte forespørselen?',
+      `Lenkene til ${r.roleLabel} slutter å virke.${waiting ? ` ${waiting} ${waiting === 1 ? 'dato' : 'datoer'} som venter (ingen invitert) fjernes.` : ''} Arrangementer der noen er invitert eller ${r.roleLabel} er bekreftet, blir liggende til du avlyser dem.`,
+      'Avbryt forespørselen',
+      async () => {
       await cancel.mutateAsync(r.id);
+      await queryClient.invalidateQueries();
       toast('Forespørselen er avbrutt');
       router.back();
-    });
+      },
+    );
 
   return (
     <Screen>
       <Header back="back" />
       <ScreenScroll bottomInset={200}>
         <PageTitle title={r.title} subtitle={[r.placeName, timeHintLabel(r.timeHint, r.startTime), requestSummary(r)].filter(Boolean).join(' · ')} />
+
+        {ready.length ? (
+          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg }}>
+            <Icon name="check-circle" size={20} color="success" />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text variant="headline">{ready.length === 1 ? '1 arrangement er klart' : `${ready.length} arrangementer er klare`}</Text>
+              <Text variant="footnote" color="textSecondary">
+                {cap(type?.role.definite ?? roleLabel)} har sagt ja. {ready.length === 1 ? 'Arrangementet ligger' : 'Arrangementene ligger'} nå i kalenderen din – inviter deltagerne når du vil.
+              </Text>
+            </View>
+          </Card>
+        ) : waiting && fresh ? (
+          <Card muted style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg }}>
+            <Icon name="clock" size={20} color="textSecondary" />
+            <Text variant="footnote" color="textSecondary" style={{ flex: 1 }}>
+              Inviter senere: ingen deltagere er invitert. Hver dato blir et arrangement i kalenderen din når {type?.role.definite ?? r.roleLabel} sier ja – da får du beskjed og kan invitere.
+            </Text>
+          </Card>
+        ) : null}
 
         <SectionHeader title={r.candidates.length === 1 ? roleLabel : `${roleLabel}e som er spurt`} />
         <Card style={{ paddingVertical: spacing.xs }}>
@@ -133,7 +167,7 @@ function Overview({ r, fresh }: { r: RoleRequest; fresh: boolean }) {
         <Text variant="footnote" color="textSecondary" style={{ marginTop: spacing.md }}>
           {r.mode === 'poll'
             ? `Lås datoen i arrangementet når du vil. Velg en dato der ${r.roleLabel} er bekreftet.`
-            : `Datoer uten ${r.roleLabel} er foreløpige. Du kan spørre en annen, endre eller avlyse dem.`}
+            : `Datoer der deltagerne er invitert, er foreløpige til ${type?.role.definite ?? r.roleLabel} har sagt ja. Datoer som venter, blir arrangementer når ${type?.role.definite ?? r.roleLabel} sier ja.`}
         </Text>
 
         {openDates.length && r.status === 'open' ? (
@@ -147,20 +181,38 @@ function Overview({ r, fresh }: { r: RoleRequest; fresh: boolean }) {
           <Button
             variant="ink"
             icon="user-plus"
-            title={confirmedEvents.length > 1 ? `Inviter deltagere · ${confirmedEvents.length} bekreftet` : 'Inviter deltagere'}
-            onPress={() =>
-              router.push({ pathname: '/event/[id]/invite', params: { id: confirmedEvents[0], events: confirmedEvents.join(','), dates: r.mode === 'each' ? confirmedDates.join(',') : '' } })
-            }
+            title={ready.length ? `Inviter deltagere · ${ready.length} ${ready.length === 1 ? 'klart' : 'klare'}` : confirmedEvents.length > 1 ? `Inviter deltagere · ${confirmedEvents.length} bekreftet` : 'Inviter deltagere'}
+            onPress={() => {
+              const ids = ready.length ? ready.map((d) => d.eventId!) : confirmedEvents;
+              const days = ready.length ? ready.map((d) => d.date) : confirmedDates;
+              router.push({ pathname: '/event/[id]/invite', params: { id: ids[0], events: ids.join(','), dates: r.mode === 'each' ? days.join(',') : '' } });
+            }}
           />
           <Text variant="caption" color="textSecondary" align="center" style={{ marginTop: spacing.sm }}>
-            Til arrangementene med bekreftet {r.roleLabel}
+            {ready.length ? `Til datoene som venter på invitasjon` : `Til arrangementene med bekreftet ${r.roleLabel}`}
           </Text>
         </BottomBar>
       ) : null}
 
       <Sheet visible={!!open} onClose={() => setOpen(null)} title={open ? formatLong(open.date) : ''}>
-        {open ? <DateSheet d={open} r={r} event={open.eventId ? byId.get(open.eventId) : undefined} onGive={give} onCancel={() => cancelEvent(open)} busy={assign.isPending} onClose={() => setOpen(null)} /> : null}
+        {open ? (
+          <DateSheet
+            d={open}
+            r={r}
+            event={open.eventId ? byId.get(open.eventId) : undefined}
+            onGive={give}
+            onCancel={() => cancelEvent(open)}
+            onTheme={() => {
+              setThemeFor(open);
+              setOpen(null);
+            }}
+            busy={assign.isPending}
+            onClose={() => setOpen(null)}
+          />
+        ) : null}
       </Sheet>
+
+      {themeFor?.eventId ? <DateTheme d={themeFor} r={r} onClose={() => setThemeFor(null)} /> : null}
 
       <Sheet visible={!!share} onClose={() => setShare(null)} title={share ? `Lenke til ${firstName(share.name)}` : ''}>
         {share ? (
@@ -191,7 +243,18 @@ function DateRow({ d, status, r, event, onPress }: { d: RoleRequestDate; status:
   const label = dateStatusLabel(status, { roleLabel: activityType(r.activityType)?.role.label ?? r.roleLabel, name: assignedTo(d, r.candidates)?.name ?? can[0]?.name, canCount: can.length });
   const guests = event ? event.members.filter((m) => m.role !== 'organizer') : [];
   const coming = guests.filter((m) => m.status === 'attending').length;
-  const people = r.mode === 'poll' ? null : !event ? null : guests.length ? `${guests.length} invitert${coming ? ` · ${coming} kommer` : ''}` : 'Deltagere ikke invitert';
+  const held = isHeld(d, event);
+  const people =
+    r.mode === 'poll' || !event
+      ? null
+      : guests.length
+        ? `${guests.length} invitert${coming ? ` · ${coming} kommer` : ''}`
+        : held
+          ? status === 'confirmed'
+            ? 'Klar – inviter deltagere'
+            : 'Inviteres senere'
+          : 'Ingen invitert';
+  const theme = d.theme ? `${activityType(r.activityType)?.theme.label ?? 'Tema'}: ${d.theme}` : null;
   return (
     <PressableScale onPress={onPress} scaleTo={0.99} accessibilityRole="button" accessibilityLabel={`${formatLong(d.date)}: ${label}${people ? `. ${people}` : ''}`} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md }}>
       <Icon name={look.icon} size={20} color={look.color} />
@@ -203,14 +266,64 @@ function DateRow({ d, status, r, event, onPress }: { d: RoleRequestDate; status:
           {label}
           {people && status !== 'cancelled' ? ` · ${people}` : ''}
         </Text>
+        {theme && status !== 'cancelled' ? (
+          <Text variant="footnote" color="textSecondary" numberOfLines={1}>
+            {theme}
+          </Text>
+        ) : null}
       </View>
-      {status === 'choose' ? <Tag label="Velg" tone="primary" /> : null}
+      {status === 'choose' ? <Tag label="Velg" tone="primary" /> : held && status === 'confirmed' && r.mode === 'each' ? <Tag label="Klar" tone="success" /> : null}
       <Icon name="chevron-right" size={18} color="textTertiary" />
     </PressableScale>
   );
 }
 
-function DateSheet({ d, r, event, onGive, onCancel, busy, onClose }: { d: RoleRequestDate; r: RoleRequest; event?: PlannerEvent; onGive: (d: RoleRequestDate, c: RoleCandidate | null) => void; onCancel: () => void; busy: boolean; onClose: () => void }) {
+function DateTheme({ d, r, onClose }: { d: RoleRequestDate; r: RoleRequest; onClose: () => void }) {
+  const toast = useToast();
+  const set = useSetActivityTheme(d.eventId!);
+  const label = activityType(r.activityType)?.theme.label ?? 'Tema';
+  return (
+    <ThemeSheet
+      visible
+      onClose={onClose}
+      activity={r.activityType}
+      value={d.theme}
+      subtitle={formatLong(d.date)}
+      loading={set.isPending}
+      onSave={async (theme) => {
+        try {
+          await set.mutateAsync(theme);
+          toast({ message: theme ? `${label} er lagret` : `${label} er fjernet`, tone: 'success' });
+          onClose();
+        } catch {
+          toast({ message: 'Kunne ikke lagre. Prøv igjen.', tone: 'error' });
+        }
+      }}
+    />
+  );
+}
+
+function DateSheet({
+  d,
+  r,
+  event,
+  onGive,
+  onCancel,
+  onTheme,
+  busy,
+  onClose,
+}: {
+  d: RoleRequestDate;
+  r: RoleRequest;
+  event?: PlannerEvent;
+  onGive: (d: RoleRequestDate, c: RoleCandidate | null) => void;
+  onCancel: () => void;
+  onTheme: () => void;
+  busy: boolean;
+  onClose: () => void;
+}) {
+  const type = activityType(r.activityType);
+  const held = isHeld(d, event);
   const status = dateStatus(d, r.status === 'cancelled');
   const can = whoCan(d, r.candidates);
   const holder = assignedTo(d, r.candidates);
@@ -249,14 +362,23 @@ function DateSheet({ d, r, event, onGive, onCancel, busy, onClose }: { d: RoleRe
       ) : null}
       {d.eventId && status !== 'cancelled' ? (
         <>
-          <Button variant="secondary" icon="calendar" title="Åpne arrangementet" onPress={() => { onClose(); router.push(`/event/${d.eventId}`); }} />
+          {held && status !== 'confirmed' && r.mode === 'each' ? (
+            <Text variant="footnote" color="textSecondary">
+              Inviter senere: arrangementet dukker opp i kalenderen din når {type?.role.definite ?? r.roleLabel} sier ja. Vil du ikke vente, kan du invitere nå – da er det foreløpig til det er bekreftet.
+            </Text>
+          ) : (
+            <Button variant="secondary" icon="calendar" title="Åpne arrangementet" onPress={() => { onClose(); router.push(`/event/${d.eventId}`); }} />
+          )}
           {r.mode === 'each' ? (
             <Button
-              variant="secondary"
+              variant={held && status === 'confirmed' ? 'ink' : 'secondary'}
               icon="user-plus"
-              title={invited ? `Inviter flere deltagere · ${invited} invitert` : 'Inviter deltagere'}
+              title={invited ? `Inviter flere deltagere · ${invited} invitert` : held && status !== 'confirmed' ? 'Inviter deltagere nå likevel' : 'Inviter deltagere'}
               onPress={() => { onClose(); router.push(`/event/${d.eventId}/invite`); }}
             />
+          ) : null}
+          {r.mode === 'each' && type && (status === 'confirmed' || !held) ? (
+            <Button variant="secondary" icon="edit-2" title={d.theme ? `${type.theme.label}: ${d.theme}` : `Legg til ${type.theme.label.toLowerCase()}`} onPress={onTheme} />
           ) : null}
           {r.mode === 'each' ? <Button variant="ghost" title="Avlys denne datoen" onPress={onCancel} /> : null}
         </>
@@ -316,4 +438,8 @@ function AskAnother({ r, dates, onDone }: { r: RoleRequest; dates: RoleRequestDa
       <Button variant="ink" icon="send" title={ready ? `Spør ${friend ? firstName(friend.name) : firstName(name.trim())} · ${picked.length} ${picked.length === 1 ? 'dato' : 'datoer'}` : 'Velg dato og person'} disabled={!ready} loading={add.isPending} onPress={send} />
     </View>
   );
+}
+
+function cap(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }

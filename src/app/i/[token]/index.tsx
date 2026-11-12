@@ -132,6 +132,11 @@ function InvitationView({ invite }: { invite: InviteView }) {
             <Text variant="display" style={{ color: '#fff' }} accessibilityRole="header">
               {e.title}
             </Text>
+            {activity && invite.activity?.theme ? (
+              <Text variant="title3" style={{ color: '#fff', marginTop: spacing.xs }}>
+                {activity.theme.label}: {invite.activity.theme}
+              </Text>
+            ) : null}
             <Text variant="title3" style={{ color: 'rgba(255,255,255,0.85)', marginTop: spacing.xs }}>
               {inviteSubtitle(invite)}
             </Text>

@@ -18,9 +18,10 @@ import { RemindButton } from '@/components/event/RemindButton';
 import { ResultsView } from '@/components/event/ResultsView';
 import { SeriesPeopleEditor } from '@/components/event/SeriesPeopleEditor';
 import { ShareSheet } from '@/components/event/ShareSheet';
-import { BottomBar, Button, Card, EmptyState, ErrorState, Icon, ListRow, PageSkeleton, Screen, Segmented, Sheet, Text, useToast, type IconName } from '@/components/ui';
+import { ThemeSheet } from '@/components/event/ThemeSheet';
+import { BottomBar, Button, Card, EmptyState, ErrorState, Icon, ListRow, PageSkeleton, PressableScale, Screen, Segmented, Sheet, Text, useToast, type IconName } from '@/components/ui';
 import { repo } from '@/data';
-import { queryClient, useAddEventPhotos, useCancelEvent, useEvent, useSetRsvp, useUpdateEvent, useUpdateEventSeries } from '@/data/hooks';
+import { queryClient, useAddEventPhotos, useCancelEvent, useEvent, useSetActivityTheme, useSetRsvp, useUpdateEvent, useUpdateEventSeries } from '@/data/hooks';
 import type { EventMember, EventSeriesInfo, PlannerEvent, SeriesPeople } from '@/data/types';
 import { confirmDestructive } from '@/components/people/PersonSheet';
 import { ReportForm } from '@/components/people/ReportSheet';
@@ -99,6 +100,8 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
   }, [rolesOpen, isOwner, e.id, e.maxParticipants, seriesId]);
   const rsvp = useSetRsvp(e.id);
   const cancel = useCancelEvent(e.id);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const setTheme = useSetActivityTheme(e.id);
   const addPhotosMutation = useAddEventPhotos(e.id);
   const prefillFromEvent = useCreateDraft((s) => s.prefillFromEvent);
 
@@ -162,6 +165,18 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
   const waitlist = e.members.filter((m) => m.status === 'waitlisted').sort((a, b) => (a.waitlistedAt ?? '').localeCompare(b.waitlistedAt ?? ''));
   const full = !!e.maxParticipants && (e.placesTaken ?? 0) >= e.maxParticipants;
   const activity = activityType(e.activityType);
+  // The sauna master looking at their own evening: not a participant, sees time, place and theme.
+  const roleHolder = !!e.activityRole?.mine && !mine && !isOrganizer;
+  const canTheme = !!activity && (isOrganizer || roleHolder) && e.status !== 'cancelled' && !isPast;
+  const saveTheme = async (theme: string | null) => {
+    try {
+      await setTheme.mutateAsync(theme);
+      setThemeOpen(false);
+      toast({ message: theme ? `${activity!.theme.label} er lagret` : `${activity!.theme.label} er fjernet`, tone: 'success' });
+    } catch {
+      toast({ message: 'Kunne ikke lagre. Prøv igjen.', tone: 'error' });
+    }
+  };
   const placesLine = e.maxParticipants
     ? full
       ? `Fullt${waitlist.length ? ` · ${waitlist.length} på venteliste` : ''}${activity ? ` · + ${activity.role.lower}` : ''}`
@@ -191,12 +206,33 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
                 {e.title}
               </Text>
             </View>
+            {activity && (e.activityTheme || canTheme) ? (
+              <PressableScale
+                disabled={!canTheme}
+                onPress={() => setThemeOpen(true)}
+                accessibilityRole={canTheme ? 'button' : undefined}
+                accessibilityLabel={e.activityTheme ? `${activity.theme.label}: ${e.activityTheme}${canTheme ? '. Trykk for å endre' : ''}` : `Legg til ${activity.theme.label.toLowerCase()}`}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm, marginLeft: 32 + spacing.sm, alignSelf: 'flex-start' }}
+              >
+                {e.activityTheme ? (
+                  <Text variant="title3" color="textSecondary">
+                    {activity.theme.label}: {e.activityTheme}
+                  </Text>
+                ) : (
+                  <Text variant="callout" color="primary">
+                    + Legg til {activity.theme.label.toLowerCase()}
+                  </Text>
+                )}
+                {e.activityTheme && canTheme ? <Icon name="edit-2" size={14} color="textTertiary" /> : null}
+              </PressableScale>
+            ) : null}
             <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
               <InfoLine icon="calendar" text={time ? `${when} · ${time}` : when} />
               {place ? <InfoLine icon="map-pin" text={place} /> : null}
               {placesLine ? <InfoLine icon="users" text={placesLine} /> : null}
               {price ? <InfoLine icon="tag" text={price.detail ? `${price.headline} · ${price.detail}` : price.headline} /> : null}
               {price && mine?.paysShare === false ? <InfoLine icon="gift" text="Du deler ikke kostnaden" /> : null}
+              {roleHolder && activity ? <InfoLine icon="award" text={`Du er ${activity.role.lower} – du bruker ingen deltagerplass og betaler ikke`} /> : null}
               {e.series && e.series.status !== 'ended' ? (
                 <InfoLine icon="repeat" text={`${repeatSummary(e.series, e.selectedDate)}${e.series.status === 'paused' ? ' · på pause' : ''}`} />
               ) : null}
@@ -205,6 +241,15 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
           </Animated.View>
 
           {activity && e.status !== 'cancelled' ? <ActivityRoleCard activity={e.activityType} role={e.activityRole} isOrganizer={isOrganizer} style={{ marginTop: spacing.xl }} /> : null}
+          {activity && isOrganizer && canInvite && e.activityRole?.status === 'confirmed' && !e.members.some((m) => m.role !== 'organizer') ? (
+            <Card style={{ marginTop: spacing.md, gap: spacing.md }}>
+              <Text variant="headline">Klar for invitasjon</Text>
+              <Text variant="footnote" color="textSecondary">
+                {activity.role.definite.charAt(0).toUpperCase() + activity.role.definite.slice(1)} har sagt ja. Inviter deltagerne når du vil – de ser at det er bekreftet.
+              </Text>
+              <Button variant="ink" icon="user-plus" title="Inviter deltagere" onPress={() => router.push(`/event/${e.id}/invite`)} />
+            </Card>
+          ) : null}
 
           {isPast && e.series?.status === 'active' ? (
             <Card muted style={{ marginTop: spacing.xl, flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
@@ -245,8 +290,30 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
             <ActionButton icon="more-horizontal" label="Mer" onPress={() => setMoreOpen(true)} />
           </View>
 
-          {e.status !== 'cancelled' ? <EventMessages eventId={e.id} isOrganizer={isOrganizer} style={{ marginTop: spacing.xl }} /> : null}
+          {e.status !== 'cancelled' && !roleHolder ? <EventMessages eventId={e.id} isOrganizer={isOrganizer} style={{ marginTop: spacing.xl }} /> : null}
 
+          {roleHolder ? (
+            <View style={{ marginTop: spacing.xl, gap: spacing.lg }}>
+              {e.description ? <Text variant="body">{e.description}</Text> : null}
+              <Card style={{ paddingVertical: spacing.xs }}>
+                <ListRow icon="calendar" title={when} subtitle={time ?? undefined} />
+                {place ? <ListRow icon="map-pin" title={e.location!.name} subtitle={e.location!.detailsPending ? 'Detaljer kommer' : e.location!.address ?? undefined} /> : null}
+                <ListRow icon="user" title={`Arrangert av ${firstName(e.organizer.name)}`} />
+                {e.activityRole?.token ? (
+                  <ListRow
+                    icon="edit-3"
+                    title="Endre svaret ditt"
+                    subtitle="Kan du likevel ikke? Si fra, så finner arrangøren en annen."
+                    chevron
+                    onPress={() => router.push({ pathname: '/r/[token]', params: { token: e.activityRole!.token! } })}
+                  />
+                ) : null}
+              </Card>
+            </View>
+          ) : null}
+
+          {roleHolder ? null : (
+          <>
           <View style={{ marginTop: spacing.xl }}>
             <Segmented<Tab>
               value={tab}
@@ -298,8 +365,22 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
               )
             ) : null}
           </View>
+          </>
+          )}
         </View>
       </ScrollView>
+
+      {activity ? (
+        <ThemeSheet
+          visible={themeOpen}
+          onClose={() => setThemeOpen(false)}
+          activity={e.activityType}
+          value={e.activityTheme ?? null}
+          subtitle={`${e.title} · ${when}`}
+          loading={setTheme.isPending}
+          onSave={saveTheme}
+        />
+      ) : null}
 
       {e.status === 'draft' && isOrganizer ? (
         <BottomBar>

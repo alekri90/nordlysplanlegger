@@ -33,6 +33,15 @@ export interface ActivityVenueSpec {
   placeholder: string;
 }
 
+/** A theme for the evening, set by the organizer or the one with the role. */
+export interface ActivityThemeSpec {
+  /** «Tema» */
+  label: string;
+  placeholder: string;
+  /** Quick picks. */
+  suggestions: string[];
+}
+
 export interface ActivityType {
   id: ActivityTypeId;
   name: string;
@@ -43,6 +52,7 @@ export interface ActivityType {
   category: CategoryId;
   venue: ActivityVenueSpec;
   role: ActivityRoleSpec;
+  theme: ActivityThemeSpec;
   /** The price is a total that the participants share. */
   priceMode: 'split';
   /** Participant places are required. */
@@ -66,6 +76,11 @@ export const ACTIVITY_TYPES: Record<ActivityTypeId, ActivityType> = {
       takesPlace: false,
       paysShare: false,
       pitch: 'Badstumesteren svarer på hver dato med en lenke – uten å installere appen.',
+    },
+    theme: {
+      label: 'Tema',
+      placeholder: 'F.eks. Eukalyptus og sitrus',
+      suggestions: ['Eukalyptus', 'Sitrus', 'Mynte', 'Lavendel', 'Skog og bjørk', 'Hav og salt', 'Jul'],
     },
     priceMode: 'split',
     requiresPlaces: true,

@@ -8,7 +8,7 @@ import { ACTIVITY_TYPES, type ActivityTypeId } from '@/lib/activities';
 import { firstEventInput, nextEventInput, okDates, type ClearanceInviteMode } from '@/lib/clearance';
 import { periodLabelFor } from '@/lib/dates';
 import type { Price } from '@/lib/price';
-import type { AddMembersInput, CreateClearanceInput, CreateEventInput, CreateGroupInput, DateClearance, EventPatch, GuestInvite, GroupPatch, GroupRole, MyPhone, NotificationPreferences, ReportInput, Venue } from './types';
+import type { AddMembersInput, CreateClearanceInput, CreateEventInput, CreateGroupInput, DateClearance, EventPatch, GuestInvite, GroupPatch, GroupRole, MyPhone, NotificationPreferences, PlannerEvent, ReportInput, Venue } from './types';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,9 +36,16 @@ function invalidateAll(qc: QueryClient) {
 
 // --- Queries ---------------------------------------------------------------
 
-export function useEvents() {
+/** Held back for «inviter senere» (an Aufguss waiting for its sauna master): not an event yet. */
+const notHeld = (events: PlannerEvent[]) => events.filter((e) => !e.activityRole?.hold);
+
+/**
+ * My events. Events held back until a role is confirmed are left out – they show up by themselves
+ * when the sauna master says yes. `includeHeld` for the request overview, which shows them all.
+ */
+export function useEvents({ includeHeld = false }: { includeHeld?: boolean } = {}) {
   const signedIn = useIsSignedIn();
-  return useQuery({ queryKey: keys.events, queryFn: () => repo.listEvents(), enabled: signedIn });
+  return useQuery({ queryKey: keys.events, queryFn: () => repo.listEvents(), enabled: signedIn, select: includeHeld ? undefined : notHeld });
 }
 
 export function useEvent(id: string | undefined) {
@@ -564,6 +571,16 @@ export function useAddRoleCandidates() {
   });
 }
 
+export function useSetActivityTheme(eventId: string) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (theme: string | null) => repo.setActivityTheme(eventId, theme), onSuccess: () => invalidateAll(qc) });
+}
+
+export function useSetRoleTheme(token: string) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: ({ dateId, theme }: { dateId: string; theme: string | null }) => repo.setRoleTheme(token, dateId, theme), onSuccess: () => invalidateAll(qc) });
+}
+
 export function useCancelRoleRequest() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: (id: string) => repo.cancelRoleRequest(id), onSuccess: () => invalidateAll(qc) });
@@ -599,6 +616,9 @@ export async function createActivityPlan(input: ActivityPlanInput) {
   const nobody = { groupId: null, memberIds: [], guestIds: [], guestNames: [], saveAsGroupName: null };
   const made: { date: string | null; eventId: string; inviteToken: string; guests: GuestInvite[]; invited: boolean }[] = [];
   let firstInvited: { groupId?: string | null; guests: { guestId: string }[] } | null = null;
+  // The event is named after the activity – «Aufguss» – and becomes «Aufguss med Ola» once confirmed.
+  const title = type.name;
+  input = { ...input, event: { ...input.event, title } };
   try {
     if (input.mode === 'poll') {
       const invited = input.inviteDates.length > 0;
@@ -632,13 +652,16 @@ export async function createActivityPlan(input: ActivityPlanInput) {
       activityType: type.id,
       roleKey: type.role.key,
       roleLabel: type.role.lower,
-      title: input.event.title,
+      title,
       timeHint: input.event.timeHint,
       startTime: input.event.startTime ?? null,
       placeName: input.event.location?.name ?? null,
       note: input.note,
       mode: input.mode,
-      dates: dates.map((date) => ({ date, eventId: (made.find((m) => m.date === date) ?? made[0]).eventId })),
+      dates: dates.map((date) => {
+        const m = made.find((x) => x.date === date) ?? made[0];
+        return { date, eventId: m.eventId, inviteNow: m.invited };
+      }),
       candidates: input.candidates,
     });
     return { requestId: request.id, candidates: request.candidates, events: made };

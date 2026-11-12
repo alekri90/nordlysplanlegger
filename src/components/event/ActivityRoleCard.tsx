@@ -25,6 +25,22 @@ export function ActivityRoleCard({ activity, role, isOrganizer, style }: { activ
   let color: keyof ColorTokens = 'textSecondary';
   let title = `Foreløpig – venter på ${type.role.definite}`;
   let body = isOrganizer ? `Deltagerne ser at arrangementet ikke er bekreftet ennå.` : `${label} har ikke bekreftet ennå. Du får beskjed når det er klart.`;
+  if (isOrganizer && role.hold) title = `Venter på ${type.role.definite}`;
+  if (isOrganizer && role.hold) body =`Inviter senere: ingen er invitert. Når ${type.role.definite} sier ja, får du beskjed og kan invitere.`;
+  if (role.mine) {
+    return (
+      <Card style={[{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }, style]}>
+        <Icon name="award" size={20} color="success" />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text variant="headline">Du er {lower}</Text>
+          <Text variant="footnote" color="textSecondary">
+            Du kommer i tillegg til deltagerne, bruker ingen plass og deler ikke kostnaden.
+          </Text>
+        </View>
+      </Card>
+    );
+  }
+  const held = isOrganizer && role.hold;
   switch (role.status) {
     case 'confirmed':
       icon = 'award';
@@ -60,7 +76,7 @@ export function ActivityRoleCard({ activity, role, isOrganizer, style }: { activ
       <View style={{ flex: 1, gap: 2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
           <Text variant="headline">{title}</Text>
-          {isProvisional(role) ? <Tag label="Foreløpig" /> : null}
+          {held && role.status !== 'confirmed' ? <Tag label="Ikke invitert" /> : isProvisional(role) ? <Tag label="Foreløpig" /> : null}
         </View>
         <Text variant="footnote" color="textSecondary">
           {body}

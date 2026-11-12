@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
-import { MonthCalendar, type DayState } from '@/components/calendar/MonthCalendar';
+import { CalendarLegend, MonthCalendar, type DayState } from '@/components/calendar/MonthCalendar';
+import { PlansNote, usePlannedDays, withoutOurs } from '@/components/calendar/usePlannedDays';
 import { ACTIVITY_STEPS, StepHeader } from '@/components/create/StepHeader';
 import { RepeatEditor, RepeatSection } from '@/components/create/RepeatEditor';
 import { PlaceDetails } from '@/components/create/PlaceDetails';
@@ -24,7 +25,11 @@ export default function CreateFixed() {
   const [month, setMonth] = useState(draft.fixedDate ? monthKey(draft.fixedDate) : monthKey(t));
 
   const days = monthDates(draft.datePreset && draft.fixedDate ? monthKey(draft.fixedDate) : month);
-  const busy = useBusyItems(days[0], days[days.length - 1]);
+  const planned = usePlannedDays();
+  const allBusy = useBusyItems(days[0], days[days.length - 1]);
+  const busy = useMemo(() => withoutOurs(allBusy, planned), [allBusy, planned]);
+  const hasPlan = (d: string) => d > t && planned.has(d);
+  const anyPlan = days.some(hasPlan);
   const moment = (date: string) => ({ date, startTime: draft.timeHint === 'exact' ? draft.startTime : null });
   const isBusy = (d: string) => d > t && conflictsFor(busy, moment(d)).length > 0;
 
@@ -58,10 +63,16 @@ export default function CreateFixed() {
               getState={getState}
               onPressDay={(d) => draft.set({ fixedDate: d })}
               isBusy={isBusy}
+              hasPlan={hasPlan}
               onPrev={month > monthKey(t) ? () => setMonth(addMonths(month, -1)) : undefined}
               onNext={() => setMonth(addMonths(month, 1))}
               dayHint="Trykk for å velge dagen"
             />
+            {anyPlan || busy.length ? (
+              <CalendarLegend
+                items={[...(anyPlan ? [{ state: 'plan' as const, label: 'Har noe planlagt' }] : []), ...(busy.length ? [{ state: 'busy' as const, label: 'Noe i kalenderen' }] : [])]}
+              />
+            ) : null}
           </>
         )}
         <View style={{ marginTop: spacing.xxl }}>
@@ -72,7 +83,8 @@ export default function CreateFixed() {
             onChange={(timeHint, startTime) => draft.set({ timeHint, startTime })}
           />
         </View>
-        <ConflictNote busy={busy} when={draft.fixedDate ? moment(draft.fixedDate) : null} style={{ marginTop: spacing.lg }} />
+        <PlansNote plans={draft.fixedDate ? planned.get(draft.fixedDate) : undefined} date={draft.fixedDate} style={{ marginTop: spacing.lg }} />
+        <ConflictNote busy={busy} when={draft.fixedDate ? moment(draft.fixedDate) : null} style={{ marginTop: spacing.sm }} />
 
         <PlaceDetails style={{ marginTop: spacing.xl }} detailsOnly={!!type} />
 

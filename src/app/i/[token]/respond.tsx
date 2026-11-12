@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { CalendarLegend, MonthCalendar, type DayState } from '@/components/calendar/MonthCalendar';
+import { PlansNote, usePlannedDays, withoutOurs } from '@/components/calendar/usePlannedDays';
 import { ConflictNote } from '@/components/event/CalendarConflict';
 import { BottomBar, Button, Header, Input, PageSkeleton, PageTitle, PressableScale, Screen, ScreenScroll, Text, useToast } from '@/components/ui';
 import { useInvite, useSubmitAvailability } from '@/data/hooks';
@@ -47,7 +48,10 @@ function RespondForm({ invite }: { invite: InviteView }) {
   const months = useMemo(() => [...new Set(options.map((o) => monthKey(o.date)))].sort(), [options]);
 
   const dates = useMemo(() => options.map((o) => o.date).sort(), [options]);
-  const busy = useBusyItems(dates[0], dates[dates.length - 1]);
+  const planned = usePlannedDays([invite.event.id]);
+  const allBusy = useBusyItems(dates[0], dates[dates.length - 1]);
+  const busy = useMemo(() => withoutOurs(allBusy, planned), [allBusy, planned]);
+  const hasPlan = (date: string) => byDate.has(date) && planned.has(date);
   const [lastDay, setLastDay] = useState<string | null>(null);
   const moment = (date: string) => ({ date, startTime: invite.event.startTime, timeHint: invite.event.timeHint, eventId: invite.event.id });
   const isBusy = (date: string) => byDate.has(date) && conflictsFor(busy, moment(date)).length > 0;
@@ -94,17 +98,19 @@ function RespondForm({ invite }: { invite: InviteView }) {
         <PageTitle title="Hvilke dager kan du ikke?" subtitle="Trykk på dagene som ikke passer for deg." />
         <View style={{ gap: spacing.xxl }}>
           {months.map((m) => (
-            <MonthCalendar key={m} month={m} getState={getState} onPressDay={toggle} isBusy={isBusy} dayHint="Trykk for å markere at du ikke kan denne dagen" />
+            <MonthCalendar key={m} month={m} getState={getState} onPressDay={toggle} isBusy={isBusy} hasPlan={hasPlan} dayHint="Trykk for å markere at du ikke kan denne dagen" />
           ))}
         </View>
         <CalendarLegend
           items={[
             { state: 'candidate', label: 'Mulig dag' },
             { state: 'unavailable', label: 'Kan ikke' },
+            ...(dates.some(hasPlan) ? [{ state: 'plan' as const, label: 'Har noe planlagt' }] : []),
             ...(dates.some(isBusy) ? [{ state: 'busy' as const, label: 'Noe i kalenderen' }] : []),
           ]}
         />
-        <ConflictNote busy={busy} when={lastDay ? moment(lastDay) : null} showDay style={{ marginTop: spacing.md }} />
+        <PlansNote plans={lastDay ? planned.get(lastDay) : undefined} date={lastDay} showDay style={{ marginTop: spacing.md }} />
+        <ConflictNote busy={busy} when={lastDay ? moment(lastDay) : null} showDay style={{ marginTop: spacing.sm }} />
         <PressableScale
           onPress={() => setUnavailable(allMarked ? new Set() : new Set(options.map((o) => o.id)))}
           style={{ alignSelf: 'center', padding: spacing.md, marginTop: spacing.sm }}

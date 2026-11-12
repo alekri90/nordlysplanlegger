@@ -1,13 +1,20 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
+import { CalendarLegend, MonthCalendar, type DayState } from '@/components/calendar/MonthCalendar';
+import { PlansNote, usePlannedDays, withoutOurs } from '@/components/calendar/usePlannedDays';
+import { ConflictNote } from '@/components/event/CalendarConflict';
+import { ThemeSheet } from '@/components/event/ThemeSheet';
 import { Avatar, BottomBar, Button, Card, EmptyState, Icon, Input, PageSkeleton, PressableScale, Screen, ScreenScroll, Tag, Text, useToast } from '@/components/ui';
-import { useAnswerRoleRequest, useRoleRequestByToken } from '@/data/hooks';
-import type { RoleRequestView } from '@/data/types';
+import { useAnswerRoleRequest, useRoleRequestByToken, useSetRoleTheme } from '@/data/hooks';
+import type { PlannerEvent, RoleRequestView } from '@/data/types';
+import { useBusyItems } from '@/lib/calendarBusy';
+import { conflictsFor, type BusyItem, type ConflictWhen } from '@/lib/calendarConflicts';
+import { useMe } from '@/state/session';
 import { activityType } from '@/lib/activities';
 import { groupByWeek } from '@/lib/clearance';
-import { formatLong, today } from '@/lib/dates';
+import { formatLong, monthKey, today } from '@/lib/dates';
 import { timeHintLabel } from '@/lib/eventText';
 import { haptics } from '@/lib/haptics';
 import { setAll } from '@/lib/roleRequest';
@@ -45,6 +52,44 @@ function Answering({ v }: { v: RoleRequestView }) {
   const [reply, setReply] = useState(v.reply ?? '');
   const [sent, setSent] = useState(false);
   const org = v.organizer.name;
+  const me = useMe();
+  const setTheme = useSetRoleTheme(v.token);
+  const [themeFor, setThemeFor] = useState<RoleRequestView['dates'][number] | null>(null);
+
+  // Your calendar for these days: plans in the app (a ring) and the phone's calendar (a dot).
+  const planned = usePlannedDays(v.dates.map((d) => d.eventId));
+  const allBusy = useBusyItems(dates[0]?.date ?? null, dates[dates.length - 1]?.date ?? null);
+  const busy = useMemo(() => withoutOurs(allBusy, planned), [allBusy, planned]);
+  const moment = (date: string): ConflictWhen => ({ date, startTime: v.startTime, timeHint: v.timeHint });
+  const months = [...new Set(dates.map((d) => monthKey(d.date)))].sort();
+  const asked = new Map(dates.map((d) => [d.date, d]));
+  const dayState = (date: string): DayState => {
+    const d = asked.get(date);
+    if (!d) return 'disabled';
+    if (d.mine) return 'best';
+    if (d.taken || d.cancelled) return 'disabled';
+    const a = answers[d.id] ?? null;
+    return a === true ? 'best' : a === false ? 'unavailable' : 'candidate';
+  };
+  const cycle = (date: string) => {
+    const d = asked.get(date);
+    if (!d || d.taken || d.cancelled || d.mine) return;
+    const a = answers[d.id] ?? null;
+    setOne(d.id, a === null ? true : a === true ? false : null);
+  };
+  const anyPlan = dates.some((d) => planned.has(d.date));
+  const anyBusy = dates.some((d) => conflictsFor(busy, moment(d.date)).length > 0);
+
+  const saveTheme = async (theme: string | null) => {
+    if (!themeFor) return;
+    try {
+      await setTheme.mutateAsync({ dateId: themeFor.id, theme });
+      toast({ message: theme ? 'Temaet er lagret' : 'Temaet er fjernet', tone: 'success' });
+      setThemeFor(null);
+    } catch {
+      toast({ message: 'Kunne ikke lagre. Prøv igjen.', tone: 'error' });
+    }
+  };
 
   const setOne = (id: string, a: Answer) => {
     haptics.tap();
@@ -76,14 +121,14 @@ function Answering({ v }: { v: RoleRequestView }) {
     const outcome = mineNow
       ? `Du er ${roleLabel} på ${mineNow} ${mineNow === 1 ? 'dato' : 'datoer'}${rest > 0 ? `, og ${org} velger for ${rest} til` : ''}.`
       : can
-        ? `${org} velger hvem som blir ${roleLabel}, og du får beskjed.`
+        ? `Du kan ${can} ${can === 1 ? 'dato' : 'datoer'}. ${org} velger hvem som blir ${roleLabel}, og du får beskjed.`
         : '';
     return (
       <Screen>
         <EmptyState
           icon="check-circle"
           title="Takk!"
-          body={`${org} har fått svaret ditt: ${can ? `du kan ${can} ${can === 1 ? 'dato' : 'datoer'}` : 'du kan ingen av datoene'}. ${outcome ? `${outcome} ` : ''}Du kan endre svaret med den samme lenken.`}
+          body={`${org} har fått svaret ditt. ${outcome || (can ? `Du kan ${can} ${can === 1 ? 'dato' : 'datoer'}.` : 'Du kan ingen av datoene.')} Du kan endre svaret med den samme lenken.`}
         />
       </Screen>
     );
@@ -118,6 +163,29 @@ function Answering({ v }: { v: RoleRequestView }) {
           </Text>
         </Card>
 
+        <Text variant="title3" style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>
+          Kalenderen din
+        </Text>
+        <View style={{ gap: spacing.xl }}>
+          {months.map((m) => (
+            <MonthCalendar key={m} month={m} getState={dayState} onPressDay={cycle} isBusy={(d) => asked.has(d) && conflictsFor(busy, moment(d)).length > 0} hasPlan={(d) => asked.has(d) && planned.has(d)} dayHint="Trykk for å svare Kan, Kan ikke eller Ikke svart" />
+          ))}
+        </View>
+        <CalendarLegend
+          items={[
+            { state: 'candidate', label: 'Spurt om' },
+            { state: 'best', label: 'Kan' },
+            { state: 'unavailable', label: 'Kan ikke' },
+            ...(anyPlan ? [{ state: 'plan' as const, label: 'Har noe planlagt' }] : []),
+            ...(anyBusy ? [{ state: 'busy' as const, label: 'Noe i kalenderen' }] : []),
+          ]}
+        />
+        {!me ? (
+          <Text variant="footnote" color="textSecondary" align="center" style={{ marginTop: spacing.sm }}>
+            Har du Nordlys-appen? Åpner du lenken der, ser du også det du har planlagt.
+          </Text>
+        ) : null}
+
         {openDates.length ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xl, alignItems: 'center' }}>
             <Text variant="subhead" color="textSecondary" style={{ flexBasis: '100%' }}>
@@ -148,7 +216,23 @@ function Answering({ v }: { v: RoleRequestView }) {
               </View>
               <View style={{ gap: spacing.sm }}>
                 {inWeek.map((d) => (
-                  <DateAnswer key={d.id} date={d.date} value={answers[d.id] ?? null} mine={d.mine} taken={d.taken} cancelled={d.cancelled} roleLabel={roleLabel} onChange={(a) => setOne(d.id, a)} />
+                  <DateAnswer
+                    key={d.id}
+                    date={d.date}
+                    value={answers[d.id] ?? null}
+                    mine={d.mine}
+                    taken={d.taken}
+                    cancelled={d.cancelled}
+                    roleLabel={roleLabel}
+                    onChange={(a) => setOne(d.id, a)}
+                    plans={planned.get(d.date)}
+                    busy={busy}
+                    when={moment(d.date)}
+                    theme={d.theme}
+                    themeLabel={type?.theme.label ?? 'Tema'}
+                    onTheme={d.mine && type ? () => setThemeFor(d) : undefined}
+                    onOpen={d.mine && d.eventId && me ? () => router.push(`/event/${d.eventId}`) : undefined}
+                  />
                 ))}
               </View>
             </View>
@@ -167,6 +251,7 @@ function Answering({ v }: { v: RoleRequestView }) {
           />
         </View>
       </ScreenScroll>
+      <ThemeSheet visible={!!themeFor} onClose={() => setThemeFor(null)} activity={v.activityType} value={themeFor?.theme ?? null} subtitle={themeFor ? formatLong(themeFor.date) : undefined} loading={setTheme.isPending} onSave={saveTheme} />
       {openDates.length ? (
         <BottomBar>
           <Text variant="footnote" color="textSecondary" align="center" style={{ marginBottom: spacing.sm }}>
@@ -179,7 +264,37 @@ function Answering({ v }: { v: RoleRequestView }) {
   );
 }
 
-function DateAnswer({ date, value, mine, taken, cancelled, roleLabel, onChange }: { date: string; value: Answer; mine: boolean; taken: boolean; cancelled: boolean; roleLabel: string; onChange: (a: Answer) => void }) {
+function DateAnswer({
+  date,
+  value,
+  mine,
+  taken,
+  cancelled,
+  roleLabel,
+  onChange,
+  plans,
+  busy,
+  when,
+  theme,
+  themeLabel,
+  onTheme,
+  onOpen,
+}: {
+  date: string;
+  value: Answer;
+  mine: boolean;
+  taken: boolean;
+  cancelled: boolean;
+  roleLabel: string;
+  onChange: (a: Answer) => void;
+  plans?: PlannerEvent[];
+  busy: BusyItem[];
+  when: ConflictWhen;
+  theme: string | null;
+  themeLabel: string;
+  onTheme?: () => void;
+  onOpen?: () => void;
+}) {
   const colors = useColors();
   const locked = taken || cancelled;
   const options: { a: Answer; label: string; fg: string; bg: string }[] = [
@@ -205,6 +320,23 @@ function DateAnswer({ date, value, mine, taken, cancelled, roleLabel, onChange }
         </Text>
         {mine ? <Tag label={`Du er ${roleLabel}`} tone="success" icon="award" /> : taken ? <Tag label="Tatt av en annen" /> : cancelled ? <Tag label="Avlyst" /> : null}
       </View>
+      {!taken && !cancelled ? (
+        <>
+          <PlansNote plans={plans} date={date} />
+          <ConflictNote busy={busy} when={when} />
+        </>
+      ) : null}
+      {mine && (onTheme || onOpen || theme) ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, alignItems: 'center' }}>
+          {theme ? (
+            <Text variant="footnote" color="textSecondary" style={{ flex: 1 }}>
+              {themeLabel}: {theme}
+            </Text>
+          ) : null}
+          {onTheme ? <Button size="sm" variant="secondary" icon="edit-2" title={theme ? 'Endre' : `Legg til ${themeLabel.toLowerCase()}`} fullWidth={false} onPress={onTheme} /> : null}
+          {onOpen ? <Button size="sm" variant="secondary" icon="calendar" title="Åpne" fullWidth={false} onPress={onOpen} /> : null}
+        </View>
+      ) : null}
       {locked ? null : (
         <View style={{ flexDirection: 'row', gap: spacing.sm }} accessibilityRole="radiogroup" accessibilityLabel={formatLong(date)}>
           {options.map((o) => {

@@ -188,7 +188,32 @@ const roleRequests: DemoRoleRequest[] = [];
 const venues: (import('../types').Venue & { ownerId: string })[] = [];
 
 function demoSyncCancelled(r: DemoRoleRequest) {
-  for (const d of r.dates) d.eventCancelled = !!d.eventId && state.events.find((e) => e.id === d.eventId)?.status === 'cancelled';
+  for (const d of r.dates) {
+    const e = d.eventId ? state.events.find((x) => x.id === d.eventId) : undefined;
+    d.eventCancelled = e?.status === 'cancelled';
+    d.theme = e?.activityTheme ?? null;
+  }
+}
+
+/** Someone else than the organizer is invited (then the event is not held back any more). */
+const demoHasGuests = (e: PlannerEvent | undefined) => !!e && e.members.some((m) => m.role !== 'organizer');
+
+/** Like is_role_holder(): I have the role on this event. */
+function demoIsRoleHolder(e: PlannerEvent) {
+  return roleRequests.some(
+    (r) => r.status === 'open' && r.dates.some((d) => d.eventId === e.id && r.candidates.some((c) => c.id === d.assignedCandidateId && !!c.userId && c.userId === meId())),
+  );
+}
+
+/** Give or take the role on a date; the title follows («Aufguss» ⇄ «Aufguss med Ola»). */
+function demoSetAssigned(r: DemoRoleRequest, d: import('../types').RoleRequestDate, candidateId: string | null) {
+  d.assignedCandidateId = candidateId;
+  const e = r.mode === 'each' && d.eventId ? state.events.find((x) => x.id === d.eventId) : undefined;
+  if (e && (e.title === r.title || e.title.startsWith(`${r.title} med `))) {
+    const name = r.candidates.find((c) => c.id === candidateId)?.name.split(' ')[0];
+    e.title = name ? `${r.title} med ${name}` : r.title;
+  }
+  if (candidateId) demoRoleAssigned(r, d);
 }
 
 /** The role on an event, like activity_role() in the database. */
@@ -200,11 +225,15 @@ function demoActivityRole(e: PlannerEvent, organizer: boolean): import('../types
     .filter((d) => d.eventId === e.id)
     .map((d) => ({ date: d.date, status: dateStatus(d), name: r.candidates.find((c) => c.id === d.assignedCandidateId)?.name.split(' ')[0] ?? null }));
   const chosen = ds.find((d) => d.date === e.selectedDate) ?? (ds.length === 1 ? ds[0] : null);
+  const mine = r.dates.filter((d) => d.eventId === e.id).map((d) => r.candidates.find((c) => c.id === d.assignedCandidateId)).find((c) => !!c?.userId && c.userId === meId());
   return {
     roleLabel: r.roleLabel,
     requestId: organizer ? r.id : null,
     status: chosen ? chosen.status : ds.some((d) => d.status === 'confirmed') ? 'partly' : 'pending',
     name: chosen?.name ?? null,
+    hold: r.dates.filter((d) => d.eventId === e.id).every((d) => !d.inviteNow) && !ds.some((d) => d.status === 'confirmed') && !demoHasGuests(e),
+    mine: !!mine,
+    token: mine?.token ?? null,
     dates: ds,
   };
 }
@@ -213,11 +242,13 @@ function demoRoleAssigned(r: DemoRoleRequest, d: import('../types').RoleRequestD
   const c = r.candidates.find((x) => x.id === d.assignedCandidateId);
   if (!c) return;
   const day = d.date.slice(8, 10) + '.' + d.date.slice(5, 7);
-  if (c.userId && c.userId !== r.organizerId) notify(c.userId, { type: 'event_updated', title: `Du er ${r.roleLabel} ${day}`, body: r.title, url: `/r/${c.token}` });
   const e = r.mode === 'each' && d.eventId ? state.events.find((x) => x.id === d.eventId) : undefined;
+  if (c.userId && c.userId !== r.organizerId) {
+    notify(c.userId, { type: 'event_updated', title: `Du er ${r.roleLabel} ${day}`, body: `${e?.title ?? r.title} ligger nå i kalenderen din i appen.`, url: e ? `/event/${e.id}` : `/r/${c.token}` });
+  }
   for (const m of e?.members ?? []) {
     if (m.userId && m.role !== 'organizer' && m.status !== 'declined') {
-      notify(m.userId, { type: 'event_updated', title: `${r.title} ${day} er bekreftet`, body: `${r.roleLabel[0].toUpperCase()}${r.roleLabel.slice(1)} er klar: ${c.name.split(' ')[0]}.`, url: `/event/${e!.id}` });
+      notify(m.userId, { type: 'event_updated', title: `${e!.title} ${day} er bekreftet`, body: `${r.roleLabel[0].toUpperCase()}${r.roleLabel.slice(1)} er klar: ${c.name.split(' ')[0]}.`, url: `/event/${e!.id}` });
     }
   }
 }
@@ -528,7 +559,7 @@ export const demoRepository: Repository = {
 
   async listEvents() {
     await wait();
-    return state.events.filter((e) => e.status !== 'cancelled' && isMemberOf(e)).map(presentEvent);
+    return state.events.filter((e) => e.status !== 'cancelled' && (isMemberOf(e) || demoIsRoleHolder(e))).map(presentEvent);
   },
 
   async getEvent(id) {
@@ -1006,7 +1037,9 @@ export const demoRepository: Repository = {
       mode: input.mode,
       status: 'open',
       createdAt: now(),
-      dates: [...input.dates].sort((a, b) => (a.date < b.date ? -1 : 1)).map((d) => ({ id: uid('rd'), date: d.date, eventId: d.eventId, assignedCandidateId: null, eventCancelled: false, answers: [] })),
+      dates: [...input.dates]
+        .sort((a, b) => (a.date < b.date ? -1 : 1))
+        .map((d) => ({ id: uid('rd'), date: d.date, eventId: d.eventId, assignedCandidateId: null, eventCancelled: false, inviteNow: d.inviteNow ?? true, theme: null, answers: [] })),
       candidates: [],
     };
     roleRequests.unshift(r);
@@ -1059,6 +1092,8 @@ export const demoRepository: Repository = {
           mine: d.assignedCandidateId === c.id,
           taken: !!d.assignedCandidateId && d.assignedCandidateId !== c.id,
           cancelled: d.eventCancelled,
+          theme: d.assignedCandidateId === c.id ? d.theme : null,
+          eventId: d.assignedCandidateId === c.id && r.mode === 'each' && !!c.userId ? d.eventId : null,
         })),
     });
   },
@@ -1070,17 +1105,20 @@ export const demoRepository: Repository = {
     demoSyncCancelled(r);
     const c = r.candidates.find((x) => x.token === token)!;
     let dropped = 0;
+    let got = 0;
+    let ready = 0;
     for (const [dateId, answer] of Object.entries(answers)) {
       const d = r.dates.find((x) => x.id === dateId);
       const a = d?.answers.find((x) => x.candidateId === c.id);
       if (!d || !a || d.eventCancelled) continue;
       a.answer = answer;
       if (answer !== true && d.assignedCandidateId === c.id) {
-        d.assignedCandidateId = null;
+        demoSetAssigned(r, d, null);
         dropped++;
       } else if (answer === true && !d.assignedCandidateId && d.answers.length === 1) {
-        d.assignedCandidateId = c.id;
-        demoRoleAssigned(r, d);
+        demoSetAssigned(r, d, c.id);
+        got++;
+        if (!d.inviteNow && !demoHasGuests(state.events.find((x) => x.id === d.eventId))) ready++;
       }
     }
     c.reply = reply?.trim() || null;
@@ -1090,7 +1128,10 @@ export const demoRepository: Repository = {
     notify(r.organizerId, {
       type: 'response_received',
       title: `${c.name.split(' ')[0]} har svart på ${r.title}`,
-      body: (ok === 0 ? 'Kan ingen av datoene.' : ok === mine.length ? 'Kan alle datoene.' : `Kan ${ok} av ${mine.length} datoer.`) + (dropped ? ` Kan likevel ikke ${dropped} ${dropped === 1 ? 'dato' : 'datoer'} hen hadde.` : ''),
+      body: (ok === 0 ? 'Kan ingen av datoene.' : ok === mine.length ? 'Kan alle datoene.' : `Kan ${ok} av ${mine.length} datoer.`) +
+        (got ? ` ${got} ${got === 1 ? 'dato er bekreftet.' : 'datoer er bekreftet.'}` : '') +
+        (ready ? ' Du kan invitere deltagere nå.' : '') +
+        (dropped ? ` Kan likevel ikke ${dropped} ${dropped === 1 ? 'dato' : 'datoer'} hen hadde.` : ''),
       url: `/rolle/${r.id}`,
     });
   },
@@ -1102,8 +1143,7 @@ export const demoRepository: Repository = {
     if (!r || !d) throw new Error('not_found');
     if (candidateId && !d.answers.some((a) => a.candidateId === candidateId && a.answer === true)) throw new Error('candidate_cannot');
     if (d.assignedCandidateId === candidateId) return;
-    d.assignedCandidateId = candidateId;
-    if (candidateId) demoRoleAssigned(r, d);
+    demoSetAssigned(r, d, candidateId);
   },
 
   async addRoleCandidates(requestId, candidates, dateIds) {
@@ -1120,6 +1160,29 @@ export const demoRepository: Repository = {
     const r = roleRequests.find((x) => x.id === id && x.organizerId === meId() && x.status === 'open');
     if (!r) throw new Error('not_found');
     r.status = 'cancelled';
+    // Events held back for it (nobody invited, never shown) go with it.
+    for (const d of r.dates) {
+      const e = d.eventId ? state.events.find((x) => x.id === d.eventId) : undefined;
+      if (e && !d.inviteNow && !d.assignedCandidateId && !demoHasGuests(e)) e.status = 'cancelled';
+    }
+  },
+
+  async setActivityTheme(eventId, theme) {
+    await wait(150);
+    const e = findEvent(eventId);
+    if (!(e.organizer.id === meId() || e.members.some((m) => m.userId === meId() && m.isCohost) || demoIsRoleHolder(e))) throw new Error('not_allowed');
+    e.activityTheme = theme?.trim() || null;
+  },
+
+  async setRoleTheme(token, dateId, theme) {
+    await wait(150);
+    const r = roleRequests.find((x) => x.status === 'open' && x.candidates.some((c) => c.token === token));
+    const c = r?.candidates.find((x) => x.token === token);
+    const d = r?.dates.find((x) => x.id === dateId && x.assignedCandidateId === c?.id);
+    const e = d?.eventId ? state.events.find((x) => x.id === d.eventId) : undefined;
+    if (!e) throw new Error('not_found');
+    e.activityTheme = theme?.trim() || null;
+    notify(r!.organizerId, { type: 'event_updated', title: `${e.title} ${d!.date.slice(8, 10)}.${d!.date.slice(5, 7)} har fått tema`, body: e.activityTheme ?? '', url: `/event/${e.id}` });
   },
 
   async listMyRoleRequests() {
@@ -1175,7 +1238,9 @@ export const demoRepository: Repository = {
         .filter((m) => m.role === 'organizer' || ['responded', 'attending'].includes(m.status))
         .map((m) => ({ ...freshPerson(m.person), name: freshPerson(m.person).name.split(' ')[0] })),
       pricing: { price: e.price ?? null, maxParticipants: e.maxParticipants ?? null, placesTaken: e.placesTaken ?? null, payingPlaces: e.payingPlaces ?? null, nonPayingPlaces: e.nonPayingPlaces ?? null },
-      activity: e.activityType ? { activityType: e.activityType, rolePlaces: e.rolePlaces ?? 0, venueCapacity: e.venueCapacity ?? null, role: demoActivityRole(e, false) } : null,
+      activity: e.activityType
+        ? { activityType: e.activityType, rolePlaces: e.rolePlaces ?? 0, venueCapacity: e.venueCapacity ?? null, theme: e.activityTheme ?? null, role: demoActivityRole(e, false) }
+        : null,
       myResponse: me ? { memberId: me.id, name: me.person.name, status: me.status, unavailableOptionIds: me.unavailableOptionIds } : null,
     });
   },
