@@ -4,11 +4,11 @@ import { useEffect } from 'react';
 import { useIsSignedIn } from '@/state/session';
 import { repo } from './index';
 import type { GuestResponseInput, ProfilePatch } from './repository';
-import { ACTIVITY_TYPES, type ActivityTypeId } from '@/lib/activities';
+import { roleActivity, type ActivityTypeId } from '@/lib/activities';
 import { firstEventInput, nextEventInput, okDates, type ClearanceInviteMode } from '@/lib/clearance';
 import { periodLabelFor } from '@/lib/dates';
 import type { Price } from '@/lib/price';
-import type { AddMembersInput, CreateClearanceInput, CreateEventInput, CreateGroupInput, DateClearance, EventPatch, GuestInvite, GroupPatch, GroupRole, MyPhone, NotificationPreferences, PlannerEvent, ReportInput, Venue } from './types';
+import type { ActivityDetailsData, KitRef, AddMembersInput, CreateClearanceInput, CreateEventInput, CreateGroupInput, DateClearance, EventPatch, GuestInvite, GroupPatch, GroupRole, MyPhone, NotificationPreferences, PlannerEvent, ReportInput, Venue } from './types';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -576,6 +576,33 @@ export function useSetActivityTheme(eventId: string) {
   return useMutation({ mutationFn: (theme: string | null) => repo.setActivityTheme(eventId, theme), onSuccess: () => invalidateAll(qc) });
 }
 
+export function useSetActivityDetails() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ eventId, type, details, bring }: { eventId: string; type: string; details: ActivityDetailsData; bring?: string[] | null }) => repo.setActivityDetails(eventId, type, details, bring),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
+/** Diets, the bring list, rides and poker results — by event id, or by invite link for guests. */
+export function useEventKit(ref: KitRef) {
+  return useQuery({ queryKey: ['kit', ref.eventId ?? null, ref.token ?? null], queryFn: () => repo.getEventKit(ref), enabled: !!(ref.eventId || ref.token) });
+}
+
+export function useKitActions(ref: KitRef) {
+  const qc = useQueryClient();
+  const done = () => qc.invalidateQueries({ queryKey: ['kit'] });
+  return {
+    diet: useMutation({ mutationFn: (diet: string | null) => repo.kitSetDiet(ref, diet), onSuccess: done }),
+    bring: useMutation({ mutationFn: ({ action, itemId, label }: { action: 'claim' | 'unclaim' | 'add' | 'remove'; itemId?: string; label?: string }) => repo.kitBring(ref, action, { itemId, label }), onSuccess: done }),
+    ride: useMutation({ mutationFn: ({ action, rideId, seats, from }: { action: 'offer' | 'cancel' | 'join' | 'leave'; rideId?: string; seats?: number; from?: string | null }) => repo.kitRide(ref, action, { rideId, seats, from }), onSuccess: done }),
+    poker: useMutation({
+      mutationFn: ({ eventId, memberId, buyIns, cashOutOre }: { eventId: string; memberId: string; buyIns: number | null; cashOutOre?: number | null }) => repo.kitPokerSet(eventId, memberId, buyIns, cashOutOre),
+      onSuccess: done,
+    }),
+  };
+}
+
 export function useSetRoleTheme(token: string) {
   const qc = useQueryClient();
   return useMutation({ mutationFn: ({ dateId, theme }: { dateId: string; theme: string | null }) => repo.setRoleTheme(token, dateId, theme), onSuccess: () => invalidateAll(qc) });
@@ -609,7 +636,8 @@ export interface ActivityPlanInput {
  * invites the participants only where asked to, and sends one request about every date.
  */
 export async function createActivityPlan(input: ActivityPlanInput) {
-  const type = ACTIVITY_TYPES[input.activityType];
+  const type = roleActivity(input.activityType);
+  if (!type) throw new Error('Ukjent aktivitet');
   const dates = [...new Set(input.dates)].sort();
   if (!dates.length) throw new Error('Velg minst én dato');
   if (!input.candidates.length) throw new Error(`Velg hvem som skal spørres som ${type.role.lower}`);

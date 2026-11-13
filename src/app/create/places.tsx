@@ -4,7 +4,7 @@ import { View } from 'react-native';
 
 import { ACTIVITY_STEPS, StepHeader } from '@/components/create/StepHeader';
 import { BottomBar, Button, Card, Divider, Icon, Input, PageTitle, PressableScale, Screen, ScreenScroll, SectionHeader, Text } from '@/components/ui';
-import { activityType, maxParticipantsFor } from '@/lib/activities';
+import { roleActivity, maxParticipantsFor } from '@/lib/activities';
 import { describeSharedPrice, formatKr, parseKr } from '@/lib/price';
 import { useCreateDraft } from '@/state/createDraft';
 import { spacing, useColors } from '@/theme';
@@ -17,7 +17,7 @@ import { spacing, useColors } from '@/theme';
 export default function CreatePlaces() {
   const colors = useColors();
   const draft = useCreateDraft();
-  const type = activityType(draft.activityType);
+  const type = roleActivity(draft.activityType);
   const [priceText, setPriceText] = useState(draft.price ? formatKr(draft.price.amountOre).replace(' kr', '') : '');
   if (!type) return null;
 

@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { Card, Icon, PressableScale, Tag, Text, type IconName } from '@/components/ui';
 import type { EventActivityRole } from '@/data/types';
-import { activityType } from '@/lib/activities';
+import { roleActivity } from '@/lib/activities';
 import type { ColorTokens } from '@/theme/tokens';
 import { spacing } from '@/theme';
 
@@ -15,7 +15,7 @@ export const isProvisional = (role: EventActivityRole | null | undefined) => !!r
  * the event is provisional until someone confirms. The organizer opens the request from here.
  */
 export function ActivityRoleCard({ activity, role, isOrganizer, style }: { activity: string | null | undefined; role: EventActivityRole | null | undefined; isOrganizer: boolean; style?: object }) {
-  const type = activityType(activity);
+  const type = roleActivity(activity);
   if (!type || !role) return null;
   const label = type.role.label;
   const lower = type.role.lower;

@@ -6,6 +6,7 @@ import { normalizeUsername, usernameFormatProblem } from '@/lib/username';
 import type { ProfilePatch, Repository } from '../repository';
 import type {
   AppNotification,
+  KitRef,
   Discoverability,
   EventMember,
   EventMessage,
@@ -364,6 +365,35 @@ function viewerMember(e: PlannerEvent, personalGuestId: string | null): EventMem
   if (personalGuestId) return e.members.find((m) => m.person.id === personalGuestId && !m.userId);
   return e.members.find((m) => !m.userId && deviceGuestIds.includes(m.person.id));
 }
+
+// --- Activity kits: diets, bring list, rides, poker (in memory, per event) ---
+type DemoKit = {
+  diets: Map<string, string>;
+  bring: { id: string; label: string; claimedBy: string | null; addedBy: string | null }[];
+  rides: { id: string; driverId: string; seats: number; from: string | null; passengers: string[] }[];
+  poker: Map<string, { buyIns: number; cashOutOre: number | null }>;
+};
+const kits = new Map<string, DemoKit>();
+const kitOf = (eventId: string): DemoKit => {
+  let k = kits.get(eventId);
+  if (!k) kits.set(eventId, (k = { diets: new Map(), bring: [], rides: [], poker: new Map() }));
+  return k;
+};
+
+/** The event and who is asking, by id (signed in) or by invite link. */
+function kitResolve(ref: KitRef): { e: PlannerEvent; me: EventMember | undefined; org: boolean } {
+  const found = ref.token ? resolveToken(ref.token) : null;
+  const e = found?.event ?? (ref.eventId ? findEvent(ref.eventId) : undefined);
+  if (!e) throw new Error('not_found');
+  const me = found ? viewerMember(e, found.guestId) : e.members.find((m) => m.userId === meId());
+  const org = state.signedIn && (e.organizer.id === meId() || e.members.some((m) => m.userId === meId() && m.isCohost));
+  return { e, me, org };
+}
+
+const kitFirst = (e: PlannerEvent, memberId: string | null) => {
+  const m = memberId ? e.members.find((x) => x.id === memberId) : undefined;
+  return m ? m.person.name.split(' ')[0] : 'Gjest';
+};
 
 function refreshGroupRefs() {
   for (const g of state.groups) {
@@ -1172,6 +1202,116 @@ export const demoRepository: Repository = {
     const e = findEvent(eventId);
     if (!(e.organizer.id === meId() || e.members.some((m) => m.userId === meId() && m.isCohost) || demoIsRoleHolder(e))) throw new Error('not_allowed');
     e.activityTheme = theme?.trim() || null;
+  },
+
+  async setActivityDetails(eventId, type, details, bring) {
+    await wait(150);
+    const e = findEvent(eventId);
+    if (e.organizer.id !== meId()) throw new Error('not_allowed');
+    if (e.activityType && e.activityType !== type) throw new Error('type_locked');
+    e.activityType = type;
+    e.activityDetails = details;
+    const k = kitOf(eventId);
+    if (bring?.length && !k.bring.length) {
+      for (const label of bring.map((b) => b.trim()).filter(Boolean)) k.bring.push({ id: uid('bring'), label, claimedBy: null, addedBy: null });
+    }
+  },
+
+  async getEventKit(ref) {
+    await wait(100);
+    const { e, me, org } = kitResolve(ref);
+    if (!ref.token && !me && !org) return null;
+    const k = kitOf(e.id);
+    return {
+      me: me?.id ?? null,
+      organizer: org,
+      details: e.activityDetails ?? null,
+      myDiet: me ? (k.diets.get(me.id) ?? null) : null,
+      diets: org ? [...k.diets].map(([memberId, diet]) => ({ memberId, name: kitFirst(e, memberId), diet })).sort((a, b) => a.name.localeCompare(b.name)) : null,
+      bring: k.bring.map((b) => ({ id: b.id, label: b.label, claimedBy: b.claimedBy ? kitFirst(e, b.claimedBy) : null, mine: !!me && b.claimedBy === me.id, addedByMe: !!me && b.addedBy === me.id })),
+      rides: k.rides.map((r) => ({
+        id: r.id,
+        driver: kitFirst(e, r.driverId),
+        mine: !!me && r.driverId === me.id,
+        seats: r.seats,
+        from: r.from,
+        passengers: r.passengers.map((p) => kitFirst(e, p)),
+        joined: !!me && r.passengers.includes(me.id),
+      })),
+      poker: me || org ? [...k.poker].map(([memberId, p]) => ({ memberId, name: kitFirst(e, memberId), buyIns: p.buyIns, cashOutOre: p.cashOutOre })).sort((a, b) => a.name.localeCompare(b.name)) : [],
+    };
+  },
+
+  async kitSetDiet(ref, diet) {
+    await wait(100);
+    const { e, me } = kitResolve(ref);
+    if (!me) throw new Error('not_member');
+    const k = kitOf(e.id);
+    if (diet?.trim()) k.diets.set(me.id, diet.trim().slice(0, 200));
+    else k.diets.delete(me.id);
+  },
+
+  async kitBring(ref, action, input) {
+    await wait(100);
+    const { e, me, org } = kitResolve(ref);
+    if (!me && !org) throw new Error('not_member');
+    const k = kitOf(e.id);
+    if (action === 'add') {
+      const label = input.label?.trim();
+      if (!label) throw new Error('bad_label');
+      k.bring.push({ id: uid('bring'), label: label.slice(0, 80), claimedBy: org ? null : (me?.id ?? null), addedBy: me?.id ?? null });
+      return;
+    }
+    const item = k.bring.find((b) => b.id === input.itemId);
+    if (!item) throw new Error('not_found');
+    if (action === 'claim') {
+      if (!me) throw new Error('not_member');
+      if (item.claimedBy && item.claimedBy !== me.id) throw new Error('taken');
+      item.claimedBy = me.id;
+    } else if (action === 'unclaim') {
+      if (!(org || item.claimedBy === me?.id)) throw new Error('not_allowed');
+      item.claimedBy = null;
+    } else {
+      if (!(org || (item.addedBy && item.addedBy === me?.id))) throw new Error('not_allowed');
+      k.bring = k.bring.filter((b) => b.id !== item.id);
+    }
+  },
+
+  async kitRide(ref, action, input) {
+    await wait(100);
+    const { e, me } = kitResolve(ref);
+    if (!me) throw new Error('not_member');
+    const k = kitOf(e.id);
+    const leave = () => k.rides.forEach((r) => (r.passengers = r.passengers.filter((p) => p !== me.id)));
+    if (action === 'offer') {
+      if (!input.seats || input.seats < 1 || input.seats > 8) throw new Error('bad_seats');
+      leave();
+      const mine = k.rides.find((r) => r.driverId === me.id);
+      if (mine && mine.passengers.length > input.seats) throw new Error('seats_taken');
+      if (mine) Object.assign(mine, { seats: input.seats, from: input.from?.trim() || null });
+      else k.rides.push({ id: uid('ride'), driverId: me.id, seats: input.seats, from: input.from?.trim() || null, passengers: [] });
+    } else if (action === 'cancel') {
+      k.rides = k.rides.filter((r) => r.driverId !== me.id);
+    } else if (action === 'join') {
+      const r = k.rides.find((x) => x.id === input.rideId);
+      if (!r) throw new Error('not_found');
+      if (r.driverId === me.id || k.rides.some((x) => x.driverId === me.id)) throw new Error('is_driver');
+      if (r.passengers.filter((p) => p !== me.id).length >= r.seats) throw new Error('full');
+      leave();
+      r.passengers.push(me.id);
+    } else {
+      leave();
+    }
+  },
+
+  async kitPokerSet(eventId, memberId, buyIns, cashOutOre) {
+    await wait(100);
+    const e = findEvent(eventId);
+    if (e.organizer.id !== meId()) throw new Error('not_allowed');
+    if (!e.members.some((m) => m.id === memberId)) throw new Error('not_found');
+    const k = kitOf(eventId);
+    if (buyIns === null) k.poker.delete(memberId);
+    else k.poker.set(memberId, { buyIns, cashOutOre: cashOutOre ?? null });
   },
 
   async setRoleTheme(token, dateId, theme) {

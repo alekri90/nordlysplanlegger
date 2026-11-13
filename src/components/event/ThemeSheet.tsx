@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { Button, Chip, Input, Sheet, Text } from '@/components/ui';
-import { activityType, type ActivityType } from '@/lib/activities';
+import { activityType, type ActivityThemeSpec } from '@/lib/activities';
 import { haptics } from '@/lib/haptics';
 import { spacing } from '@/theme';
 
@@ -22,24 +22,24 @@ type Props = {
  */
 export function ThemeSheet({ visible, onClose, activity, value, subtitle, loading, onSave }: Props) {
   const type = activityType(activity);
-  if (!type) return null;
+  if (!type?.theme) return null;
   const label = type.theme.label.toLowerCase();
   return (
     <Sheet visible={visible} onClose={onClose} title={value ? `Endre ${label}` : `Legg til ${label}`} subtitle={subtitle}>
       {/* Starts from the saved theme each time it opens. */}
-      <ThemeForm key={`${visible}-${value ?? ''}`} type={type} value={value} loading={loading} onSave={onSave} />
+      <ThemeForm key={`${visible}-${value ?? ''}`} theme={type.theme} who={type.kind === 'role' ? `${type.role.label} og arrangøren kan endre det.` : 'Bare arrangøren kan endre det.'} value={value} loading={loading} onSave={onSave} />
     </Sheet>
   );
 }
 
-function ThemeForm({ type, value, loading, onSave }: { type: ActivityType; value: string | null; loading?: boolean; onSave: (theme: string | null) => void }) {
+function ThemeForm({ theme, who, value, loading, onSave }: { theme: ActivityThemeSpec; who: string; value: string | null; loading?: boolean; onSave: (theme: string | null) => void }) {
   const [text, setText] = useState(value ?? '');
   const trimmed = text.trim();
   return (
     <View style={{ gap: spacing.lg }}>
       <Input
-        label={type.theme.label}
-        placeholder={type.theme.placeholder}
+        label={theme.label}
+        placeholder={theme.placeholder}
         value={text}
         onChangeText={setText}
         maxLength={80}
@@ -47,7 +47,7 @@ function ThemeForm({ type, value, loading, onSave }: { type: ActivityType; value
         onSubmitEditing={() => trimmed && onSave(trimmed)}
       />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-        {type.theme.suggestions.map((s) => (
+        {theme.suggestions.map((s) => (
           <Chip
             key={s}
             label={s}
@@ -60,10 +60,10 @@ function ThemeForm({ type, value, loading, onSave }: { type: ActivityType; value
         ))}
       </View>
       <Text variant="footnote" color="textSecondary">
-        Vises under tittelen for alle som er med. {type.role.label} og arrangøren kan endre det.
+        Vises under tittelen for alle som er med. {who}
       </Text>
       <Button title="Lagre" variant="ink" disabled={!trimmed || trimmed === (value ?? '')} loading={loading} onPress={() => onSave(trimmed)} />
-      {value ? <Button title={`Fjern ${type.theme.label.toLowerCase()}`} variant="secondary" disabled={loading} onPress={() => onSave(null)} /> : null}
+      {value ? <Button title={`Fjern ${theme.label.toLowerCase()}`} variant="secondary" disabled={loading} onPress={() => onSave(null)} /> : null}
     </View>
   );
 }

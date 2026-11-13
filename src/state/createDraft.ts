@@ -67,6 +67,10 @@ export type CreateDraft = {
   inviteNow: boolean;
   /** … unless changed for a single date: date → now (true) / later (false). */
   inviteOverrides: Record<string, boolean>;
+  /** A building-block type's own fields (variant, menu, distance …), as text. */
+  activityDetails: Record<string, string>;
+  /** The first «hvem tar med hva» list. */
+  bringItems: string[];
 };
 
 type Actions = {
@@ -117,6 +121,8 @@ const initial = (): CreateDraft => ({
   roleNote: '',
   inviteNow: false,
   inviteOverrides: {},
+  activityDetails: {},
+  bringItems: [],
 });
 
 export const useCreateDraft = create<CreateDraft & Actions>((set, get) => ({
@@ -132,7 +138,10 @@ export const useCreateDraft = create<CreateDraft & Actions>((set, get) => ({
       category,
       coverImageUrl: coverTouched ? coverImageUrl : defaultCoverFor(title, category),
       maxParticipants: type?.requiresPlaces ? (maxParticipants ?? type.defaultPlaces) : null,
-      ...(!type && { venue: null, roleCandidates: [], roleNote: '', price: null }),
+      ...(type?.kind !== 'role' && { venue: null, roleCandidates: [], roleNote: '' }),
+      price: null,
+      activityDetails: {},
+      bringItems: type?.kind === 'kit' && type.kit.bring ? type.kit.bring.suggestions.slice(0, 4) : [],
       clearance: false,
       spontaneous: false,
       repeat: { ...get().repeat, enabled: false },

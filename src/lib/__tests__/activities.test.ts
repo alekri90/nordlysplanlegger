@@ -12,7 +12,12 @@ describe('activity types', () => {
     for (const t of ['auf', 'Aufguss', 'aufguss med jentene', 'badstue', 'Badstu tirsdag', 'sauna']) {
       assert.deepEqual(matchActivities(t).map((a) => a.id), ['aufguss'], t);
     }
-    for (const t of ['', 'au', 'Middag', 'badetur', 'Fotball']) assert.deepEqual(matchActivities(t), [], t);
+    for (const t of ['', 'au', 'badetur', 'Fotball', 'Kortkveld', 'Pokemon-kveld']) assert.deepEqual(matchActivities(t), [], t);
+  });
+
+  it('suggests the other types while typing', () => {
+    const cases: [string, string][] = [['Pokerkveld', 'poker'], ['Middag hos oss', 'dinner'], ['Løpetur fredag', 'run'], ['Knytteknute', 'potluck'], ['Padel', 'racket'], ['Tennis med Ola', 'racket'], ['Fjelltur til Kolsås', 'hike']];
+    for (const [t, id] of cases) assert.deepEqual(matchActivities(t).map((a) => a.id), [id], t);
   });
 
   it('reads weekdays and a saved venue from the text', () => {

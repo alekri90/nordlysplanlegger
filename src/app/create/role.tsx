@@ -7,7 +7,7 @@ import { ACTIVITY_STEPS, StepHeader } from '@/components/create/StepHeader';
 import { PersonRow } from '@/components/people/PersonRow';
 import { BottomBar, Button, Card, Divider, Icon, Input, ListRow, PageTitle, PressableScale, Screen, ScreenScroll, SectionHeader, Text } from '@/components/ui';
 import { useFriends, useVenues } from '@/data/hooks';
-import { activityType, venueIn } from '@/lib/activities';
+import { roleActivity, venueIn } from '@/lib/activities';
 import { firstName } from '@/lib/eventText';
 import { haptics } from '@/lib/haptics';
 import { useCreateDraft } from '@/state/createDraft';
@@ -20,7 +20,7 @@ import { radius, spacing, useColors } from '@/theme';
 export default function CreateRole() {
   const colors = useColors();
   const draft = useCreateDraft();
-  const type = activityType(draft.activityType);
+  const type = roleActivity(draft.activityType);
   const venues = useVenues(type?.id);
   const friends = useFriends();
   const [adding, setAdding] = useState(false);

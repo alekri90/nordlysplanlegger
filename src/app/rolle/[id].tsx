@@ -11,7 +11,7 @@ import { repo } from '@/data';
 import { queryClient, useAddRoleCandidates, useAssignRole, useCancelRoleRequest, useEvents, useFriends, useRoleRequest, useSetActivityTheme } from '@/data/hooks';
 import type { ColorTokens } from '@/theme/tokens';
 import type { PlannerEvent, RoleCandidate, RoleDateStatus, RoleRequest, RoleRequestDate } from '@/data/types';
-import { activityType } from '@/lib/activities';
+import { roleActivity } from '@/lib/activities';
 import { roleRequestUrl } from '@/lib/config';
 import { formatLong } from '@/lib/dates';
 import { firstName, timeHintLabel } from '@/lib/eventText';
@@ -59,7 +59,7 @@ function Overview({ r, fresh }: { r: RoleRequest; fresh: boolean }) {
   const events = useEvents({ includeHeld: true });
   const assign = useAssignRole();
   const cancel = useCancelRoleRequest();
-  const type = activityType(r.activityType);
+  const type = roleActivity(r.activityType);
   const roleLabel = type?.role.label ?? r.roleLabel;
   const [open, setOpen] = useState<RoleRequestDate | null>(null);
   const [share, setShare] = useState<RoleCandidate | null>(null);
@@ -240,7 +240,7 @@ function Overview({ r, fresh }: { r: RoleRequest; fresh: boolean }) {
 function DateRow({ d, status, r, event, onPress }: { d: RoleRequestDate; status: RoleDateStatus; r: RoleRequest; event?: PlannerEvent; onPress: () => void }) {
   const look = STATUS_LOOK[status];
   const can = whoCan(d, r.candidates);
-  const label = dateStatusLabel(status, { roleLabel: activityType(r.activityType)?.role.label ?? r.roleLabel, name: assignedTo(d, r.candidates)?.name ?? can[0]?.name, canCount: can.length });
+  const label = dateStatusLabel(status, { roleLabel: roleActivity(r.activityType)?.role.label ?? r.roleLabel, name: assignedTo(d, r.candidates)?.name ?? can[0]?.name, canCount: can.length });
   const guests = event ? event.members.filter((m) => m.role !== 'organizer') : [];
   const coming = guests.filter((m) => m.status === 'attending').length;
   const held = isHeld(d, event);
@@ -254,7 +254,7 @@ function DateRow({ d, status, r, event, onPress }: { d: RoleRequestDate; status:
             ? 'Klar – inviter deltagere'
             : 'Inviteres senere'
           : 'Ingen invitert';
-  const theme = d.theme ? `${activityType(r.activityType)?.theme.label ?? 'Tema'}: ${d.theme}` : null;
+  const theme = d.theme ? `${roleActivity(r.activityType)?.theme.label ?? 'Tema'}: ${d.theme}` : null;
   return (
     <PressableScale onPress={onPress} scaleTo={0.99} accessibilityRole="button" accessibilityLabel={`${formatLong(d.date)}: ${label}${people ? `. ${people}` : ''}`} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md }}>
       <Icon name={look.icon} size={20} color={look.color} />
@@ -281,7 +281,7 @@ function DateRow({ d, status, r, event, onPress }: { d: RoleRequestDate; status:
 function DateTheme({ d, r, onClose }: { d: RoleRequestDate; r: RoleRequest; onClose: () => void }) {
   const toast = useToast();
   const set = useSetActivityTheme(d.eventId!);
-  const label = activityType(r.activityType)?.theme.label ?? 'Tema';
+  const label = roleActivity(r.activityType)?.theme.label ?? 'Tema';
   return (
     <ThemeSheet
       visible
@@ -322,7 +322,7 @@ function DateSheet({
   busy: boolean;
   onClose: () => void;
 }) {
-  const type = activityType(r.activityType);
+  const type = roleActivity(r.activityType);
   const held = isHeld(d, event);
   const status = dateStatus(d, r.status === 'cancelled');
   const can = whoCan(d, r.candidates);

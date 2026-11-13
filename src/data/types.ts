@@ -215,6 +215,59 @@ export interface PlannerEvent {
   activityRole?: EventActivityRole | null;
   /** A theme for the evening («Eukalyptus»), set by the organizer or the one with the role. */
   activityTheme?: string | null;
+  /** A building-block type's own fields (buy-in structure, menu, distance …). */
+  activityDetails?: ActivityDetailsData | null;
+}
+
+/** What a building-block type stores on the event: its own fields as text. */
+export interface ActivityDetailsData {
+  fields?: Record<string, string>;
+}
+
+// ---------------------------------------------------------------------------
+// Activity kits: diets, the bring list, rides and poker results for one event
+// ---------------------------------------------------------------------------
+
+/** Which event: by id when signed in, or by invite link for guests without an account. */
+export type KitRef = { eventId?: string | null; token?: string | null };
+
+export interface KitBringItem {
+  id: string;
+  label: string;
+  /** First name of the one bringing it. */
+  claimedBy: string | null;
+  mine: boolean;
+  addedByMe: boolean;
+}
+
+export interface KitRide {
+  id: string;
+  driver: string;
+  mine: boolean;
+  seats: number;
+  from: string | null;
+  passengers: string[];
+  joined: boolean;
+}
+
+export interface KitPokerRow {
+  memberId: string;
+  name: string;
+  buyIns: number;
+  cashOutOre: number | null;
+}
+
+export interface EventKit {
+  /** My member id; null when only looking (link not answered yet). */
+  me: string | null;
+  organizer: boolean;
+  details: ActivityDetailsData | null;
+  myDiet: string | null;
+  /** Everyone's diets — only for the organizer side. */
+  diets: { memberId: string; name: string; diet: string }[] | null;
+  bring: KitBringItem[];
+  rides: KitRide[];
+  poker: KitPokerRow[];
 }
 
 // ---------------------------------------------------------------------------

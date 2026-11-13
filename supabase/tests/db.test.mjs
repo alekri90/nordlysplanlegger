@@ -1498,5 +1498,81 @@ console.log('\nAufguss: invite later, the sauna master sees the event, themes');
   });
 }
 
+console.log('\nActivity kits: details, diets, bring list, rides, poker');
+{
+  const asUser = async (u, sql, args) => { await as(u); await db.exec('set role authenticated'); try { return await q(sql, args); } finally { await db.exec('reset role'); } };
+  const asAnon = async (sql, args) => { await as(null); await db.exec('set role anon'); try { return await q(sql, args); } finally { await db.exec('reset role'); } };
+  const host = await newUser('host@example.com', { display_name: 'Emma Vert', username: 'emmavert' });
+  const p1 = await newUser('p1@example.com', { display_name: 'Per Spiller', username: 'perspiller' });
+  const p2 = await newUser('p2@example.com', { display_name: 'Kari Spiller', username: 'karispiller' });
+  const outsider = await newUser('out@example.com', { display_name: 'Ute Person', username: 'utep' });
+  const befriend = async (x, y) => { await as(x); await q('select send_friend_request($1)', [y]); await as(y); await q('select send_friend_request($1)', [x]); };
+  await befriend(host, p1);
+  await befriend(host, p2);
+  const [{ r }] = await asUser(host, `select create_event($1) r`, [{ title: 'Knytteknute', category: 'dinner', date_mode: 'fixed', fixed_date: '2026-12-04', time_hint: 'evening', member_user_ids: [p1, p2], guest_names: ['Lise'] }]);
+  const ev = r.event_id;
+  const lise = r.guests[0].token;
+  const [{ m: p1m }] = await q(`select id m from event_members where event_id = $1 and user_id = $2`, [ev, p1]);
+  const kit = async (u, args = [ev, null, null]) => (await (u === 'anon' ? asAnon(`select get_event_kit($1, $2, $3) k`, args) : asUser(u, `select get_event_kit($1, $2, $3) k`, args)))[0].k;
+
+  await check('the organizer sets type, details and the first bring list; others cannot', async () => {
+    await asUser(host, `select set_activity_details($1, 'potluck', $2, $3)`, [ev, { fields: { theme: 'Italiensk' } }, ['Salat', 'Dessert', ' ']]);
+    const [e] = await q(`select activity_type, activity_details from events where id = $1`, [ev]);
+    assert.deepEqual([e.activity_type, e.activity_details.fields.theme], ['potluck', 'Italiensk']);
+    assert.equal((await kit(p1)).bring.length, 2);
+    await assert.rejects(asUser(p1, `select set_activity_details($1, 'poker', '{}')`, [ev]), /not_allowed/);
+    await assert.rejects(asUser(host, `select set_activity_details($1, 'poker', '{}')`, [ev]), /type_locked/);
+    assert.equal(await kit(outsider), null, 'not for people outside the event');
+    await assert.rejects(asUser(outsider, `select kit_set_diet($1, 'x')`, [ev]), /not_member/);
+  });
+
+  await check('the bring list: claim, no double claims, a guest by link adds their own, removing is limited', async () => {
+    const [salat] = (await kit(p1)).bring;
+    await asUser(p1, `select kit_bring($1, 'claim', $2)`, [ev, salat.id]);
+    await assert.rejects(asUser(p2, `select kit_bring($1, 'claim', $2)`, [ev, salat.id]), /taken/);
+    await asAnon(`select kit_bring(null, 'add', null, 'Brød', $1)`, [lise]);
+    const list = (await kit('anon', [null, lise, null])).bring;
+    const brod = list.find((b) => b.label === 'Brød');
+    assert.deepEqual([brod.claimed_by, brod.mine, brod.added_by_me], ['Lise', true, true]);
+    assert.equal(list.find((b) => b.label === 'Salat').claimed_by, 'Per');
+    await assert.rejects(asUser(p2, `select kit_bring($1, 'remove', $2)`, [ev, brod.id]), /not_allowed/);
+    await asUser(host, `select kit_bring($1, 'unclaim', $2)`, [ev, salat.id]);
+    assert.equal((await kit(p2)).bring.find((b) => b.label === 'Salat').claimed_by, null);
+  });
+
+  await check('diets: only the organizer sees everyone’s, each person their own', async () => {
+    await asUser(p1, `select kit_set_diet($1, ' Nøtteallergi ')`, [ev]);
+    await asAnon(`select kit_set_diet(null, 'Vegetar', $1)`, [lise]);
+    assert.equal((await kit(p1)).my_diet, 'Nøtteallergi');
+    assert.equal((await kit(p1)).diets, null);
+    assert.deepEqual((await kit(host)).diets.map((d) => `${d.name}: ${d.diet}`), ['Lise: Vegetar', 'Per: Nøtteallergi']);
+    await asUser(p1, `select kit_set_diet($1, '')`, [ev]);
+    assert.equal((await kit(p1)).my_diet, null);
+  });
+
+  await check('rides: offer seats, join until full, one ride each', async () => {
+    await asUser(p1, `select kit_ride($1, 'offer', null, 1, 'Majorstuen')`, [ev]);
+    const [ride] = (await kit(p2)).rides;
+    assert.deepEqual([ride.driver, ride.seats, ride.from], ['Per', 1, 'Majorstuen']);
+    await asUser(p2, `select kit_ride($1, 'join', $2)`, [ev, ride.id]);
+    await assert.rejects(asAnon(`select kit_ride(null, 'join', $1, null, null, $2)`, [ride.id, lise]), /full/);
+    await assert.rejects(asUser(p1, `select kit_ride($1, 'offer', null, 0)`, [ev]), /bad_seats/);
+    const mine = (await kit(p2)).rides[0];
+    assert.deepEqual([mine.joined, mine.passengers], [true, ['Kari']]);
+    await asUser(p2, `select kit_ride($1, 'leave')`, [ev]);
+    await asAnon(`select kit_ride(null, 'join', $1, null, null, $2)`, [ride.id, lise]);
+    assert.deepEqual((await kit(p1)).rides[0].passengers, ['Lise']);
+  });
+
+  await check('poker: the organizer keeps the score; players see it, outsiders cannot set it', async () => {
+    await asUser(host, `select kit_poker_set($1, $2, 2, 0)`, [ev, p1m]);
+    await assert.rejects(asUser(p1, `select kit_poker_set($1, $2, 1, 100)`, [ev, p1m]), /not_allowed/);
+    const [row] = (await kit(p2)).poker;
+    assert.deepEqual([row.name, row.buy_ins, row.cash_out_ore], ['Per', 2, 0]);
+    await asUser(host, `select kit_poker_set($1, $2, null)`, [ev, p1m]);
+    assert.equal((await kit(p2)).poker.length, 0);
+  });
+}
+
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);

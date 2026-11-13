@@ -18,7 +18,8 @@ import { CATEGORIES } from '@/lib/categories';
 import { formatLong, formatTime } from '@/lib/dates';
 import { firstName, inviteSubtitle, optionsSummary, timeHintLabel } from '@/lib/eventText';
 import { getGuestName } from '@/lib/guestIdentity';
-import { activityType } from '@/lib/activities';
+import { activityType, kitActivity, roleActivity } from '@/lib/activities';
+import { ActivityKit } from '@/components/event/ActivityKit';
 import { describePrice, describeSharedPrice } from '@/lib/price';
 import { useMe } from '@/state/session';
 import { gutter, radius, spacing, useColors } from '@/theme';
@@ -82,7 +83,9 @@ function InvitationView({ invite }: { invite: InviteView }) {
       : `${pricing.maxParticipants - (pricing.placesTaken ?? 0)} av ${pricing.maxParticipants} plasser ledige`
     : null;
   // An activity type (Aufguss): the role comes on top of the places, and the shared total is an estimate until full.
-  const activity = activityType(invite.activity?.activityType);
+  const activity = roleActivity(invite.activity?.activityType);
+  const kit = kitActivity(invite.activity?.activityType);
+  const themeSpec = activityType(invite.activity?.activityType)?.theme ?? null;
   const role = invite.activity?.role ?? null;
   const provisional = !!activity && !!role && role.status !== 'confirmed' && role.status !== 'cancelled';
   const shared = activity && pricing?.price?.mode === 'split' ? describeSharedPrice(pricing.price.amountOre, pricing) : null;
@@ -132,9 +135,9 @@ function InvitationView({ invite }: { invite: InviteView }) {
             <Text variant="display" style={{ color: '#fff' }} accessibilityRole="header">
               {e.title}
             </Text>
-            {activity && invite.activity?.theme ? (
+            {themeSpec && invite.activity?.theme ? (
               <Text variant="title3" style={{ color: '#fff', marginTop: spacing.xs }}>
-                {activity.theme.label}: {invite.activity.theme}
+                {themeSpec.label}: {invite.activity.theme}
               </Text>
             ) : null}
             <Text variant="title3" style={{ color: 'rgba(255,255,255,0.85)', marginTop: spacing.xs }}>
@@ -265,6 +268,7 @@ function InvitationView({ invite }: { invite: InviteView }) {
             </PressableScale>
           </View>
           {/* Signed-in members also see the organizer's updates here while the date is being found. */}
+          {kit && !isOrganizer ? <ActivityKit type={kit} event={null} token={invite.token} style={{ marginTop: spacing.lg }} /> : null}
           {me && !isOrganizer ? <EventMessages eventId={e.id} isOrganizer={false} style={{ marginTop: spacing.lg }} /> : null}
         </Animated.View>
       </ScrollView>

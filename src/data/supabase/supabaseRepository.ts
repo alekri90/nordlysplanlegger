@@ -8,7 +8,7 @@ import type { PriceMode } from '@/lib/price';
 import type { RepeatConfig, RepeatDateMode, RepeatUnit } from '@/lib/recurrence';
 import { isLocalUri, readImageBytes } from '@/lib/upload';
 import type { Repository } from '../repository';
-import type {
+import type { ActivityDetailsData, EventKit,
   AppNotification,
   CategoryId,
   ClaimResult,
@@ -75,6 +75,7 @@ type EventRow = {
   venue_capacity: number | null;
   activity_role: ActivityRoleRow | null;
   activity_theme: string | null;
+  activity_details: ActivityDetailsData | null;
   organizer: ProfileRow | null;
   location: { name: string; address: string | null; details_pending: boolean } | null;
   options: { id: string; date: string }[];
@@ -111,7 +112,7 @@ type EventRow = {
 const EVENT_SELECT = `
   id, title, category, cover_image_url, status, date_mode, group_id, period_label, time_hint,
   start_time, selected_date, selected_option_id, description, created_at, locked_at, max_participants, places_taken, guests_can_invite, spontaneous,
-  price_ore, price_mode, paying_places, non_paying_places, activity_type, role_places, venue_capacity, activity_role, activity_theme,
+  price_ore, price_mode, paying_places, non_paying_places, activity_type, role_places, venue_capacity, activity_role, activity_theme, activity_details,
   organizer:profiles!events_organizer_id_fkey(id, display_name, avatar_url, username),
   location:event_locations(name, address, details_pending),
   options:event_date_options!event_date_options_event_id_fkey(id, date),
@@ -295,6 +296,7 @@ function toEvent(r: EventRow): PlannerEvent {
     venueCapacity: r.venue_capacity,
     activityRole: toActivityRole(r.activity_role),
     activityTheme: r.activity_theme ?? null,
+    activityDetails: r.activity_details ?? null,
     spontaneous: r.spontaneous,
     inviteToken: r.invites?.find((i) => !i.revoked_at)?.token ?? '',
     photos: (r.images ?? []).filter((i) => i.kind === 'memory').map((i) => i.url),
@@ -519,6 +521,28 @@ async function requireUserId(): Promise<string> {
 // ---------------------------------------------------------------------------
 // Repository
 // ---------------------------------------------------------------------------
+
+type KitRow = {
+  me: string | null;
+  organizer: boolean;
+  details: ActivityDetailsData | null;
+  my_diet: string | null;
+  diets: { member_id: string; name: string; diet: string }[] | null;
+  bring: { id: string; label: string; claimed_by: string | null; mine: boolean; added_by_me: boolean }[];
+  rides: { id: string; driver: string; mine: boolean; seats: number; from: string | null; passengers: string[]; joined: boolean }[];
+  poker: { member_id: string; name: string; buy_ins: number; cash_out_ore: number | null }[];
+};
+
+const toKit = (k: KitRow): EventKit => ({
+  me: k.me,
+  organizer: k.organizer,
+  details: k.details,
+  myDiet: k.my_diet,
+  diets: k.diets?.map((d) => ({ memberId: d.member_id, name: d.name, diet: d.diet })) ?? null,
+  bring: (k.bring ?? []).map((b) => ({ id: b.id, label: b.label, claimedBy: b.claimed_by, mine: b.mine, addedByMe: b.added_by_me })),
+  rides: (k.rides ?? []).map((r) => ({ id: r.id, driver: r.driver, mine: r.mine, seats: r.seats, from: r.from, passengers: r.passengers ?? [], joined: r.joined })),
+  poker: (k.poker ?? []).map((p) => ({ memberId: p.member_id, name: p.name, buyIns: p.buy_ins, cashOutOre: p.cash_out_ore })),
+});
 
 export const supabaseRepository: Repository = {
   kind: 'supabase',
@@ -1078,6 +1102,45 @@ export const supabaseRepository: Repository = {
 
   async setActivityTheme(eventId, theme) {
     const { error } = await getSupabase().rpc('set_activity_theme', { p_event_id: eventId, p_theme: theme?.trim() || null });
+    fail(error);
+  },
+
+  async setActivityDetails(eventId, type, details, bring) {
+    const { error } = await getSupabase().rpc('set_activity_details', { p_event_id: eventId, p_type: type, p_details: details, p_bring: bring?.length ? bring : null });
+    fail(error);
+  },
+
+  async getEventKit(ref) {
+    const secret = ref.token ? await getGuestSecret() : null;
+    const { data, error } = await getSupabase().rpc('get_event_kit', { p_event_id: ref.eventId ?? null, p_token: ref.token ?? null, p_secret: secret });
+    fail(error);
+    return data ? toKit(data as KitRow) : null;
+  },
+
+  async kitSetDiet(ref, diet) {
+    const secret = ref.token ? await getGuestSecret() : null;
+    const { error } = await getSupabase().rpc('kit_set_diet', { p_event_id: ref.eventId ?? null, p_diet: diet?.trim() || null, p_token: ref.token ?? null, p_secret: secret });
+    fail(error);
+  },
+
+  async kitBring(ref, action, input) {
+    const secret = ref.token ? await getGuestSecret() : null;
+    const { error } = await getSupabase().rpc('kit_bring', {
+      p_event_id: ref.eventId ?? null, p_action: action, p_item_id: input.itemId ?? null, p_label: input.label?.trim() || null, p_token: ref.token ?? null, p_secret: secret,
+    });
+    fail(error);
+  },
+
+  async kitRide(ref, action, input) {
+    const secret = ref.token ? await getGuestSecret() : null;
+    const { error } = await getSupabase().rpc('kit_ride', {
+      p_event_id: ref.eventId ?? null, p_action: action, p_ride_id: input.rideId ?? null, p_seats: input.seats ?? null, p_from: input.from?.trim() || null, p_token: ref.token ?? null, p_secret: secret,
+    });
+    fail(error);
+  },
+
+  async kitPokerSet(eventId, memberId, buyIns, cashOutOre) {
+    const { error } = await getSupabase().rpc('kit_poker_set', { p_event_id: eventId, p_member_id: memberId, p_buy_ins: buyIns, p_cash_out_ore: cashOutOre ?? null });
     fail(error);
   },
 

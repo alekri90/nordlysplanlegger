@@ -1,5 +1,5 @@
 import type { RepeatConfig } from '@/lib/recurrence';
-import type {
+import type { ActivityDetailsData, EventKit, KitRef,
   AddMembersInput,
   AppNotification,
   ClaimResult,
@@ -170,6 +170,17 @@ export interface Repository {
   setRoleTheme(token: string, dateId: string, theme: string | null): Promise<void>;
   /** Requests sent to me in the app. */
   listMyRoleRequests(): Promise<MyRoleRequest[]>;
+
+  // --- Activity kits (poker, dinner, run, potluck, racket, hike) -----------
+  /** The organizer sets the type and its fields; the first bring list comes along. */
+  setActivityDetails(eventId: string, type: string, details: ActivityDetailsData, bring?: string[] | null): Promise<void>;
+  getEventKit(ref: KitRef): Promise<EventKit | null>;
+  /** My diet and allergies for this event (blank removes it). */
+  kitSetDiet(ref: KitRef, diet: string | null): Promise<void>;
+  kitBring(ref: KitRef, action: 'claim' | 'unclaim' | 'add' | 'remove', input: { itemId?: string; label?: string }): Promise<void>;
+  kitRide(ref: KitRef, action: 'offer' | 'cancel' | 'join' | 'leave', input: { rideId?: string; seats?: number; from?: string | null }): Promise<void>;
+  /** The organizer keeps the score: buy-ins and what the player ended with (null buy-ins removes them). */
+  kitPokerSet(eventId: string, memberId: string, buyIns: number | null, cashOutOre?: number | null): Promise<void>;
 
   // --- Invitations (work without an account) -------------------------------
   getInvite(token: string): Promise<InviteView | null>;

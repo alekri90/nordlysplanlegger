@@ -12,7 +12,7 @@ import type { PlannerEvent, RoleRequestView } from '@/data/types';
 import { useBusyItems } from '@/lib/calendarBusy';
 import { conflictsFor, type BusyItem, type ConflictWhen } from '@/lib/calendarConflicts';
 import { useMe } from '@/state/session';
-import { activityType } from '@/lib/activities';
+import { roleActivity } from '@/lib/activities';
 import { groupByWeek } from '@/lib/clearance';
 import { formatLong, monthKey, today } from '@/lib/dates';
 import { timeHintLabel } from '@/lib/eventText';
@@ -43,7 +43,7 @@ export default function RoleAnswerPage() {
 function Answering({ v }: { v: RoleRequestView }) {
   const toast = useToast();
   const send = useAnswerRoleRequest(v.token);
-  const type = activityType(v.activityType);
+  const type = roleActivity(v.activityType);
   const roleLabel = type?.role.lower ?? v.roleLabel;
   const t = today();
   const dates = useMemo(() => v.dates.filter((d) => d.date >= t || d.mine), [v.dates, t]);

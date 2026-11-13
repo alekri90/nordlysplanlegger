@@ -9,14 +9,15 @@ import { PlacesSetting } from '@/components/event/PlacesSetting';
 import { PriceSetting } from '@/components/event/PriceSetting';
 import { repo } from '@/data';
 import { InviteTiming, datesInvitedNow } from '@/components/create/InviteTiming';
-import { ACTIVITY_STEPS, StepHeader } from '@/components/create/StepHeader';
+import { ACTIVITY_STEPS, KIT_STEPS, StepHeader } from '@/components/create/StepHeader';
+import { cleanFields } from '@/components/event/ActivityKit';
 import { GroupPickList } from '@/components/people/GroupPickList';
 import { PeoplePicker } from '@/components/people/PeoplePicker';
 import { PersonRow } from '@/components/people/PersonRow';
 import { SelectedSummary } from '@/components/people/SelectedSummary';
 import { AvatarStack, BottomBar, Button, Card, Divider, Icon, Input, ListRow, PageTitle, PressableScale, Screen, ScreenScroll, Text, Toggle, useToast } from '@/components/ui';
-import { useCreateActivityPlan, useCreateEvent, useCreateEventSeries, useGroups, useInviteSuggestions, useSaveVenue } from '@/data/hooks';
-import { activityType } from '@/lib/activities';
+import { useCreateActivityPlan, useSetActivityDetails, useCreateEvent, useCreateEventSeries, useGroups, useInviteSuggestions, useSaveVenue } from '@/data/hooks';
+import { kitActivity, roleActivity } from '@/lib/activities';
 import type { Group, Person } from '@/data/types';
 import { periodLabelFor } from '@/lib/dates';
 import { firstName } from '@/lib/eventText';
@@ -43,7 +44,9 @@ export default function CreateWho() {
   const plan = useCreateActivityPlan();
   const saveVenue = useSaveVenue();
   const awaitingAuth = useRef(false);
-  const type = activityType(draft.activityType);
+  const type = roleActivity(draft.activityType);
+  const kit = kitActivity(draft.activityType);
+  const setDetails = useSetActivityDetails();
   // An activity type: every date its own event (or alternatives for one); participants now or later.
   const activityDates = type ? (draft.dateMode === 'fixed' ? (draft.fixedDate ? [draft.fixedDate] : []) : [...draft.optionDates].sort()) : [];
   const activityMode: 'each' | 'poll' = draft.dateMode === 'fixed' ? 'each' : draft.activityMode;
@@ -185,6 +188,14 @@ export default function CreateWho() {
           ...(draft.price && { price: draft.price }),
         });
       }
+      // A building-block type: its details and the first bring list, before a series copies them.
+      if (kit) {
+        try {
+          await setDetails.mutateAsync({ eventId: result.eventId, type: kit.id, details: { fields: cleanFields(draft.activityDetails) }, bring: kit.kit.bring ? draft.bringItems : null });
+        } catch {
+          toast({ message: 'Arrangementet er sendt, men detaljene kunne ikke lagres. Legg dem til på arrangementet.', tone: 'error' });
+        }
+      }
       if (draft.repeat.enabled && draft.dateMode !== 'undecided') {
         const { enabled: _on, ...config } = draft.repeat;
         try {
@@ -221,7 +232,7 @@ export default function CreateWho() {
 
   return (
     <Screen>
-      <StepHeader step={type ? 5 : draft.source === 'event' ? 1 : 3} total={type ? ACTIVITY_STEPS : draft.source === 'event' ? 2 : draft.clearance ? 5 : 4} />
+      <StepHeader step={type ? 5 : kit ? 4 : draft.source === 'event' ? 1 : 3} total={type ? ACTIVITY_STEPS : kit ? KIT_STEPS : draft.source === 'event' ? 2 : draft.clearance ? 5 : 4} />
       <ScreenScroll bottomInset={220}>
         <PageTitle
           title={type ? 'Deltagere' : 'Hvem skal være med?'}

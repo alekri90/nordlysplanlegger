@@ -32,7 +32,7 @@ export function ActivitySuggestions({ text, chosen, onChoose }: { text: string; 
               <Tag label="Valgt" tone="primary" icon="check" />
             </View>
             <Text variant="footnote" color="textSecondary">
-              {selected.venue.label}, {selected.role.lower}, plasser og pris kommer i de neste stegene.
+              {selected.kind === 'role' ? `${selected.venue.label}, ${selected.role.lower}, plasser og pris kommer i de neste stegene.` : `${selected.kit.detailsTitle} og det praktiske kommer etter at du har valgt dato.`}
             </Text>
           </View>
           <Button

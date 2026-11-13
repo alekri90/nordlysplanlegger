@@ -2,10 +2,10 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { ACTIVITY_STEPS, StepHeader } from '@/components/create/StepHeader';
+import { ACTIVITY_STEPS, KIT_STEPS, StepHeader } from '@/components/create/StepHeader';
 import { Icon, PageTitle, PressableScale, Screen, ScreenScroll, Tag, Text, type IconName } from '@/components/ui';
 import type { DateMode } from '@/data/types';
-import { activityType } from '@/lib/activities';
+import { kitActivity, roleActivity } from '@/lib/activities';
 import { useCreateDraft } from '@/state/createDraft';
 import { radius, shadows, spacing, useColors } from '@/theme';
 
@@ -33,12 +33,15 @@ const activityOptions = (role: string): Option[] => [
 export default function CreateWhen() {
   const colors = useColors();
   const set = useCreateDraft((s) => s.set);
-  const type = activityType(useCreateDraft((s) => s.activityType));
-  const options = type ? activityOptions(type.role.label) : OPTIONS;
+  const chosen = useCreateDraft((s) => s.activityType);
+  const type = roleActivity(chosen);
+  const kit = kitActivity(chosen);
+  // A building-block type needs a date to put its details on: find one, or set it.
+  const options = type ? activityOptions(type.role.label) : kit ? OPTIONS.filter((o) => o.id === 'poll' || o.id === 'fixed') : OPTIONS;
 
   return (
     <Screen>
-      <StepHeader step={1} total={type ? ACTIVITY_STEPS : undefined} />
+      <StepHeader step={1} total={type ? ACTIVITY_STEPS : kit ? KIT_STEPS : undefined} />
       <ScreenScroll>
         <PageTitle title="Når passer det?" subtitle={type ? `Datoene er forespørsler til ${type.role.lower} har sagt ja.` : undefined} />
         <View style={{ gap: spacing.md }}>

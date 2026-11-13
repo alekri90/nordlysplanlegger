@@ -13,7 +13,7 @@ import { repeatSummary } from '@/lib/recurrence';
 import { shortNames } from '@/lib/names';
 import { hasResponded, rankDateOptions, responseProgress } from '@/lib/ranking';
 import { spacing } from '@/theme';
-import { activityType } from '@/lib/activities';
+import { roleActivity } from '@/lib/activities';
 import { ActivityRoleCard } from './ActivityRoleCard';
 import { CalendarConflict } from './CalendarConflict';
 import { DateResultRow } from './DateResultRow';
@@ -53,7 +53,7 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
   const nameOf = (memberId: string) => short.get(memberId) ?? '';
 
   // Alternative dates for an Aufguss: which of them have a confirmed sauna master.
-  const activity = activityType(event.activityType);
+  const activity = roleActivity(event.activityType);
   const roleOn = (date: string) => event.activityRole?.dates.find((d) => d.date === date) ?? null;
   const selectedRole = selected ? roleOn(selected.option.date) : null;
 

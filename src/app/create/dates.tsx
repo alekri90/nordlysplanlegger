@@ -5,14 +5,14 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { CalendarLegend, MonthCalendar, type DayState } from '@/components/calendar/MonthCalendar';
 import { PlansNote, usePlannedDays, withoutOurs } from '@/components/calendar/usePlannedDays';
-import { ACTIVITY_STEPS, StepHeader } from '@/components/create/StepHeader';
+import { ACTIVITY_STEPS, KIT_STEPS, StepHeader } from '@/components/create/StepHeader';
 import { RepeatEditor, RepeatSection } from '@/components/create/RepeatEditor';
 import { PlaceDetails } from '@/components/create/PlaceDetails';
 import { TimePicker } from '@/components/create/TimePicker';
 import { ConflictNote } from '@/components/event/CalendarConflict';
 import { BottomBar, Button, Chip, PageTitle, Screen, ScreenScroll, Segmented, Text, useToast } from '@/components/ui';
 import { useStartPoll } from '@/data/hooks';
-import { activityType, weekdaysIn } from '@/lib/activities';
+import { kitActivity, roleActivity, weekdaysIn } from '@/lib/activities';
 import { useBusyItems } from '@/lib/calendarBusy';
 import { conflictsFor } from '@/lib/calendarConflicts';
 import { addMonths, hasWholeWeekday, monthDates, monthKey, monthName, today, toggleWeekday, weekday } from '@/lib/dates';
@@ -30,7 +30,8 @@ const WEEKDAY_PLURALS = ['Mandager', 'Tirsdager', 'Onsdager', 'Torsdager', 'Fred
 export default function CreateDates() {
   const toast = useToast();
   const draft = useCreateDraft();
-  const type = activityType(draft.activityType);
+  const type = roleActivity(draft.activityType);
+  const kit = kitActivity(draft.activityType);
   const startPoll = useStartPoll(draft.existingEventId ?? '');
   const [customMonth, setCustomMonth] = useState(suggestedMonth());
 
@@ -105,12 +106,12 @@ export default function CreateDates() {
       }
       return;
     }
-    router.push(type ? '/create/role' : '/create/who');
+    router.push(type ? '/create/role' : kit ? '/create/details' : '/create/who');
   };
 
   return (
     <Screen>
-      <StepHeader step={draft.source === 'event' ? 0 : 2} total={draft.source === 'event' ? 2 : type ? ACTIVITY_STEPS : draft.clearance ? 5 : 4} />
+      <StepHeader step={draft.source === 'event' ? 0 : 2} total={draft.source === 'event' ? 2 : type ? ACTIVITY_STEPS : kit ? KIT_STEPS : draft.clearance ? 5 : 4} />
       <ScreenScroll bottomInset={140}>
         <PageTitle
           title={type ? 'Hvilke datoer vil du forespørre?' : draft.clearance ? 'Hvilke dager vil du foreslå?' : 'Hvilke dager passer?'}
@@ -197,7 +198,7 @@ export default function CreateDates() {
           <TimePicker hint={draft.timeHint} time={draft.startTime} onChange={(timeHint, startTime) => draft.set({ timeHint, startTime })} />
         </View>
 
-        {!draft.existingEventId ? <PlaceDetails style={{ marginTop: spacing.xl }} detailsOnly={!!type} /> : null}
+        {!draft.existingEventId ? <PlaceDetails style={{ marginTop: spacing.xl }} detailsOnly={!!type || !!kit} /> : null}
 
         {!draft.existingEventId && !draft.clearance && !type ? (
           <RepeatSection
