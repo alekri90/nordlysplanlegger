@@ -4,14 +4,14 @@ import { View } from 'react-native';
 
 import { PersonalLinks } from '@/components/event/PersonalLinks';
 import { ShareSheet } from '@/components/event/ShareSheet';
+import { GroupPickList } from '@/components/people/GroupPickList';
 import { PeoplePicker } from '@/components/people/PeoplePicker';
 import { SelectedSummary } from '@/components/people/SelectedSummary';
-import { AvatarStack, BottomBar, Button, Card, Divider, Icon, Header, ListRow, PageSkeleton, PressableScale, Screen, ScreenScroll, SectionHeader, Sheet, Text, useToast } from '@/components/ui';
+import { BottomBar, Button, Card, Icon, Header, PageSkeleton, PressableScale, Screen, ScreenScroll, Sheet, Text, useToast } from '@/components/ui';
 import { inviteToEvents, queryClient, useDateClearance, useEvent, useGroups } from '@/data/hooks';
 import type { Group, GuestInvite, PlannerEvent } from '@/data/types';
 import { okDates } from '@/lib/clearance';
 import { formatLong } from '@/lib/dates';
-import { firstName } from '@/lib/eventText';
 import { haptics } from '@/lib/haptics';
 import { useMe } from '@/state/session';
 import { spacing, useColors } from '@/theme';
@@ -96,27 +96,19 @@ function InviteForm({ e, eventIds, initialUserIds, initialGuestNames, dates }: {
           onGuestNamesChange={setGuestNames}
           header={
             groupList.length ? (
-              <View>
-                <SectionHeader title="Hele gjengen" />
-                <Card style={{ paddingVertical: spacing.xs }}>
-                  {groupList.map((g, i) => {
-                    const fresh = newFrom(g);
-                    const all = fresh.every((x) => userIds.includes(x));
-                    return (
-                      <View key={g.id}>
-                        {i ? <Divider /> : null}
-                        <ListRow
-                          title={`${g.emoji ? `${g.emoji} ` : ''}${g.name}`}
-                          subtitle={`${fresh.length} ikke invitert ennå`}
-                          leading={<AvatarStack people={g.members.slice(0, 3)} size={30} max={3} />}
-                          trailing={all ? <Icon name="check" size={18} color="primary" /> : <Text variant="footnote" color="primary">Velg alle</Text>}
-                          onPress={() => (all ? setUserIds((ids) => ids.filter((x) => !fresh.includes(x))) : addGroup(g))}
-                        />
-                      </View>
-                    );
-                  })}
-                </Card>
-              </View>
+              <GroupPickList
+                groups={groupList}
+                meId={me?.id}
+                selectedIds={userIds}
+                onToggle={(p) => toggle(p.id)}
+                onSelectAll={addGroup}
+                onClearAll={(g) => {
+                  const fresh = newFrom(g);
+                  setUserIds((ids) => ids.filter((x) => !fresh.includes(x)));
+                }}
+                existingIds={existingIds}
+                accountsOnly
+              />
             ) : undefined
           }
         />
@@ -149,12 +141,12 @@ function InviteForm({ e, eventIds, initialUserIds, initialGuestNames, dates }: {
                 {dates[eventIds.indexOf(l.eventId)] ? formatLong(dates[eventIds.indexOf(l.eventId)]) : `Gang ${eventIds.indexOf(l.eventId) + 1}`}
               </Text>
             ) : null}
-            <PersonalLinks guests={l.guests} title={e.title} organizerName={firstName(e.organizer.name)} />
+            <PersonalLinks guests={l.guests} event={e} />
           </View>
         ))}
         <Button title="Ferdig" variant="ink" style={{ marginTop: spacing.lg }} onPress={() => router.back()} />
       </Sheet>
-      <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} title={e.title} token={e.inviteToken} organizerName={firstName(e.organizer.name)} />
+      <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} event={e} />
     </Screen>
   );
 }

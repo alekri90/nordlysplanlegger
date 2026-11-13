@@ -13,7 +13,7 @@ import { useEvent } from '@/data/hooks';
 import { thumb } from '@/lib/categories';
 import { inviteUrl } from '@/lib/config';
 import { repeatSummary } from '@/lib/recurrence';
-import { inviteMessage } from '@/lib/share';
+import { eventInviteMessage, inviteMessage } from '@/lib/share';
 import { eventDateLine, firstName } from '@/lib/eventText';
 import { useCreateDraft } from '@/state/createDraft';
 import { motion, radius, spacing, useColors } from '@/theme';
@@ -91,14 +91,14 @@ export default function CreateSent() {
             <ShareGrid
               url={inviteUrl(token ?? '')}
               title={e?.title ?? ''}
-              message={inviteMessage(e?.title ?? '', inviteUrl(token ?? ''), e ? firstName(e.organizer.name) : undefined)}
+              message={e ? eventInviteMessage(e, inviteUrl(token ?? '')) : inviteMessage('', inviteUrl(token ?? ''))}
             />
           )}
         </Animated.View>
 
-        {guests.length ? (
+        {guests.length && e ? (
           <Animated.View entering={FadeInDown.delay(520).duration(380)} style={{ marginTop: spacing.xxl }}>
-            <PersonalLinks guests={guests} title={e?.title ?? ''} organizerName={e ? firstName(e.organizer.name) : undefined} />
+            <PersonalLinks guests={guests} event={e} />
           </Animated.View>
         ) : null}
       </ScreenScroll>

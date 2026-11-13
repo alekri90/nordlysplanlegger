@@ -8,7 +8,6 @@ import { Avatar, BottomBar, Button, Card, Confetti, Header, Icon, IconButton, Pr
 import { useEventRealtime, useLockDate, useUpdateEvent } from '@/data/hooks';
 import type { EventMember, PlannerEvent, TimeHint } from '@/data/types';
 import { formatDayMonth, formatLong } from '@/lib/dates';
-import { firstName } from '@/lib/eventText';
 import { haptics } from '@/lib/haptics';
 import { repeatSummary } from '@/lib/recurrence';
 import { shortNames } from '@/lib/names';
@@ -188,7 +187,7 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
       </BottomBar>
 
       <MemberSheet member={member} canRemove onClose={() => setMember(null)} />
-      <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} title={event.title} token={event.inviteToken} organizerName={firstName(event.organizer.name)} />
+      <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} event={event} />
 
       <Sheet
         visible={confirmOpen}

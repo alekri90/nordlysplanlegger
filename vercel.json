@@ -9,7 +9,7 @@
   ],
   "rewrites": [
     {
-      "source": "/:kind(g|i)/:token",
+      "source": "/:kind(g|i|r|a)/:token",
       "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|Twitterbot|Snap URL Preview|WhatsApp/|TelegramBot|Slackbot|Discordbot|LinkedInBot|Googlebot|bingbot|Applebot|redditbot|Embedly|SkypeUriPreview|Pinterestbot).*" }],
       "missing": [{ "type": "query", "key": "web" }],
       "destination": "/api/preview?kind=:kind&token=:token"

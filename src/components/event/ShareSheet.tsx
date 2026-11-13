@@ -2,8 +2,9 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { View } from 'react-native';
 
 import { Icon, PressableScale, Sheet, Text, useToast } from '@/components/ui';
+import type { PlannerEvent } from '@/data/types';
 import { inviteUrl } from '@/lib/config';
-import { inviteMessage, LINK_ONLY_CHANNELS, SHARE_CHANNELS, shareTo, type ShareChannel } from '@/lib/share';
+import { eventInviteMessage, LINK_ONLY_CHANNELS, SHARE_CHANNELS, shareTo, type ShareChannel } from '@/lib/share';
 import { spacing, useColors } from '@/theme';
 
 const BRAND_ICON: Partial<Record<ShareChannel, React.ComponentProps<typeof FontAwesome>['name']>> = {
@@ -18,17 +19,15 @@ export const SNAP_YELLOW = '#FFFC00';
 type Props = {
   visible: boolean;
   onClose: () => void;
-  title: string;
-  token: string;
-  organizerName?: string;
+  event: PlannerEvent;
 };
 
 /** Share an invitation to the apps people actually use. */
-export function ShareSheet({ visible, onClose, title, token, organizerName }: Props) {
-  const url = inviteUrl(token);
+export function ShareSheet({ visible, onClose, event }: Props) {
+  const url = inviteUrl(event.inviteToken);
   return (
     <Sheet visible={visible} onClose={onClose} title="Del invitasjonen" subtitle="Gjestene svarer rett i nettleseren – ingen app eller konto.">
-      <ShareGrid url={url} title={title} message={inviteMessage(title, url, organizerName)} onDone={onClose} />
+      <ShareGrid url={url} title={event.title} message={eventInviteMessage(event, url)} onDone={onClose} />
     </Sheet>
   );
 }

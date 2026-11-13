@@ -487,7 +487,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
         </BottomBar>
       ) : null}
 
-      <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} title={e.title} token={e.inviteToken} organizerName={firstName(e.organizer.name)} />
+      <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} event={e} />
       <MemberSheet
         member={personMember ? (e.members.find((m) => m.id === personMember.id) ?? null) : null}
         canRemove={isOrganizer}

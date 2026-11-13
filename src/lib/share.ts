@@ -1,6 +1,9 @@
 import * as Clipboard from 'expo-clipboard';
 import { Linking, Platform, Share } from 'react-native';
 
+import type { PlannerEvent } from '@/data/types';
+import { eventWhenLong, firstName } from '@/lib/eventText';
+
 export type ShareChannel = 'sms' | 'messenger' | 'whatsapp' | 'snapchat' | 'instagram' | 'email' | 'copy' | 'more';
 
 /** Snapchat first — it's where most people actually talk. */
@@ -23,6 +26,19 @@ export const LINK_ONLY_CHANNELS: ShareChannel[] = ['snapchat', 'instagram', 'mes
 
 export function inviteMessage(title: string, url: string, organizerFirstName?: string, toFirstName?: string) {
   return `Hei${toFirstName ? ` ${toFirstName}` : ''}! ${organizerFirstName ? `${organizerFirstName} vil` : 'Vi vil'} invitere deg til ${title} 🎉 Trykk på lenken og si hvilke dager du kan – du trenger ikke appen: ${url}`;
+}
+
+/**
+ * The text for an event invitation, fitted to what is shared: a date poll asks which days work,
+ * a set date asks if you come. «Aufguss med Ola (tema: Eukalyptus) tirsdag 17. november …»
+ */
+export function eventInviteMessage(e: Pick<PlannerEvent, 'title' | 'status' | 'selectedDate' | 'startTime' | 'timeHint' | 'activityTheme' | 'organizer'>, url: string, toFirstName?: string) {
+  const hi = `Hei${toFirstName ? ` ${toFirstName}` : ''}!`;
+  const org = firstName(e.organizer.name);
+  const what = e.activityTheme ? `${e.title} (tema: ${e.activityTheme})` : e.title;
+  if (e.status === 'polling' || !e.selectedDate) return inviteMessage(what, url, org, toFirstName);
+  const when = eventWhenLong(e);
+  return `${hi} ${org} inviterer deg til ${what}${when ? ` ${when.charAt(0).toLowerCase()}${when.slice(1)}` : ''} 🎉 Trykk på lenken og si om du kommer – du trenger ikke appen: ${url}`;
 }
 
 /** To the key person: «Hei Ola! Hvilke av disse dagene passer for «Badstu»? Kryss av her …» */

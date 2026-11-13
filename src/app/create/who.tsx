@@ -10,10 +10,11 @@ import { PriceSetting } from '@/components/event/PriceSetting';
 import { repo } from '@/data';
 import { InviteTiming, datesInvitedNow } from '@/components/create/InviteTiming';
 import { ACTIVITY_STEPS, StepHeader } from '@/components/create/StepHeader';
+import { GroupPickList } from '@/components/people/GroupPickList';
 import { PeoplePicker } from '@/components/people/PeoplePicker';
 import { PersonRow } from '@/components/people/PersonRow';
 import { SelectedSummary } from '@/components/people/SelectedSummary';
-import { AvatarStack, BottomBar, Button, Card, Divider, Icon, Input, ListRow, PageTitle, PressableScale, Screen, ScreenScroll, SectionHeader, Text, Toggle, useToast } from '@/components/ui';
+import { AvatarStack, BottomBar, Button, Card, Divider, Icon, Input, ListRow, PageTitle, PressableScale, Screen, ScreenScroll, Text, Toggle, useToast } from '@/components/ui';
 import { useCreateActivityPlan, useCreateEvent, useCreateEventSeries, useGroups, useInviteSuggestions, useSaveVenue } from '@/data/hooks';
 import { activityType } from '@/lib/activities';
 import type { Group, Person } from '@/data/types';
@@ -69,6 +70,25 @@ export default function CreateWho() {
   };
 
   const clearGroup = () => draft.set({ groupId: null, memberIds: [], guestIds: [] });
+
+  // «Velg alle» on a group: with nobody picked yet, the event belongs to that group (as before);
+  // otherwise its people are added to those already picked.
+  const selectWholeGroup = (g: Group) => {
+    if (!draft.groupId && !draft.memberIds.length && !draft.guestIds.length) return chooseGroup(g);
+    const others = g.members.filter((m) => m.id !== me?.id);
+    draft.set({
+      memberIds: [...new Set([...draft.memberIds, ...others.filter((m) => !m.isGuest).map((m) => m.id)])],
+      guestIds: [...new Set([...draft.guestIds, ...others.filter((m) => m.isGuest).map((m) => m.id)])],
+    });
+  };
+  const clearWholeGroup = (g: Group) => {
+    const ids = new Set(g.members.map((m) => m.id));
+    draft.set({
+      memberIds: draft.memberIds.filter((x) => !ids.has(x)),
+      guestIds: draft.guestIds.filter((x) => !ids.has(x)),
+      ...(draft.groupId === g.id ? { groupId: null } : {}),
+    });
+  };
 
   const toggle = (p: Person) => {
     if (p.isGuest) {
@@ -196,6 +216,7 @@ export default function CreateWho() {
   const canSaveGroup = !draft.groupId && draft.memberIds.length + draft.guestNames.length >= 2;
   const hasMore = !draft.existingEventId || canSaveGroup;
   const groupMembers = selectedGroup?.members.filter((m) => m.id !== me?.id) ?? [];
+  const otherGroups = groupList.filter((g) => g.id !== selectedGroup?.id);
   const selectedInGroup = groupMembers.filter((m) => selected.has(m.id)).length;
 
   return (
@@ -286,28 +307,22 @@ export default function CreateWho() {
               </Animated.View>
             ) : null}
 
-            {groupList.length ? (
-              <View style={{ marginTop: spacing.xl }}>
-                <SectionHeader title="Gjengene dine" />
-                <Card style={{ paddingVertical: spacing.xs }}>
-                  {groupList.map((g, i) => (
-                    <View key={g.id}>
-                      {i > 0 ? <Divider /> : null}
-                      <ListRow
-                        title={`${g.emoji ? `${g.emoji} ` : ''}${g.name}`}
-                        subtitle={`Hele gjengen · ${g.members.length} personer`}
-                        leading={<AvatarStack people={g.members.slice(0, 3)} size={30} max={3} />}
-                        radio
-                        selected={false}
-                        onPress={() => chooseGroup(g)}
-                      />
-                    </View>
-                  ))}
-                </Card>
-              </View>
-            ) : null}
           </>
         )}
+
+        {otherGroups.length ? (
+          <View style={{ marginTop: spacing.xl }}>
+            <GroupPickList
+              groups={otherGroups}
+              meId={me?.id}
+              selectedIds={selected}
+              onToggle={toggle}
+              onSelectAll={selectWholeGroup}
+              onClearAll={clearWholeGroup}
+              title={selectedGroup ? 'Flere fra andre gjenger' : 'Gjengene dine'}
+            />
+          </View>
+        ) : null}
 
         <View style={{ marginTop: spacing.xl }}>
           <PeoplePicker
