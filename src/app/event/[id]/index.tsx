@@ -16,22 +16,21 @@ import { CalendarConflict } from '@/components/event/CalendarConflict';
 import { confirmDecline } from '@/components/event/confirmDecline';
 import { EventMessages } from '@/components/event/EventMessages';
 import { GuestList } from '@/components/event/GuestList';
-import { PriceCard } from '@/components/event/PriceCard';
-import { InfoTiles, type InfoTile } from '@/components/event/InfoTiles';
+import { EventFacts } from '@/components/event/EventFacts';
 import { useMemberActions } from '@/components/event/MemberMenu';
 import { RemindButton } from '@/components/event/RemindButton';
 import { ResultsView } from '@/components/event/ResultsView';
 import { SeriesPeopleEditor } from '@/components/event/SeriesPeopleEditor';
 import { ShareSheet } from '@/components/event/ShareSheet';
 import { ThemeSheet } from '@/components/event/ThemeSheet';
-import { Avatar, AvatarStack, BottomBar, Button, Card, Divider, EmptyState, ErrorState, Icon, IconButton, ListRow, PageSkeleton, PressableScale, Screen, Segmented, Sheet, Tag, Text, useToast, type IconName } from '@/components/ui';
+import { Avatar, AvatarStack, BottomBar, Button, Card, Divider, EmptyState, ErrorState, Icon, IconButton, ListRow, PageSkeleton, PressableScale, Screen, Segmented, Sheet, Tag, Text, useToast } from '@/components/ui';
 import { repo } from '@/data';
 import { queryClient, useAddEventPhotos, useCancelEvent, useEvent, useSetActivityTheme, useSetRsvp, useUpdateEvent, useUpdateEventSeries } from '@/data/hooks';
 import type { EventMember, EventSeriesInfo, PlannerEvent, SeriesPeople } from '@/data/types';
 import { confirmDestructive } from '@/components/people/PersonSheet';
 import { ReportForm } from '@/components/people/ReportSheet';
 import { thumb } from '@/lib/categories';
-import { formatLong, formatTime, today } from '@/lib/dates';
+import { formatLong, formatMedium, formatTime, today } from '@/lib/dates';
 import { addEventToCalendar } from '@/lib/eventActions';
 import { countdown, firstName, timeHintLabel } from '@/lib/eventText';
 import { activityType, kitActivity, roleActivity } from '@/lib/activities';
@@ -212,23 +211,9 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
       ? `Fullt${waitlist.length ? ` · ${waitlist.length} venter` : ''}`
       : `${Math.max(0, e.maxParticipants - (e.placesTaken ?? 0))} av ${e.maxParticipants} plasser ledige`
     : `${coming.length} kommer`;
-  const tiles: InfoTile[] = [
-    {
-      icon: 'calendar',
-      label: e.selectedDate ? formatLong(e.selectedDate) : (e.periodLabel ?? 'Dato kommer'),
-      hint: canAddToCalendar ? 'Legg i kalender' : undefined,
-      onPress: canAddToCalendar ? calendar : undefined,
-    },
-    {
-      icon: 'clock',
-      label: e.startTime ? `Kl. ${formatTime(e.startTime)}` : timeHintLabel(e.timeHint),
-      hint: isOrganizer && !e.startTime && e.selectedDate && !isPast ? 'Sett tid' : undefined,
-      onPress: isOrganizer && !isPast && e.status !== 'cancelled' ? () => router.push(`/event/${e.id}/edit`) : undefined,
-    },
-    e.location
-      ? { icon: 'map-pin', label: e.location.name, hint: e.location.detailsPending ? 'Detaljer kommer' : undefined }
-      : { icon: 'users', label: placesLabel, hint: coming.length ? 'Se hvem' : undefined, onPress: () => setWhoOpen(true) },
-  ];
+  // «Tir 24. november · kl. 19:00»
+  const timePart = e.startTime ? `kl. ${formatTime(e.startTime)}` : e.selectedDate ? timeHintLabel(e.timeHint).replace(/^./, (ch) => ch.toLowerCase()) : null;
+  const whenLine = [e.selectedDate ? formatMedium(e.selectedDate) : (e.periodLabel ?? 'Dato kommer'), timePart].filter(Boolean).join(' · ');
   // A shared total (Aufguss): total, how many share it, and per person — an estimate until full.
   // A building-block type names its price (the card's heading): «Buy-in», «Banepris».
   const price = e.price ? priceView(e.price, e, !!(activity || kit)) : null;
@@ -252,21 +237,31 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
           .join(' · ');
   const myQueue = mine?.status === 'waitlisted' ? waitlist.findIndex((m) => m.id === mine.id) + 1 : 0;
   const showInterest = !isOrganizer && !!mine && mine.role === 'guest' && e.status === 'draft';
-  // The photo as large as it can be while what matters still fits above the answer buttons.
-  const hasBar = showInterest || showRsvp || (e.status === 'draft' && isOrganizer);
-  const heroHeight = Math.round(Math.min(500, Math.max(360, screenHeight * 0.53 - (hasBar ? 52 : 0))));
+  const heroHeight = Math.round(Math.min(420, Math.max(320, screenHeight * 0.42)));
   const interested = e.members.filter((m) => m.role === 'guest' && m.status === 'attending').length;
   const notInterested = e.members.filter((m) => m.role === 'guest' && m.status === 'declined').length;
 
   return (
     <Screen edges={[]}>
       <ScrollView showsVerticalScrollIndicator={false} contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingBottom: 140 }}>
-        <View style={{ height: heroHeight, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl, overflow: 'hidden', backgroundColor: '#201A17' }}>
+        <View
+          style={{
+            minHeight: heroHeight,
+            justifyContent: 'flex-end',
+            paddingTop: insets.top + 64,
+            paddingBottom: spacing.xl,
+            paddingHorizontal: gutter,
+            borderBottomLeftRadius: radius.xl,
+            borderBottomRightRadius: radius.xl,
+            overflow: 'hidden',
+            backgroundColor: '#201A17',
+          }}
+        >
           <StatusBar style="light" />
           <Image source={{ uri: e.coverImageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={250} accessibilityIgnoresInvertColors />
           <LinearGradient
-            colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0)', 'rgba(12,10,9,0.5)', 'rgba(12,10,9,0.9)']}
-            locations={[0, 0.22, 0.55, 1]}
+            colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0)', 'rgba(12,10,9,0.55)', 'rgba(12,10,9,0.92)']}
+            locations={[0, 0.2, 0.48, 1]}
             style={StyleSheet.absoluteFill}
           />
           <View style={{ position: 'absolute', top: insets.top + spacing.xs, left: gutter - 8, right: gutter - 8, flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -276,7 +271,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
               <IconButton icon={isOrganizer ? 'settings' : 'more-horizontal'} variant="glass" accessibilityLabel={isOrganizer ? 'Innstillinger' : 'Mer'} onPress={() => setMoreOpen(true)} />
             </View>
           </View>
-          <Animated.View entering={FadeInDown.duration(450)} style={{ position: 'absolute', left: gutter, right: gutter, bottom: spacing.xl }}>
+          <Animated.View entering={FadeInDown.duration(450)}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}>
               {soon || e.status === 'cancelled' ? <Tag label={e.status === 'cancelled' ? 'Avlyst' : soon!} tone="glass" /> : null}
               <Avatar name={e.organizer.name} uri={e.organizer.avatarUrl} size={22} />
@@ -320,13 +315,15 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
 
         <View style={{ paddingHorizontal: gutter, paddingTop: spacing.lg }}>
           <Animated.View entering={FadeInDown.delay(120).duration(420)}>
-            <InfoTiles tiles={tiles} />
-            {price ? <PriceCard view={price} title={kit?.kit.price?.label ?? 'Pris'} exempt={mine?.paysShare === false} style={{ marginTop: spacing.md }} /> : null}
-            {e.series && e.series.status !== 'ended' ? (
-              <View style={{ marginTop: spacing.md }}>
-                <InfoLine icon="repeat" text={`${repeatSummary(e.series, e.selectedDate)}${e.series.status === 'paused' ? ' · på pause' : ''}`} />
-              </View>
-            ) : null}
+            <EventFacts
+              when={whenLine}
+              onAddToCalendar={canAddToCalendar ? calendar : undefined}
+              inCalendar={inCalendar}
+              whenAction={isOrganizer && !e.startTime && e.selectedDate && !isPast && e.status !== 'cancelled' ? { label: 'Sett tid', onPress: () => router.push(`/event/${e.id}/edit`) } : undefined}
+              place={e.location ? { name: e.location.name, detail: e.location.detailsPending ? 'Detaljer kommer' : null, address: e.location.address } : null}
+              price={price ? { view: price, title: kit?.kit.price?.label ?? 'Pris', exempt: mine?.paysShare === false } : null}
+              notes={e.series && e.series.status !== 'ended' ? [{ icon: 'repeat', text: `${repeatSummary(e.series, e.selectedDate)}${e.series.status === 'paused' ? ' · på pause' : ''}` }] : []}
+            />
           </Animated.View>
 
           {activity && e.status !== 'cancelled' && e.activityRole && e.activityRole.status !== 'confirmed' && !e.activityRole.mine ? (
@@ -769,13 +766,3 @@ function MenuGroup({ title, children }: { title?: string; children: (ReactElemen
   );
 }
 
-function InfoLine({ icon, text }: { icon: IconName; text: string }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-      <Icon name={icon} size={16} color="textSecondary" />
-      <Text variant="callout" color="textSecondary" style={{ flex: 1 }}>
-        {text}
-      </Text>
-    </View>
-  );
-}

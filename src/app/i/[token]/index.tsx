@@ -12,17 +12,16 @@ import { AttendeesSheet } from '@/components/event/AttendeesSheet';
 import { CalendarConflict } from '@/components/event/CalendarConflict';
 import { confirmDecline } from '@/components/event/confirmDecline';
 import { EventMessages } from '@/components/event/EventMessages';
-import { InfoTiles, type InfoTile } from '@/components/event/InfoTiles';
+import { EventFacts } from '@/components/event/EventFacts';
 import { Avatar, AvatarStack, Button, EmptyState, Icon, IconButton, Input, PressableScale, Sheet, Skeleton, Tag, Text, useToast, type IconName } from '@/components/ui';
 import { useInvite, useSubmitRsvp } from '@/data/hooks';
 import type { InviteView } from '@/data/types';
-import { formatLong, formatTime } from '@/lib/dates';
+import { formatLong, formatMedium, formatTime } from '@/lib/dates';
 import { countdown, firstName, inviteSubtitle, optionsSummary, timeHintLabel } from '@/lib/eventText';
 import { getGuestName } from '@/lib/guestIdentity';
 import { activityType, kitActivity, roleActivity } from '@/lib/activities';
 import { ActivityKit } from '@/components/event/ActivityKit';
 import { RoleBadge, rolePill } from '@/components/event/ActivityRoleCard';
-import { PriceCard } from '@/components/event/PriceCard';
 import { priceView } from '@/lib/price';
 import { useMe } from '@/state/session';
 import { gutter, spacing, useColors } from '@/theme';
@@ -99,18 +98,13 @@ function InvitationView({ invite }: { invite: InviteView }) {
 
   // Who said yes, with whole names: tap the places to see them.
   const attendees = invite.attendees ?? [];
-  const tiles: InfoTile[] = [
-    isDated
-      ? { icon: 'calendar', label: formatLong(e.selectedDate!) }
-      : { icon: 'calendar', label: e.options.length ? optionsSummary(e.options.map((o) => o.date)) : 'Dato kommer' },
-    { icon: 'clock', label: e.startTime ? `Kl. ${formatTime(e.startTime)}` : timeHintLabel(e.timeHint) },
-    {
-      icon: 'users',
-      label: placesLabel ?? (attendees.length ? `${attendees.length} kommer` : `${invite.invitedCount} inviterte`),
-      hint: attendees.length ? 'Se hvem' : undefined,
-      onPress: attendees.length || (activity && role?.status === 'confirmed') ? () => setWhoOpen(true) : undefined,
-    },
-  ];
+  const timePart = e.startTime ? `kl. ${formatTime(e.startTime)}` : timeHintLabel(e.timeHint).replace(/^./, (ch) => ch.toLowerCase());
+  const whenLine = [isDated ? formatMedium(e.selectedDate!) : e.options.length ? optionsSummary(e.options.map((o) => o.date)) : 'Dato kommer', timePart].join(' · ');
+  const free = pricing?.maxParticipants ? Math.max(0, pricing.maxParticipants - (pricing.placesTaken ?? 0)) : null;
+  const peopleLine = [invite.respondents.length > 1 ? `${invite.respondents.length} har svart` : null, full ? 'fullt, venteliste' : free !== null ? `${free} ${free === 1 ? 'ledig plass' : 'ledige plasser'}` : null]
+    .filter(Boolean)
+    .join(' · ');
+  const canSeeWho = attendees.length > 0 || (!!activity && role?.status === 'confirmed');
 
   const declineRsvp = () => {
     if (invite.myResponse?.status === 'declined') return;
@@ -135,13 +129,13 @@ function InvitationView({ invite }: { invite: InviteView }) {
     <View style={{ flex: 1, backgroundColor: INK }}>
       <StatusBar style="light" />
       <ScrollView bounces={false} showsVerticalScrollIndicator={false} contentInsetAdjustmentBehavior="never" contentContainerStyle={{ minHeight: height, paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.lg }}>
-        <View style={{ height: Math.max(360, height * 0.5) }}>
+        <View style={{ minHeight: Math.max(320, height * 0.42), justifyContent: 'flex-end', paddingTop: insets.top + 64, paddingBottom: spacing.lg, paddingHorizontal: gutter }}>
           <Image source={{ uri: e.coverImageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
           <LinearGradient colors={['rgba(22,18,15,0.45)', 'rgba(22,18,15,0)', 'rgba(22,18,15,0.6)', INK]} locations={[0, 0.25, 0.7, 1]} style={StyleSheet.absoluteFill} />
           <View style={{ position: 'absolute', top: insets.top + spacing.xs, left: gutter - 8, right: gutter - 8, flexDirection: 'row', justifyContent: 'space-between' }}>
             {router.canGoBack() ? <IconButton icon="chevron-left" variant="glass" accessibilityLabel="Tilbake" onPress={() => router.back()} /> : <AppLogo size={36} />}
           </View>
-          <Animated.View entering={FadeInDown.duration(500)} style={{ position: 'absolute', left: gutter, right: gutter, bottom: spacing.lg }}>
+          <Animated.View entering={FadeInDown.duration(500)}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}>
               {soon ? <Tag label={soon} tone="glass" /> : null}
               <Avatar name={invite.organizer.name} uri={invite.organizer.avatarUrl} size={22} />
@@ -157,43 +151,46 @@ function InvitationView({ invite }: { invite: InviteView }) {
                 {themeSpec.label}: {invite.activity.theme}
               </Text>
             ) : null}
-            {/* The day is in the tiles; before it's set, this says when it's meant to be. */}
+            {/* The day is in the card below; before it's set, this says when it's meant to be. */}
             {!isDated ? (
               <Text variant="title3" style={{ color: 'rgba(255,255,255,0.85)', marginTop: spacing.xs }}>
                 {inviteSubtitle(invite)}
               </Text>
             ) : null}
             {pill ? <RoleBadge pill={pill} style={{ marginTop: spacing.md }} /> : null}
-            {invite.respondents.length > 1 ? (
+            {peopleLine ? (
               <PressableScale
-                disabled={!attendees.length}
+                disabled={!canSeeWho}
                 onPress={() => setWhoOpen(true)}
                 scaleTo={0.97}
-                accessibilityRole={attendees.length ? 'button' : undefined}
-                accessibilityLabel={`${invite.respondents.length} har svart${attendees.length ? '. Se hvem som kommer' : ''}`}
+                accessibilityRole={canSeeWho ? 'button' : undefined}
+                accessibilityLabel={`${peopleLine}${canSeeWho ? '. Se hvem som kommer' : ''}`}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg, alignSelf: 'flex-start' }}
               >
-                <AvatarStack people={invite.respondents} size={28} max={5} />
+                {invite.respondents.length > 1 ? <AvatarStack people={invite.respondents} size={28} max={5} /> : null}
                 <Text variant="subhead" style={{ color: 'rgba(255,255,255,0.92)' }}>
-                  {invite.respondents.length} har svart
+                  {peopleLine}
                 </Text>
-                {attendees.length ? <Icon name="chevron-right" size={16} tint="rgba(255,255,255,0.6)" /> : null}
+                {canSeeWho ? <Icon name="chevron-right" size={16} tint="rgba(255,255,255,0.6)" /> : null}
               </PressableScale>
             ) : null}
           </Animated.View>
         </View>
 
         <Animated.View entering={FadeInDown.delay(150).duration(450)} style={{ paddingHorizontal: gutter }}>
-          <InfoTiles tiles={tiles} onDark style={{ marginTop: spacing.sm }} />
+          <EventFacts
+            onDark
+            when={whenLine}
+            place={e.location ? { name: e.location.name, detail: e.location.detailsPending ? 'Detaljer kommer' : null, address: e.location.address } : null}
+            price={price ? { view: price, title: kit?.kit.price?.label ?? 'Pris' } : null}
+            style={{ marginTop: spacing.sm }}
+          />
 
           {provisional ? (
             <Text variant="footnote" align="center" style={{ color: 'rgba(255,255,255,0.75)', marginTop: spacing.md }}>
               Du får beskjed når {activity!.role.definite} har bekreftet.
             </Text>
           ) : null}
-
-          {price ? <PriceCard view={price} title={kit?.kit.price?.label ?? 'Pris'} onDark style={{ marginTop: spacing.md }} /> : null}
-
 
           <View style={{ marginTop: spacing.xl, gap: spacing.sm }}>
             {isOrganizer ? (
