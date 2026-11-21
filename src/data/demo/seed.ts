@@ -1,6 +1,6 @@
-import { unsplash } from '@/lib/categories';
+import { defaultCoverFor, unsplash } from '@/lib/categories';
 import { addDays, monthKey, monthName, today, weekday } from '@/lib/dates';
-import type { AppNotification, Discoverability, EventMember, Group, GroupMember, Person, PlannerEvent, Profile } from '../types';
+import type { AppNotification, Discoverability, EventMember, Group, GroupMember, Person, PlannerEvent, Profile, RoleRequest } from '../types';
 
 /**
  * Realistic demo data, generated relative to today so the app always looks alive.
@@ -91,6 +91,45 @@ function nextWeekday(from: string, wd: number, minGap = 1): string {
 
 const iso = (offsetMinutes: number) => new Date(Date.now() - offsetMinutes * 60_000).toISOString();
 
+const AUFGUSS_ID = 'ev-aufguss';
+/** The coming Tuesday (at least two days away). */
+const aufgussDay = (t: string) => nextWeekday(t, 1, 2);
+
+/** The sauna master's yes behind the demo Aufguss (kept apart from the events, like role_requests). */
+export function seedRoleRequests(): (RoleRequest & { organizerId: string })[] {
+  const date = aufgussDay(today());
+  return [
+    {
+      id: 'rr-aufguss',
+      organizerId: ME.id,
+      activityType: 'aufguss',
+      roleKey: 'sauna_master',
+      roleLabel: 'Badstumester',
+      title: 'Aufguss',
+      timeHint: 'exact',
+      startTime: '19:00',
+      placeName: 'Sørenga badstue',
+      note: null,
+      mode: 'each',
+      status: 'open',
+      createdAt: iso(60 * 24 * 5),
+      dates: [
+        {
+          id: 'rd-aufguss',
+          date,
+          eventId: AUFGUSS_ID,
+          assignedCandidateId: 'rc-kari',
+          eventCancelled: false,
+          inviteNow: true,
+          theme: 'Fullmåne',
+          answers: [{ candidateId: 'rc-kari', answer: true }],
+        },
+      ],
+      candidates: [{ id: 'rc-kari', userId: null, name: 'Kari Bakken', token: 'badstumester-demo', reply: null, answeredAt: iso(60 * 24 * 4) }],
+    },
+  ];
+}
+
 function member(
   eventId: string,
   person: Person,
@@ -159,6 +198,46 @@ export function createSeed(): DemoState {
     photos: [],
     createdAt: iso(60 * 24 * 9),
     lockedAt: iso(60 * 24 * 3),
+  };
+
+  // --- Aufguss: the sauna master has said yes, a theme, a shared price, one place left ---
+  const aufgussDate = aufgussDay(t);
+  const aufguss: PlannerEvent = {
+    id: AUFGUSS_ID,
+    title: 'Aufguss med Kari',
+    category: 'sauna',
+    coverImageUrl: defaultCoverFor('Aufguss', 'sauna', 'aufguss'),
+    status: 'confirmed',
+    dateMode: 'fixed',
+    organizer: ME,
+    groupId: 'g-jentene',
+    periodLabel: monthName(monthKey(aufgussDate)),
+    timeHint: 'exact',
+    startTime: '19:00',
+    selectedDate: aufgussDate,
+    location: { name: 'Sørenga badstue', address: 'Sørengkaia, Oslo' },
+    description: 'Tre runder med Kari, kaldbad mellom hver. Ta med håndkle, badetøy og vannflaske.',
+    options: [],
+    members: [
+      member(AUFGUSS_ID, ME, 'attending', { organizer: true }),
+      member(AUFGUSS_ID, P.maja, 'attending'),
+      member(AUFGUSS_ID, P.nora, 'attending'),
+      member(AUFGUSS_ID, P.thea, 'attending'),
+      member(AUFGUSS_ID, P.ida, 'invited'),
+    ],
+    inviteToken: 'aufguss-demo',
+    photos: [],
+    createdAt: iso(60 * 24 * 4),
+    lockedAt: iso(60 * 24 * 4),
+    maxParticipants: 5,
+    placesTaken: 4,
+    price: { mode: 'split', amountOre: 100_000 },
+    payingPlaces: 4,
+    nonPayingPlaces: 0,
+    activityType: 'aufguss',
+    rolePlaces: 1,
+    venueCapacity: 8,
+    activityTheme: 'Fullmåne',
   };
 
   // --- Kortkveld: polling, 5 of 8 answered ----------------------------------
@@ -418,7 +497,7 @@ export function createSeed(): DemoState {
     signedIn: false,
     me: { ...ME },
     friendships: seedFriendships(),
-    events: [padel, badstu, poker, middag, pokerPast, familyPast],
+    events: [padel, aufguss, badstu, poker, middag, pokerPast, familyPast],
     groups,
     notifications,
     guestName: null,

@@ -21,7 +21,7 @@ import type {
   Profile,
   UsernameCheck,
 } from '../types';
-import { createSeed, ME, PEOPLE, STRANGERS, type DemoFriendship, type DemoState } from './seed';
+import { createSeed, ME, PEOPLE, seedRoleRequests, STRANGERS, type DemoFriendship, type DemoState } from './seed';
 
 /**
  * In-memory implementation used when no backend is configured.
@@ -185,7 +185,7 @@ function presentEvent(e: PlannerEvent): PlannerEvent {
 
 // --- Activity types: venues and role requests (mirrors role_requests in the database) ---
 type DemoRoleRequest = import('../types').RoleRequest & { organizerId: string };
-const roleRequests: DemoRoleRequest[] = [];
+const roleRequests: DemoRoleRequest[] = seedRoleRequests();
 const venues: (import('../types').Venue & { ownerId: string })[] = [];
 
 function demoSyncCancelled(r: DemoRoleRequest) {
@@ -541,6 +541,7 @@ export const demoRepository: Repository = {
   async deleteAccount() {
     await wait(600);
     state = createSeed();
+    roleRequests.splice(0, roleRequests.length, ...seedRoleRequests());
     accounts = [];
     inbox = new Map([[ME.id, state.notifications]]);
     deviceGuestIds = [];

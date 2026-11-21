@@ -6,19 +6,20 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { TimePicker } from '@/components/create/TimePicker';
 import { Avatar, BottomBar, Button, Card, Confetti, Header, Icon, IconButton, PressableScale, Screen, ScreenScroll, Sheet, Text, useToast } from '@/components/ui';
 import { useEventRealtime, useLockDate, useUpdateEvent } from '@/data/hooks';
-import type { EventMember, PlannerEvent, TimeHint } from '@/data/types';
+import type { PlannerEvent, TimeHint } from '@/data/types';
 import { formatDayMonth, formatLong } from '@/lib/dates';
 import { haptics } from '@/lib/haptics';
 import { repeatSummary } from '@/lib/recurrence';
 import { shortNames } from '@/lib/names';
 import { hasResponded, rankDateOptions, responseProgress } from '@/lib/ranking';
+import { useMe } from '@/state/session';
 import { spacing } from '@/theme';
 import { roleActivity } from '@/lib/activities';
 import { ActivityRoleCard } from './ActivityRoleCard';
 import { CalendarConflict } from './CalendarConflict';
 import { DateResultRow } from './DateResultRow';
 import { EventMessages } from './EventMessages';
-import { MemberSheet } from './MemberSheet';
+import { useMemberActions } from './MemberMenu';
 import { RemindButton } from './RemindButton';
 import { ShareSheet } from './ShareSheet';
 
@@ -45,7 +46,9 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
   const scores = useMemo(() => rankDateOptions(event.options, event.members), [event.options, event.members]);
   const progress = responseProgress(event.members);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [member, setMember] = useState<EventMember | null>(null);
+  // Those who haven't answered: tap for the profile, hold to remove or make co-organizer.
+  const me = useMe();
+  const people = useMemberActions(event, { meId: me?.id, isOwner: event.organizer.id === me?.id, canManage: true });
   const best = scores[0];
   const selected = scores.find((s) => s.option.id === selectedId) ?? best;
   const everyoneCan = best?.everyoneCan ?? false;
@@ -153,7 +156,15 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
             </View>
           ))}
           {pending.map((m) => (
-            <PressableScale key={m.id} onPress={() => setMember(m)} style={{ alignItems: 'center', width: 56, gap: 4, opacity: 0.45 }} accessibilityLabel={`${m.person.name} har ${m.status === 'opened' ? 'sett invitasjonen, men ikke svart' : 'ikke svart'}`}>
+            <PressableScale
+              key={m.id}
+              onPress={(ev) => people.onPress(m, ev)}
+              onLongPress={people.canHold(m) ? (ev) => people.onLongPress?.(m, ev) : undefined}
+              delayLongPress={350}
+              style={{ alignItems: 'center', width: 56, gap: 4, opacity: 0.45 }}
+              accessibilityLabel={`${m.person.name} har ${m.status === 'opened' ? 'sett invitasjonen, men ikke svart' : 'ikke svart'}`}
+              accessibilityHint={people.canHold(m) ? 'Åpner profilen. Hold inne for å fjerne eller gjøre til medarrangør.' : undefined}
+            >
               <Avatar name={m.person.name} uri={m.person.avatarUrl} size={48} />
               <Text variant="caption" numberOfLines={1}>
                 {nameOf(m.id)}
@@ -186,7 +197,7 @@ export function ResultsView({ event }: { event: PlannerEvent }) {
         />
       </BottomBar>
 
-      <MemberSheet member={member} canRemove onClose={() => setMember(null)} />
+      {people.element}
       <ShareSheet visible={shareOpen} onClose={() => setShareOpen(false)} event={event} />
 
       <Sheet

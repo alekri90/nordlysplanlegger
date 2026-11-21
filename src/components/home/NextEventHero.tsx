@@ -6,17 +6,9 @@ import { AvatarStack, PressableScale, Tag, Text } from '@/components/ui';
 import type { PlannerEvent } from '@/data/types';
 import { activityType } from '@/lib/activities';
 import { thumb } from '@/lib/categories';
-import { daysBetween, formatLong, formatTime, today } from '@/lib/dates';
+import { formatLong, formatTime } from '@/lib/dates';
+import { countdown } from '@/lib/eventText';
 import { radius, shadows, spacing } from '@/theme';
-
-/** «I dag», «I morgen», «Om 5 dager» — only when it's close. */
-function countdown(date: string | null | undefined): string | null {
-  if (!date) return null;
-  const d = daysBetween(today(), date);
-  if (d === 0) return 'I dag';
-  if (d === 1) return 'I morgen';
-  return d > 1 && d <= 14 ? `Om ${d} dager` : null;
-}
 
 /** The next thing you're going to: the photo, when, what, the theme and who's coming. */
 export function NextEventHero({ event: e, onPress }: { event: PlannerEvent; onPress: () => void }) {

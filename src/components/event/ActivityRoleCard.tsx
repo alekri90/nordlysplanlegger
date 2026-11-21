@@ -1,14 +1,67 @@
 import { router } from 'expo-router';
-import { View } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Card, Icon, PressableScale, Tag, Text, type IconName } from '@/components/ui';
 import type { EventActivityRole } from '@/data/types';
 import { roleActivity } from '@/lib/activities';
 import type { ColorTokens } from '@/theme/tokens';
-import { spacing } from '@/theme';
+import { radius, spacing } from '@/theme';
 
 /** Whether an event with a role (Aufguss) is still provisional: nobody has confirmed the role yet. */
 export const isProvisional = (role: EventActivityRole | null | undefined) => !!role && role.status !== 'confirmed' && role.status !== 'cancelled';
+
+export type RolePill = { icon: IconName; label: string; tone: 'ok' | 'wait' | 'act' | 'stop' };
+
+/** The role in a few words, for the photo on the event page: who has it, or what it waits for. */
+export function rolePill(activity: string | null | undefined, role: EventActivityRole | null | undefined, isOrganizer: boolean): RolePill | null {
+  const type = roleActivity(activity);
+  if (!type || !role) return null;
+  const { label, lower, definite } = type.role;
+  if (role.mine) return { icon: 'award', label: `Du er ${lower}`, tone: 'ok' };
+  switch (role.status) {
+    case 'confirmed':
+      return { icon: 'award', label: `${label}: ${role.name ?? ''}`.trim(), tone: 'ok' };
+    case 'choose':
+      return isOrganizer ? { icon: 'user-check', label: `Velg ${lower}`, tone: 'act' } : { icon: 'clock', label: `Foreløpig – ${lower} ikke valgt`, tone: 'wait' };
+    case 'unavailable':
+      return isOrganizer ? { icon: 'alert-circle', label: `Ingen ${lower} kan`, tone: 'stop' } : { icon: 'clock', label: `Foreløpig – mangler ${lower}`, tone: 'wait' };
+    case 'partly': {
+      const n = role.dates.filter((d) => d.status === 'confirmed').length;
+      return { icon: 'calendar', label: `${label} for ${n} av ${role.dates.length} datoer`, tone: 'wait' };
+    }
+    case 'cancelled':
+      return null;
+    default:
+      return { icon: 'clock', label: `Foreløpig – venter på ${definite}`, tone: 'wait' };
+  }
+}
+
+/** The icon on the photo: mint when it's settled, amber while waiting, coral to act, red when stuck. */
+const PILL_TINT: Record<RolePill['tone'], string> = { ok: '#8EE3B0', wait: '#FFC870', act: '#FF9A8B', stop: '#FF8A80' };
+
+/** The role as a glass pill on the photo, high up: «Badstumester: Kari». The organizer taps it for the request. */
+export function RoleBadge({ pill, onPress, style }: { pill: RolePill; onPress?: () => void; style?: StyleProp<ViewStyle> }) {
+  return (
+    <PressableScale
+      disabled={!onPress}
+      onPress={onPress}
+      scaleTo={0.97}
+      accessibilityRole={onPress ? 'button' : 'text'}
+      accessibilityLabel={pill.label}
+      accessibilityHint={onPress ? 'Åpner forespørselen' : undefined}
+      style={[
+        { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'flex-start', paddingVertical: 7, paddingLeft: spacing.md, paddingRight: onPress ? spacing.sm : spacing.md, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.16)' },
+        style,
+      ]}
+    >
+      <Icon name={pill.icon} size={16} tint={PILL_TINT[pill.tone]} />
+      <Text variant="subhead" style={{ color: '#fff', flexShrink: 1 }} numberOfLines={1}>
+        {pill.label}
+      </Text>
+      {onPress ? <Icon name="chevron-right" size={14} tint="rgba(255,255,255,0.6)" /> : null}
+    </PressableScale>
+  );
+}
 
 /**
  * The role on an event (the sauna master), shown apart from the participants: who has it, or that

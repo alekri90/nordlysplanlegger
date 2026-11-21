@@ -3,14 +3,14 @@ import { useState } from 'react';
 import { Alert, Platform, View } from 'react-native';
 
 import { Avatar, Divider, ListRow, Sheet, Text, useToast } from '@/components/ui';
-import { repo } from '@/data';
-import { queryClient, useBlockUser, useGroups, usePublicProfile, useRemoveFriend } from '@/data/hooks';
+import { useBlockUser, usePublicProfile, useRemoveFriend } from '@/data/hooks';
 import type { Person } from '@/data/types';
 import { firstName } from '@/lib/eventText';
 import { profilePath } from '@/lib/username';
 import { useCreateDraft } from '@/state/createDraft';
 import { useMe } from '@/state/session';
 import { spacing } from '@/theme';
+import { AddToGroupList } from './AddToGroupList';
 import { FriendButton } from './FriendButton';
 import { ReportForm } from './ReportSheet';
 
@@ -41,7 +41,6 @@ export function PersonSheet({ person, onClose, extra }: Props) {
   const block = useBlockUser();
   const isUser = !!person && !person.isGuest && person.id !== me?.id;
   const profile = usePublicProfile(isUser ? { userId: person!.id } : null);
-  const groups = useGroups();
   const removeFriend = useRemoveFriend();
   const resetDraft = useCreateDraft((s) => s.reset);
   const setDraft = useCreateDraft((s) => s.set);
@@ -55,7 +54,6 @@ export function PersonSheet({ person, onClose, extra }: Props) {
 
   const name = firstName(person.name);
   const friendship = profile.data?.friendship ?? 'none';
-  const myGroups = (groups.data ?? []).filter((g) => !g.members.some((m) => m.id === person.id));
 
   const inviteToEvent = () => {
     close();
@@ -64,19 +62,8 @@ export function PersonSheet({ person, onClose, extra }: Props) {
     router.push('/create');
   };
 
-  const addToGroup = async (groupId: string, groupName: string) => {
-    try {
-      const added = await repo.addGroupMembers(groupId, person.isGuest ? { guestIds: [person.id] } : { userIds: [person.id] });
-      queryClient.invalidateQueries();
-      toast({ message: added ? `${name} er lagt til i ${groupName}` : `${name} er allerede med`, tone: 'success' });
-      close();
-    } catch (e) {
-      toast({ message: e instanceof Error ? e.message : 'Kunne ikke legge til', tone: 'error' });
-    }
-  };
-
   return (
-    <Sheet visible={!!person} onClose={close}>
+    <Sheet visible={!!person} onClose={close} scroll>
       {reporting ? (
         <View>
           <Text variant="title3" style={{ marginBottom: spacing.sm }}>
@@ -90,13 +77,7 @@ export function PersonSheet({ person, onClose, extra }: Props) {
           <Text variant="title3" style={{ marginBottom: spacing.md }}>
             Legg {name} til i …
           </Text>
-          {myGroups.length ? (
-            myGroups.map((g) => <ListRow key={g.id} icon="users" title={`${g.emoji ? `${g.emoji} ` : ''}${g.name}`} subtitle={`${g.members.length} medlemmer`} onPress={() => addToGroup(g.id, g.name)} />)
-          ) : (
-            <Text variant="subhead" color="textSecondary">
-              {name} er allerede med i alle gjengene dine.
-            </Text>
-          )}
+          <AddToGroupList person={person} onDone={close} />
           <ListRow icon="arrow-left" title="Tilbake" onPress={() => setGroupPicker(false)} />
         </View>
       ) : (

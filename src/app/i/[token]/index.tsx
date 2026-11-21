@@ -16,15 +16,16 @@ import { InfoTiles, type InfoTile } from '@/components/event/InfoTiles';
 import { Avatar, AvatarStack, Button, EmptyState, Icon, IconButton, Input, PressableScale, Sheet, Skeleton, Tag, Text, useToast, type IconName } from '@/components/ui';
 import { useInvite, useSubmitRsvp } from '@/data/hooks';
 import type { InviteView } from '@/data/types';
-import { CATEGORIES } from '@/lib/categories';
 import { formatLong, formatTime } from '@/lib/dates';
-import { firstName, inviteSubtitle, optionsSummary, timeHintLabel } from '@/lib/eventText';
+import { countdown, firstName, inviteSubtitle, optionsSummary, timeHintLabel } from '@/lib/eventText';
 import { getGuestName } from '@/lib/guestIdentity';
 import { activityType, kitActivity, roleActivity } from '@/lib/activities';
 import { ActivityKit } from '@/components/event/ActivityKit';
-import { describePrice, describeSharedPrice } from '@/lib/price';
+import { RoleBadge, rolePill } from '@/components/event/ActivityRoleCard';
+import { PriceCard } from '@/components/event/PriceCard';
+import { priceView } from '@/lib/price';
 import { useMe } from '@/state/session';
-import { gutter, radius, spacing, useColors } from '@/theme';
+import { gutter, spacing, useColors } from '@/theme';
 
 const INK = '#16120F';
 
@@ -91,8 +92,10 @@ function InvitationView({ invite }: { invite: InviteView }) {
   const themeSpec = activityType(invite.activity?.activityType)?.theme ?? null;
   const role = invite.activity?.role ?? null;
   const provisional = !!activity && !!role && role.status !== 'confirmed' && role.status !== 'cancelled';
-  const shared = activity && pricing?.price?.mode === 'split' ? describeSharedPrice(pricing.price.amountOre, pricing) : null;
-  const price = shared ? { headline: shared.headline, detail: shared.detail } : pricing?.price ? describePrice(pricing.price, pricing) : null;
+  // Drawn like on the event page; a building-block type names it («Buy-in»).
+  const price = pricing?.price ? priceView(pricing.price, pricing, !!(activity || kit)) : null;
+  const pill = activity ? rolePill(invite.activity?.activityType, role, false) : null;
+  const soon = isDated ? countdown(e.selectedDate) : null;
 
   // Who said yes, with whole names: tap the places to see them.
   const attendees = invite.attendees ?? [];
@@ -132,77 +135,65 @@ function InvitationView({ invite }: { invite: InviteView }) {
     <View style={{ flex: 1, backgroundColor: INK }}>
       <StatusBar style="light" />
       <ScrollView bounces={false} showsVerticalScrollIndicator={false} contentInsetAdjustmentBehavior="never" contentContainerStyle={{ minHeight: height, paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.lg }}>
-        <View style={{ height: Math.max(380, height * 0.56) }}>
+        <View style={{ height: Math.max(360, height * 0.5) }}>
           <Image source={{ uri: e.coverImageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
           <LinearGradient colors={['rgba(22,18,15,0.45)', 'rgba(22,18,15,0)', 'rgba(22,18,15,0.6)', INK]} locations={[0, 0.25, 0.7, 1]} style={StyleSheet.absoluteFill} />
           <View style={{ position: 'absolute', top: insets.top + spacing.xs, left: gutter - 8, right: gutter - 8, flexDirection: 'row', justifyContent: 'space-between' }}>
             {router.canGoBack() ? <IconButton icon="chevron-left" variant="glass" accessibilityLabel="Tilbake" onPress={() => router.back()} /> : <AppLogo size={36} />}
           </View>
           <Animated.View entering={FadeInDown.duration(500)} style={{ position: 'absolute', left: gutter, right: gutter, bottom: spacing.lg }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md }}>
-              <Icon name={(CATEGORIES[e.category] ?? CATEGORIES.hangout).icon} size={26} tint="#FF9A8B" />
-            </View>
-            <Text variant="display" style={{ color: '#fff' }} accessibilityRole="header">
-              {e.title}
-            </Text>
-            {themeSpec && invite.activity?.theme ? (
-              <Text variant="title3" style={{ color: '#fff', marginTop: spacing.xs }}>
-                {themeSpec.label}: {invite.activity.theme}
-              </Text>
-            ) : null}
-            <Text variant="title3" style={{ color: 'rgba(255,255,255,0.85)', marginTop: spacing.xs }}>
-              {inviteSubtitle(invite)}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md }}>
-              <Avatar name={invite.organizer.name} uri={invite.organizer.avatarUrl} size={28} />
-              <Text variant="callout" style={{ color: 'rgba(255,255,255,0.85)' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}>
+              {soon ? <Tag label={soon} tone="glass" /> : null}
+              <Avatar name={invite.organizer.name} uri={invite.organizer.avatarUrl} size={22} />
+              <Text variant="footnote" style={{ color: 'rgba(255,255,255,0.85)', flexShrink: 1 }} numberOfLines={1}>
                 Arrangert av {firstName(invite.organizer.name)}
               </Text>
             </View>
+            <Text variant="display" style={{ color: '#fff' }} numberOfLines={3} accessibilityRole="header">
+              {e.title}
+            </Text>
+            {themeSpec && invite.activity?.theme ? (
+              <Text variant="title3" style={{ color: '#fff', marginTop: 2 }}>
+                {themeSpec.label}: {invite.activity.theme}
+              </Text>
+            ) : null}
+            {/* The day is in the tiles; before it's set, this says when it's meant to be. */}
+            {!isDated ? (
+              <Text variant="title3" style={{ color: 'rgba(255,255,255,0.85)', marginTop: spacing.xs }}>
+                {inviteSubtitle(invite)}
+              </Text>
+            ) : null}
+            {pill ? <RoleBadge pill={pill} style={{ marginTop: spacing.md }} /> : null}
+            {invite.respondents.length > 1 ? (
+              <PressableScale
+                disabled={!attendees.length}
+                onPress={() => setWhoOpen(true)}
+                scaleTo={0.97}
+                accessibilityRole={attendees.length ? 'button' : undefined}
+                accessibilityLabel={`${invite.respondents.length} har svart${attendees.length ? '. Se hvem som kommer' : ''}`}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg, alignSelf: 'flex-start' }}
+              >
+                <AvatarStack people={invite.respondents} size={28} max={5} />
+                <Text variant="subhead" style={{ color: 'rgba(255,255,255,0.92)' }}>
+                  {invite.respondents.length} har svart
+                </Text>
+                {attendees.length ? <Icon name="chevron-right" size={16} tint="rgba(255,255,255,0.6)" /> : null}
+              </PressableScale>
+            ) : null}
           </Animated.View>
         </View>
 
         <Animated.View entering={FadeInDown.delay(150).duration(450)} style={{ paddingHorizontal: gutter }}>
           <InfoTiles tiles={tiles} onDark style={{ marginTop: spacing.sm }} />
 
-          {activity && role ? (
-            <View
-              accessible
-              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.md, padding: spacing.md, borderRadius: radius.lg, backgroundColor: provisional ? 'rgba(255,190,90,0.14)' : 'rgba(120,220,160,0.12)' }}
-            >
-              <Icon name={provisional ? 'clock' : 'award'} size={18} tint={provisional ? '#FFC870' : '#8EE3B0'} />
-              <Text variant="footnote" style={{ color: 'rgba(255,255,255,0.9)', flex: 1 }}>
-                {provisional
-                  ? `Foreløpig – venter på at ${activity.role.definite} bekrefter. Du får beskjed når det er klart.`
-                  : `${activity.role.label}: ${role.name ?? ''}`}
-              </Text>
-            </View>
+          {provisional ? (
+            <Text variant="footnote" align="center" style={{ color: 'rgba(255,255,255,0.75)', marginTop: spacing.md }}>
+              Du får beskjed når {activity!.role.definite} har bekreftet.
+            </Text>
           ) : null}
 
-          {price ? (
-            <View accessible style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, justifyContent: 'center' }}>
-              <Icon name="tag" size={16} tint="rgba(255,255,255,0.85)" />
-              <Text variant="footnote" style={{ color: 'rgba(255,255,255,0.85)', flexShrink: 1 }}>
-                {price.headline}
-              </Text>
-            </View>
-          ) : null}
+          {price ? <PriceCard view={price} title={kit?.kit.price?.label ?? 'Pris'} onDark style={{ marginTop: spacing.md }} /> : null}
 
-          {invite.respondents.length > 1 ? (
-            <PressableScale
-              disabled={!attendees.length}
-              onPress={() => setWhoOpen(true)}
-              accessibilityRole={attendees.length ? 'button' : undefined}
-              accessibilityLabel={`${invite.respondents.length} har svart${attendees.length ? '. Se hvem som kommer' : ''}`}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg, justifyContent: 'center', alignSelf: 'center' }}
-            >
-              <AvatarStack people={invite.respondents} size={26} max={5} />
-              <Text variant="footnote" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                {invite.respondents.length} har svart
-              </Text>
-              {attendees.length ? <Icon name="chevron-right" size={14} tint="rgba(255,255,255,0.5)" /> : null}
-            </PressableScale>
-          ) : null}
 
           <View style={{ marginTop: spacing.xl, gap: spacing.sm }}>
             {isOrganizer ? (
@@ -281,7 +272,7 @@ function InvitationView({ invite }: { invite: InviteView }) {
           <Detail icon="calendar" text={isDated ? formatLong(e.selectedDate!) : e.periodLabel ?? 'Dato bestemmes'} />
           <Detail icon="clock" text={e.startTime ? `Kl. ${formatTime(e.startTime)}` : timeHintLabel(e.timeHint)} />
           {e.location ? <Detail icon="map-pin" text={`${e.location.name}${e.location.detailsPending ? ' (detaljer kommer)' : ''}`} /> : null}
-          {price ? <Detail icon="tag" text={price.detail ? `${price.headline} · ${price.detail}` : price.headline} /> : null}
+          {price ? <Detail icon="tag" text={[`${price.amount} ${price.unit}`, price.detail].filter(Boolean).join(' · ')} /> : null}
           {placesLabel ? <Detail icon="users" text={placesLabel} /> : null}
           <Detail icon="user" text={`Arrangert av ${firstName(invite.organizer.name)}`} />
           {e.description ? (

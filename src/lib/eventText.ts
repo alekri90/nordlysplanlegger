@@ -1,5 +1,5 @@
 import type { InviteView, PlannerEvent, TimeHint } from '@/data/types';
-import { addDays, countWeekends, formatDayMonth, formatLong, formatShort, formatTime, today, weekday } from './dates';
+import { addDays, countWeekends, daysBetween, formatDayMonth, formatLong, formatShort, formatTime, today, weekday } from './dates';
 import { responseProgress } from './ranking';
 
 /** Human copy for an event's time preference. */
@@ -71,4 +71,13 @@ export function inviteSubtitle(invite: InviteView): string {
 
 export function firstName(name: string) {
   return name.trim().split(/\s+/)[0] ?? name;
+}
+
+/** «I dag», «I morgen», «Om 5 dager» — only when it's close. */
+export function countdown(date: string | null | undefined): string | null {
+  if (!date) return null;
+  const d = daysBetween(today(), date);
+  if (d === 0) return 'I dag';
+  if (d === 1) return 'I morgen';
+  return d > 1 && d <= 14 ? `Om ${d} dager` : null;
 }

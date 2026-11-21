@@ -8,11 +8,12 @@ import { ClearanceCards } from '@/components/event/ClearanceCards';
 import { splitEvents } from '@/components/event/EventSections';
 import { GroupBubble } from '@/components/group/GroupBubble';
 import { InvitationCard } from '@/components/home/InvitationCard';
+import { DateRow } from '@/components/home/DateRow';
 import { NextEventHero } from '@/components/home/NextEventHero';
 import { Button, Card, Divider, ErrorState, EventListSkeleton, Icon, IconButton, PressableScale, Screen, SectionHeader, Skeleton, Text } from '@/components/ui';
 import { useEvents, useGroups, useNotifications } from '@/data/hooks';
-import type { Group, PlannerEvent } from '@/data/types';
-import { daysBetween, formatTime, MONTHS_SHORT, today } from '@/lib/dates';
+import type { Group } from '@/data/types';
+import { daysBetween, today } from '@/lib/dates';
 import { usePushPermission } from '@/lib/push';
 import { useCreateDraft } from '@/state/createDraft';
 import { useMe } from '@/state/session';
@@ -170,7 +171,7 @@ export default function Home() {
                     {later.slice(0, LATER_LIMIT).map((e, i) => (
                       <View key={e.id}>
                         {i ? <Divider /> : null}
-                        <LaterRow event={e} onPress={() => router.push(`/event/${e.id}`)} />
+                        <DateRow event={e} onPress={() => router.push(`/event/${e.id}`)} />
                       </View>
                     ))}
                   </>
@@ -211,38 +212,6 @@ export default function Home() {
         </View>
       </ScrollView>
     </Screen>
-  );
-}
-
-/** «10 DES · Aufguss med Lorna · kl. 18:00 · Sørenga»: what's coming after the next one. */
-function LaterRow({ event: e, onPress }: { event: PlannerEvent; onPress: () => void }) {
-  const colors = useColors();
-  const d = e.selectedDate ? new Date(`${e.selectedDate}T12:00:00`) : null;
-  const coming = e.members.filter((m) => m.status === 'attending').length;
-  const detail = [e.startTime ? `kl. ${formatTime(e.startTime)}` : null, e.location?.name ?? null].filter(Boolean).join(' · ') || `${coming} kommer`;
-  return (
-    <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={`${e.title}. ${detail}`} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md }}>
-      <View style={{ width: 44, alignItems: 'center', borderRightWidth: 1, borderRightColor: colors.border, paddingRight: spacing.sm }}>
-        <Text variant="title2" style={{ lineHeight: 26 }}>
-          {d ? d.getDate() : '–'}
-        </Text>
-        <Text variant="caption" color="textSecondary">
-          {d ? MONTHS_SHORT[d.getMonth()].toUpperCase() : ''}
-        </Text>
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text variant="headline" numberOfLines={1}>
-          {e.title}
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-          <Icon name={e.startTime || e.location ? 'clock' : 'users'} size={13} color="textSecondary" />
-          <Text variant="footnote" color="textSecondary" numberOfLines={1} style={{ flexShrink: 1 }}>
-            {detail}
-          </Text>
-        </View>
-      </View>
-      <Icon name="chevron-right" size={18} color="textTertiary" />
-    </PressableScale>
   );
 }
 

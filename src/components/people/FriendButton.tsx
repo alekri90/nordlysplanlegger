@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { Button, useToast } from '@/components/ui';
+import type { IconName } from '@/components/ui/Icon';
 import { useRespondFriendRequest, useSendFriendRequest } from '@/data/hooks';
 import type { FriendshipState } from '@/data/types';
 import { haptics } from '@/lib/haptics';
@@ -14,22 +15,25 @@ type Props = {
   name?: string;
 };
 
-/** "Legg til" → "Sendt" → "Venner". Optimistic so it feels instant. */
-export function FriendButton({ userId, state, requestId, size = 'sm', name }: Props) {
+export type FriendAction = {
+  state: FriendshipState;
+  title: string;
+  icon: IconName;
+  accessibilityLabel: string;
+  /** Null when there's nothing to do (already friends, or a request is out). */
+  onPress: (() => void) | null;
+};
+
+/** "Legg til" → "Sendt" → "Venner", optimistic so it feels instant. Shared by the button and the profile's tiles. */
+export function useFriendAction({ userId, state, requestId, name }: Omit<Props, 'size'>): FriendAction {
   const toast = useToast();
   const send = useSendFriendRequest();
   const respond = useRespondFriendRequest();
   const [local, setLocal] = useState<FriendshipState | null>(null);
   const current = local ?? state;
 
-  if (current === 'self' || current === 'anonymous') return null;
-
-  if (current === 'friends') {
-    return <Button title="Venner" icon="check" size={size} variant="secondary" fullWidth={size === 'md'} disabled accessibilityLabel={name ? `Du og ${name} er venner` : 'Venner'} />;
-  }
-  if (current === 'outgoing') {
-    return <Button title="Sendt" icon="clock" size={size} variant="secondary" fullWidth={size === 'md'} disabled accessibilityLabel="Venneforespørsel sendt" />;
-  }
+  if (current === 'friends') return { state: current, title: 'Venner', icon: 'check', accessibilityLabel: name ? `Du og ${name} er venner` : 'Venner', onPress: null };
+  if (current === 'outgoing') return { state: current, title: 'Sendt', icon: 'clock', accessibilityLabel: 'Venneforespørsel sendt', onPress: null };
 
   const onPress = async () => {
     haptics.light();
@@ -49,16 +53,30 @@ export function FriendButton({ userId, state, requestId, size = 'sm', name }: Pr
       toast({ message: e instanceof Error ? e.message : 'Noe gikk galt', tone: 'error' });
     }
   };
+  const incoming = current === 'incoming';
+  return {
+    state: current,
+    title: incoming ? 'Godta' : 'Legg til',
+    icon: incoming ? 'check' : 'user-plus',
+    accessibilityLabel: incoming ? `Godta ${name ?? ''}` : `Legg til ${name ?? ''} som venn`,
+    onPress: () => void onPress(),
+  };
+}
 
+export function FriendButton({ size = 'sm', ...props }: Props) {
+  const action = useFriendAction(props);
+  if (action.state === 'self' || action.state === 'anonymous') return null;
+  const done = !action.onPress;
   return (
     <Button
-      title={current === 'incoming' ? 'Godta' : 'Legg til'}
-      icon={current === 'incoming' ? 'check' : 'user-plus'}
+      title={action.title}
+      icon={action.icon}
       size={size}
-      variant={current === 'incoming' ? 'primary' : 'ink'}
+      variant={done ? 'secondary' : action.state === 'incoming' ? 'primary' : 'ink'}
       fullWidth={size === 'md'}
-      onPress={onPress}
-      accessibilityLabel={current === 'incoming' ? `Godta ${name ?? ''}` : `Legg til ${name ?? ''} som venn`}
+      disabled={done}
+      onPress={action.onPress ?? undefined}
+      accessibilityLabel={action.accessibilityLabel}
     />
   );
 }

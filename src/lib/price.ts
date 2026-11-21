@@ -137,3 +137,50 @@ export function describeSharedPrice(totalOre: number, c: { maxParticipants?: num
     now: s.now ? `Med ${s.now.sharers} påmeldt nå: ${formatKr(s.now.perPersonOre)} per person` : null,
   };
 }
+
+/**
+ * The price as the event page draws it: one big amount, a line under it, and — when the share
+ * falls as more join — the places as a bar, with the price now and when it's full.
+ * `shared`: an activity type's total, where a role (the sauna master) never takes a share.
+ */
+export interface PriceView {
+  /** «Ca. 200 kr» */
+  amount: string;
+  /** «per person» */
+  unit: string;
+  /** «1 000 kr totalt · delt på 5 deltagere» */
+  detail: string | null;
+  meter: { filled: number; total: number; now: string; full: string } | null;
+  /** Read out in one go. */
+  label: string;
+}
+
+export function priceView(price: Price, c: PriceCounts, shared = false): PriceView {
+  const view = (amount: string, unit: string, detail: string | null, meter: PriceView['meter']): PriceView => ({
+    amount,
+    unit,
+    detail,
+    meter,
+    label: [`${amount} ${unit}`, detail, meter ? `${meter.now}. ${meter.full}` : null].filter(Boolean).join('. '),
+  });
+  const people = (n: number) => `${n} ${n === 1 ? 'deltager' : 'deltagere'}`;
+  const nowLine = (paying: number, ore: number) => (paying > 0 ? `${paying} påmeldt nå: ${formatKr(ore)} hver` : 'Ingen påmeldt ennå');
+
+  if (price.mode === 'per_person') {
+    const s = priceSummary(price, c);
+    return view(formatKr(price.amountOre), 'per person', s.total !== null ? `${formatKr(s.total)} totalt når det er fullt` : null, null);
+  }
+  if (shared) {
+    const s = sharedPrice(price.amountOre, c);
+    const detail = c.maxParticipants ? `${formatKr(s.totalOre)} totalt · delt på ${people(s.sharers)}` : `${formatKr(s.totalOre)} totalt · delt på de som kommer`;
+    const meter = s.estimate ? { filled: Math.min(c.payingPlaces ?? 0, s.sharers), total: s.sharers, now: nowLine(c.payingPlaces ?? 0, s.now?.perPersonOre ?? 0), full: `Fullt: ${formatKr(s.perPersonOre)}` } : null;
+    return view(`${s.estimate ? 'Ca. ' : ''}${formatKr(s.perPersonOre)}`, 'per person', detail, meter);
+  }
+  const s = priceSummary(price, c);
+  if (s.atFull === null) {
+    return view(formatKr(price.amountOre), 'totalt', s.payersNow > 0 ? `Deles på de som kommer · ${formatKr(s.now)} hver med ${s.payersNow} nå` : 'Deles på de som kommer', null);
+  }
+  const estimate = s.payersNow < s.payersAtFull!;
+  const meter = estimate ? { filled: s.payersNow, total: s.payersAtFull!, now: nowLine(s.payersNow, s.now), full: `Fullt: ${formatKr(s.atFull)}` } : null;
+  return view(`${estimate ? 'Ca. ' : ''}${formatKr(s.atFull)}`, 'per person', `${formatKr(price.amountOre)} totalt · delt på ${people(s.payersAtFull!)}`, meter);
+}
