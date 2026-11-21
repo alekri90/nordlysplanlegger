@@ -1,26 +1,29 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert, Platform, ScrollView, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { Alert, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RepeatEditor } from '@/components/create/RepeatEditor';
-import { ActionButton } from '@/components/event/ActionButton';
 import { ActivityKit } from '@/components/event/ActivityKit';
 import { ActivityRoleCard } from '@/components/event/ActivityRoleCard';
+import { AttendeesSheet } from '@/components/event/AttendeesSheet';
 import { CalendarConflict } from '@/components/event/CalendarConflict';
 import { confirmDecline } from '@/components/event/confirmDecline';
-import { EventHero } from '@/components/event/EventHero';
 import { EventMessages } from '@/components/event/EventMessages';
 import { GuestList } from '@/components/event/GuestList';
+import { InfoTiles, type InfoTile } from '@/components/event/InfoTiles';
 import { MemberSheet } from '@/components/event/MemberSheet';
 import { RemindButton } from '@/components/event/RemindButton';
 import { ResultsView } from '@/components/event/ResultsView';
 import { SeriesPeopleEditor } from '@/components/event/SeriesPeopleEditor';
 import { ShareSheet } from '@/components/event/ShareSheet';
 import { ThemeSheet } from '@/components/event/ThemeSheet';
-import { BottomBar, Button, Card, EmptyState, ErrorState, Icon, ListRow, PageSkeleton, PressableScale, Screen, Segmented, Sheet, Text, useToast, type IconName } from '@/components/ui';
+import { Avatar, BottomBar, Button, Card, Divider, EmptyState, ErrorState, Icon, IconButton, ListRow, PageSkeleton, PressableScale, Screen, Segmented, Sheet, Tag, Text, useToast, type IconName } from '@/components/ui';
 import { repo } from '@/data';
 import { queryClient, useAddEventPhotos, useCancelEvent, useEvent, useSetActivityTheme, useSetRsvp, useUpdateEvent, useUpdateEventSeries } from '@/data/hooks';
 import type { EventMember, EventSeriesInfo, PlannerEvent, SeriesPeople } from '@/data/types';
@@ -76,9 +79,19 @@ type Tab = 'guests' | 'details' | 'photos';
 function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerEvent; isOrganizer: boolean; isOwner: boolean; meId?: string }) {
   const colors = useColors();
   const toast = useToast();
+  const insets = useSafeAreaInsets();
+  const { height: screenHeight } = useWindowDimensions();
   const [tab, setTab] = useState<Tab>('guests');
+  const [whoOpen, setWhoOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  // The menu (⚙ for the organizer, ⋯ for guests). iOS can't present one modal while another is
+  // still closing (the screen freezes), or navigate under it: the next step waits until it's gone.
+  const afterMore = useRef<(() => void) | null>(null);
+  const openAfterMore = (open: () => void) => {
+    afterMore.current = open;
+    setMoreOpen(false);
+  };
   const [reporting, setReporting] = useState(false);
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [repeatDraft, setRepeatDraft] = useState<EventSeriesInfo | null>(null);
@@ -181,13 +194,28 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
       toast({ message: 'Kunne ikke lagre. Prøv igjen.', tone: 'error' });
     }
   };
-  const placesLine = e.maxParticipants
+  // Who is coming: the organizer first, then the rest. Whole names in the list.
+  const coming = e.members.filter((m) => m.status === 'attending').sort((a, b) => Number(b.role === 'organizer') - Number(a.role === 'organizer'));
+  const placesLabel = e.maxParticipants
     ? full
-      ? `Fullt${waitlist.length ? ` · ${waitlist.length} på venteliste` : ''}${activity ? ` · + ${activity.role.lower}` : ''}`
-      : activity
-        ? `${e.placesTaken ?? 0} av ${e.maxParticipants} deltagerplasser tatt · + ${activity.role.lower}`
-        : `${e.placesTaken ?? 0} av ${e.maxParticipants} plasser tatt`
-    : null;
+      ? `Fullt${waitlist.length ? ` · ${waitlist.length} venter` : ''}`
+      : `${Math.max(0, e.maxParticipants - (e.placesTaken ?? 0))} av ${e.maxParticipants} plasser ledige`
+    : `${coming.length} kommer`;
+  const tiles: InfoTile[] = [
+    {
+      icon: 'calendar',
+      label: e.selectedDate ? formatLong(e.selectedDate) : (e.periodLabel ?? 'Dato kommer'),
+      hint: canAddToCalendar ? 'Legg i kalender' : undefined,
+      onPress: canAddToCalendar ? calendar : undefined,
+    },
+    {
+      icon: 'clock',
+      label: e.startTime ? `Kl. ${formatTime(e.startTime)}` : timeHintLabel(e.timeHint),
+      hint: isOrganizer && !e.startTime && e.selectedDate && !isPast ? 'Sett tid' : undefined,
+      onPress: isOrganizer && !isPast && e.status !== 'cancelled' ? () => router.push(`/event/${e.id}/edit`) : undefined,
+    },
+    { icon: 'users', label: placesLabel, hint: coming.length ? 'Se hvem' : undefined, onPress: () => setWhoOpen(true) },
+  ];
   // A shared total (Aufguss): total, how many share it, and per person — an estimate until full.
   const shared = (activity || kit) && e.price?.mode === 'split' ? describeSharedPrice(e.price.amountOre, e) : null;
   const basePrice = shared ? { headline: shared.headline, detail: [shared.detail, shared.now].filter(Boolean).join(' · ') } : e.price ? describePrice(e.price, e) : null;
@@ -201,49 +229,63 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
   return (
     <Screen edges={[]}>
       <ScrollView showsVerticalScrollIndicator={false} contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingBottom: 140 }}>
-        <EventHero imageUrl={e.coverImageUrl} height={300} />
-        <View style={{ marginTop: -spacing.xxl, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, backgroundColor: colors.background, paddingHorizontal: gutter, paddingTop: spacing.xxl }}>
-          <Animated.View entering={FadeInDown.duration(320)}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
-                <Icon name={category.icon} size={16} color="primary" />
-              </View>
-              <Text variant="title1" style={{ flex: 1 }} accessibilityRole="header">
-                {e.title}
-              </Text>
+        <View style={{ height: Math.max(360, screenHeight * 0.52) }}>
+          <StatusBar style="light" />
+          <Image source={{ uri: e.coverImageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={250} accessibilityIgnoresInvertColors />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0)', 'rgba(12,10,9,0.55)', 'rgba(12,10,9,0.88)']}
+            locations={[0, 0.25, 0.6, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={{ position: 'absolute', top: insets.top + spacing.xs, left: gutter - 8, right: gutter - 8, flexDirection: 'row', justifyContent: 'space-between' }}>
+            <IconButton icon="chevron-left" variant="glass" accessibilityLabel="Tilbake" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              {canInvite ? <IconButton icon="user-plus" variant="glass" accessibilityLabel="Inviter" onPress={() => router.push(`/event/${e.id}/invite`)} /> : null}
+              <IconButton icon={isOrganizer ? 'settings' : 'more-horizontal'} variant="glass" accessibilityLabel={isOrganizer ? 'Innstillinger' : 'Mer'} onPress={() => setMoreOpen(true)} />
             </View>
+          </View>
+          <Animated.View entering={FadeInDown.duration(450)} style={{ position: 'absolute', left: gutter, right: gutter, bottom: radius.xl + spacing.md }}>
+            <Icon name={category.icon} size={26} tint="#FF9A8B" />
+            <Text variant="display" style={{ color: '#fff', marginTop: spacing.md }} accessibilityRole="header">
+              {e.title}
+            </Text>
             {themeSpec && (e.activityTheme || canTheme) ? (
               <PressableScale
                 disabled={!canTheme}
                 onPress={() => setThemeOpen(true)}
                 accessibilityRole={canTheme ? 'button' : undefined}
                 accessibilityLabel={e.activityTheme ? `${themeSpec.label}: ${e.activityTheme}${canTheme ? '. Trykk for å endre' : ''}` : `Legg til ${themeSpec.label.toLowerCase()}`}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm, marginLeft: 32 + spacing.sm, alignSelf: 'flex-start' }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs, alignSelf: 'flex-start' }}
               >
-                {e.activityTheme ? (
-                  <Text variant="title3" color="textSecondary">
-                    {themeSpec.label}: {e.activityTheme}
-                  </Text>
-                ) : (
-                  <Text variant="callout" color="primary">
-                    + Legg til {themeSpec.label.toLowerCase()}
-                  </Text>
-                )}
-                {e.activityTheme && canTheme ? <Icon name="edit-2" size={14} color="textTertiary" /> : null}
+                <Text variant="title3" style={{ color: e.activityTheme ? '#fff' : '#FF9A8B' }}>
+                  {e.activityTheme ? `${themeSpec.label}: ${e.activityTheme}` : `+ Legg til ${themeSpec.label.toLowerCase()}`}
+                </Text>
+                {e.activityTheme && canTheme ? <Icon name="edit-2" size={14} tint="rgba(255,255,255,0.6)" /> : null}
               </PressableScale>
             ) : null}
-            <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
-              <InfoLine icon="calendar" text={time ? `${when} · ${time}` : when} />
-              {place ? <InfoLine icon="map-pin" text={place} /> : null}
-              {placesLine ? <InfoLine icon="users" text={placesLine} /> : null}
-              {price ? <InfoLine icon="tag" text={price.detail ? `${price.headline} · ${price.detail}` : price.headline} /> : null}
-              {price && mine?.paysShare === false ? <InfoLine icon="gift" text="Du deler ikke kostnaden" /> : null}
-              {roleHolder && activity ? <InfoLine icon="award" text={`Du er ${activity.role.lower} – du bruker ingen deltagerplass og betaler ikke`} /> : null}
-              {e.series && e.series.status !== 'ended' ? (
-                <InfoLine icon="repeat" text={`${repeatSummary(e.series, e.selectedDate)}${e.series.status === 'paused' ? ' · på pause' : ''}`} />
-              ) : null}
-              {!isOrganizer ? <InfoLine icon="user" text={`Arrangert av ${firstName(e.organizer.name)}`} /> : null}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md }}>
+              <Avatar name={e.organizer.name} uri={e.organizer.avatarUrl} size={28} />
+              <Text variant="callout" style={{ color: 'rgba(255,255,255,0.85)', flexShrink: 1 }} numberOfLines={1}>
+                {isOwner ? 'Du arrangerer' : `Arrangert av ${firstName(e.organizer.name)}`}
+              </Text>
+              {e.status === 'cancelled' ? <Tag label="Avlyst" tone="glass" /> : null}
             </View>
+          </Animated.View>
+        </View>
+
+        <View style={{ marginTop: -radius.xl, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, backgroundColor: colors.background, paddingHorizontal: gutter, paddingTop: spacing.lg }}>
+          <Animated.View entering={FadeInDown.delay(120).duration(420)}>
+            <InfoTiles tiles={tiles} />
+            {place || price || e.series ? (
+              <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
+                {place ? <InfoLine icon="map-pin" text={place} /> : null}
+                {price ? <InfoLine icon="tag" text={price.detail ? `${price.headline} · ${price.detail}` : price.headline} /> : null}
+                {price && mine?.paysShare === false ? <InfoLine icon="gift" text="Du deler ikke kostnaden" /> : null}
+                {e.series && e.series.status !== 'ended' ? (
+                  <InfoLine icon="repeat" text={`${repeatSummary(e.series, e.selectedDate)}${e.series.status === 'paused' ? ' · på pause' : ''}`} />
+                ) : null}
+              </View>
+            ) : null}
           </Animated.View>
 
           {activity && e.status !== 'cancelled' ? <ActivityRoleCard activity={e.activityType} role={e.activityRole} isOrganizer={isOrganizer} style={{ marginTop: spacing.xl }} /> : null}
@@ -289,13 +331,6 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
               </View>
             </Card>
           ) : null}
-
-          <View style={{ flexDirection: 'row', marginTop: spacing.xl }}>
-            {canAddToCalendar ? <ActionButton icon="calendar" label="Kalender" onPress={calendar} /> : null}
-            {canInvite ? <ActionButton icon="user-plus" label="Inviter" onPress={() => router.push(`/event/${e.id}/invite`)} /> : null}
-            {isOrganizer ? <ActionButton icon="edit-2" label="Rediger" onPress={() => router.push(`/event/${e.id}/edit`)} /> : null}
-            <ActionButton icon="more-horizontal" label="Mer" onPress={() => setMoreOpen(true)} />
-          </View>
 
           {e.status !== 'cancelled' && !roleHolder ? <EventMessages eventId={e.id} isOrganizer={isOrganizer} style={{ marginTop: spacing.xl }} /> : null}
 
@@ -377,7 +412,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
         </View>
       </ScrollView>
 
-      {activity ? (
+      {themeSpec ? (
         <ThemeSheet
           visible={themeOpen}
           onClose={() => setThemeOpen(false)}
@@ -503,7 +538,7 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
         onClose={() => setPersonMember(null)}
       />
       {isOwner ? (
-        <Sheet visible={rolesOpen} onClose={() => setRolesOpen(false)} title="Medarrangører og plasser">
+        <Sheet visible={rolesOpen} onClose={() => setRolesOpen(false)} title="Medarrangører og plasser" scroll>
           {roles ? <SeriesPeopleEditor members={e.members} value={roles} onChange={setRoles} recurring={!!e.series} /> : null}
           <Button
             title="Lagre"
@@ -553,48 +588,137 @@ function EventDetail({ event: e, isOrganizer, isOwner, meId }: { event: PlannerE
           />
         </Sheet>
       ) : null}
-      <Sheet visible={moreOpen} onClose={() => { setMoreOpen(false); setReporting(false); }} title={reporting ? 'Rapporter arrangementet' : e.title}>
+      <AttendeesSheet
+        visible={whoOpen}
+        onClose={() => setWhoOpen(false)}
+        subtitle={e.maxParticipants ? placesLabel : undefined}
+        role={activity && e.activityRole?.status === 'confirmed' && e.activityRole.name ? { label: activity.role.label, name: e.activityRole.name } : null}
+        coming={coming.map((m) => ({ id: m.id, name: m.person.name, avatarUrl: m.person.avatarUrl, tag: m.role === 'organizer' ? 'Arrangør' : m.isCohost ? 'Medarrangør' : undefined }))}
+        waitlist={waitlist.map((m) => ({ id: m.id, name: m.person.name, avatarUrl: m.person.avatarUrl }))}
+      />
+      <Sheet
+        visible={moreOpen}
+        onClose={() => {
+          setMoreOpen(false);
+          setReporting(false);
+        }}
+        title={reporting ? 'Rapporter arrangementet' : isOrganizer ? 'Innstillinger' : e.title}
+        subtitle={!reporting && isOrganizer ? e.title : undefined}
+        scroll
+        onClosed={() => {
+          const open = afterMore.current;
+          afterMore.current = null;
+          open?.();
+        }}
+      >
         {reporting ? (
-          <ReportForm target={{ eventId: e.id }} onDone={() => { setMoreOpen(false); setReporting(false); }} />
+          <ReportForm
+            target={{ eventId: e.id }}
+            onDone={() => {
+              setMoreOpen(false);
+              setReporting(false);
+            }}
+          />
         ) : (
-          <>
-            {isOrganizer && e.groupId ? <ListRow icon="users" title="Gå til gjengen" onPress={() => { setMoreOpen(false); router.push(`/group/${e.groupId}`); }} /> : null}
-            {isOwner && e.series && e.series.status !== 'ended' ? (
-              <>
-                <ListRow icon="repeat" title="Endre gjentakelse" onPress={() => { setMoreOpen(false); setRepeatOpen(true); }} />
-                <ListRow
-                  icon={e.series.status === 'paused' ? 'play' : 'pause'}
-                  title={e.series.status === 'paused' ? 'Fortsett gjentakelsen' : 'Sett gjentakelsen på pause'}
-                  onPress={async () => {
-                    setMoreOpen(false);
-                    const status = e.series!.status === 'paused' ? 'active' : 'paused';
-                    await updateSeries.mutateAsync({ seriesId: e.series!.id, patch: { status } });
-                    toast(status === 'paused' ? 'Satt på pause – ingen nye runder før du fortsetter' : 'Gjentakelsen fortsetter');
-                  }}
-                />
-                <ListRow
-                  icon="x-circle"
-                  title="Avslutt gjentakelsen"
-                  destructive
-                  onPress={() =>
-                    confirmDestructive('Avslutte gjentakelsen?', 'Dette arrangementet blir som det er, men det lages ingen nye.', 'Avslutt', async () => {
+          <View style={{ gap: spacing.lg }}>
+            <MenuGroup title={isOrganizer ? 'Arrangementet' : undefined}>
+              {[
+                isOrganizer && e.status !== 'cancelled' ? (
+                  <ListRow key="edit" icon="edit-2" title="Rediger" subtitle="Navn, dato og tid, sted og beskrivelse" chevron onPress={() => openAfterMore(() => router.push(`/event/${e.id}/edit`))} />
+                ) : null,
+                canTheme && isOrganizer ? (
+                  <ListRow key="theme" icon="star" title={themeSpec!.label} subtitle={e.activityTheme ?? 'Ikke satt'} chevron onPress={() => openAfterMore(() => setThemeOpen(true))} />
+                ) : null,
+                canAddToCalendar ? (
+                  <ListRow
+                    key="calendar"
+                    icon="calendar"
+                    title="Legg i kalender"
+                    onPress={() => {
                       setMoreOpen(false);
-                      await updateSeries.mutateAsync({ seriesId: e.series!.id, patch: { status: 'ended' } });
-                      toast('Gjentakelsen er avsluttet');
-                    })
-                  }
-                />
-              </>
+                      void calendar();
+                    }}
+                  />
+                ) : null,
+                e.groupId && isOrganizer ? <ListRow key="group" icon="users" title="Gå til gjengen" chevron onPress={() => openAfterMore(() => router.push(`/group/${e.groupId}`))} /> : null,
+              ]}
+            </MenuGroup>
+            {isOrganizer ? (
+              <MenuGroup title="Folk og plasser">
+                {[
+                  isOwner && !isPast && e.status !== 'cancelled' && e.series?.status !== 'ended' ? (
+                    <ListRow key="roles" icon="user-check" title="Medarrangører og plasser" subtitle="Hvem som har alltid plass, og hvor mange" chevron onPress={() => openAfterMore(() => setRolesOpen(true))} />
+                  ) : null,
+                  canInvite && e.inviteToken ? (
+                    <ListRow key="share" icon="share-2" title="Del invitasjonen" subtitle="Lenke på SMS, Snapchat eller i gruppechatten" chevron onPress={() => openAfterMore(() => setShareOpen(true))} />
+                  ) : null,
+                ]}
+              </MenuGroup>
             ) : null}
-            {!isOrganizer ? <ListRow icon="flag" title="Rapporter arrangementet" subtitle="Også bilder som er delt her" onPress={() => setReporting(true)} /> : null}
-            {isOwner && !isPast && e.status !== 'cancelled' && e.series?.status !== 'ended' ? (
-              <ListRow icon="users" title="Medarrangører og plasser" subtitle="Hvem som har alltid plass, og hvor mange" onPress={() => { setMoreOpen(false); setRolesOpen(true); }} />
+            {isOwner && e.series && e.series.status !== 'ended' ? (
+              <MenuGroup title="Gjentakelse">
+                {[
+                  <ListRow key="repeat" icon="repeat" title="Endre gjentakelse" subtitle={repeatSummary(e.series, e.selectedDate)} chevron onPress={() => openAfterMore(() => setRepeatOpen(true))} />,
+                  <ListRow
+                    key="pause"
+                    icon={e.series.status === 'paused' ? 'play' : 'pause'}
+                    title={e.series.status === 'paused' ? 'Fortsett gjentakelsen' : 'Sett gjentakelsen på pause'}
+                    onPress={async () => {
+                      setMoreOpen(false);
+                      const status = e.series!.status === 'paused' ? 'active' : 'paused';
+                      await updateSeries.mutateAsync({ seriesId: e.series!.id, patch: { status } });
+                      toast(status === 'paused' ? 'Satt på pause – ingen nye runder før du fortsetter' : 'Gjentakelsen fortsetter');
+                    }}
+                  />,
+                  <ListRow
+                    key="end"
+                    icon="x-circle"
+                    title="Avslutt gjentakelsen"
+                    destructive
+                    onPress={() =>
+                      confirmDestructive('Avslutte gjentakelsen?', 'Dette arrangementet blir som det er, men det lages ingen nye.', 'Avslutt', async () => {
+                        setMoreOpen(false);
+                        await updateSeries.mutateAsync({ seriesId: e.series!.id, patch: { status: 'ended' } });
+                        toast('Gjentakelsen er avsluttet');
+                      })
+                    }
+                  />,
+                ]}
+              </MenuGroup>
             ) : null}
-            {isOwner && !isPast ? <ListRow icon="x-circle" title="Avlys arrangementet" destructive onPress={confirmCancel} /> : null}
-          </>
+            <MenuGroup>
+              {[
+                !isOrganizer ? <ListRow key="report" icon="flag" title="Rapporter arrangementet" subtitle="Også bilder som er delt her" onPress={() => setReporting(true)} /> : null,
+                isOwner && !isPast && e.status !== 'cancelled' ? <ListRow key="cancel" icon="x-circle" title="Avlys arrangementet" subtitle="Alle som er invitert får beskjed" destructive onPress={confirmCancel} /> : null,
+              ]}
+            </MenuGroup>
+          </View>
         )}
       </Sheet>
     </Screen>
+  );
+}
+
+/** A card of menu rows with dividers, under a small heading. Empty groups disappear. */
+function MenuGroup({ title, children }: { title?: string; children: (ReactElement | null | false)[] }) {
+  const rows = children.filter((r): r is ReactElement => !!r);
+  if (!rows.length) return null;
+  return (
+    <View>
+      {title ? (
+        <Text variant="overline" color="textTertiary" style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
+          {title}
+        </Text>
+      ) : null}
+      <Card style={{ paddingVertical: spacing.xs }}>
+        {rows.map((r, i) => (
+          <View key={r.key ?? i}>
+            {i ? <Divider /> : null}
+            {r}
+          </View>
+        ))}
+      </Card>
+    </View>
   );
 }
 

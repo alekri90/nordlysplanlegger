@@ -8,9 +8,11 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppLogo } from '@/components/brand/AppLogo';
+import { AttendeesSheet } from '@/components/event/AttendeesSheet';
 import { CalendarConflict } from '@/components/event/CalendarConflict';
 import { confirmDecline } from '@/components/event/confirmDecline';
 import { EventMessages } from '@/components/event/EventMessages';
+import { InfoTiles, type InfoTile } from '@/components/event/InfoTiles';
 import { Avatar, AvatarStack, Button, EmptyState, Icon, IconButton, Input, PressableScale, Sheet, Skeleton, Tag, Text, useToast, type IconName } from '@/components/ui';
 import { useInvite, useSubmitRsvp } from '@/data/hooks';
 import type { InviteView } from '@/data/types';
@@ -60,6 +62,7 @@ function InvitationView({ invite }: { invite: InviteView }) {
   const me = useMe();
   const rsvp = useSubmitRsvp(invite.token);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [whoOpen, setWhoOpen] = useState(false);
   const [nameSheet, setNameSheet] = useState<null | boolean>(null);
   const [name, setName] = useState('');
   const [knownName, setKnownName] = useState<string | null>(null);
@@ -91,12 +94,19 @@ function InvitationView({ invite }: { invite: InviteView }) {
   const shared = activity && pricing?.price?.mode === 'split' ? describeSharedPrice(pricing.price.amountOre, pricing) : null;
   const price = shared ? { headline: shared.headline, detail: shared.detail } : pricing?.price ? describePrice(pricing.price, pricing) : null;
 
-  const tiles: { icon: IconName; label: string }[] = [
+  // Who said yes, with whole names: tap the places to see them.
+  const attendees = invite.attendees ?? [];
+  const tiles: InfoTile[] = [
     isDated
       ? { icon: 'calendar', label: formatLong(e.selectedDate!) }
       : { icon: 'calendar', label: e.options.length ? optionsSummary(e.options.map((o) => o.date)) : 'Dato kommer' },
     { icon: 'clock', label: e.startTime ? `Kl. ${formatTime(e.startTime)}` : timeHintLabel(e.timeHint) },
-    { icon: 'users', label: placesLabel ?? `${invite.invitedCount} inviterte` },
+    {
+      icon: 'users',
+      label: placesLabel ?? (attendees.length ? `${attendees.length} kommer` : `${invite.invitedCount} inviterte`),
+      hint: attendees.length ? 'Se hvem' : undefined,
+      onPress: attendees.length || (activity && role?.status === 'confirmed') ? () => setWhoOpen(true) : undefined,
+    },
   ];
 
   const declineRsvp = () => {
@@ -153,21 +163,7 @@ function InvitationView({ invite }: { invite: InviteView }) {
         </View>
 
         <Animated.View entering={FadeInDown.delay(150).duration(450)} style={{ paddingHorizontal: gutter }}>
-          <View style={{ flexDirection: 'row', borderRadius: radius.lg, backgroundColor: 'rgba(255,255,255,0.06)', marginTop: spacing.sm }}>
-            {tiles.map((t, i) => (
-              <View
-                key={t.icon}
-                accessible
-                accessibilityLabel={t.label}
-                style={{ flex: 1, alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg, paddingHorizontal: spacing.xs, borderLeftWidth: i ? 1 : 0, borderLeftColor: 'rgba(255,255,255,0.08)' }}
-              >
-                <Icon name={t.icon} size={20} tint="rgba(255,255,255,0.85)" />
-                <Text variant="caption" align="center" style={{ color: 'rgba(255,255,255,0.8)' }} numberOfLines={2}>
-                  {t.label}
-                </Text>
-              </View>
-            ))}
-          </View>
+          <InfoTiles tiles={tiles} onDark style={{ marginTop: spacing.sm }} />
 
           {activity && role ? (
             <View
@@ -178,7 +174,7 @@ function InvitationView({ invite }: { invite: InviteView }) {
               <Text variant="footnote" style={{ color: 'rgba(255,255,255,0.9)', flex: 1 }}>
                 {provisional
                   ? `Foreløpig – venter på at ${activity.role.definite} bekrefter. Du får beskjed når det er klart.`
-                  : `${activity.role.label}: ${role.name ?? ''}. Kommer i tillegg til deltagerne og deler ikke kostnaden.`}
+                  : `${activity.role.label}: ${role.name ?? ''}`}
               </Text>
             </View>
           ) : null}
@@ -193,12 +189,19 @@ function InvitationView({ invite }: { invite: InviteView }) {
           ) : null}
 
           {invite.respondents.length > 1 ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg, justifyContent: 'center' }}>
+            <PressableScale
+              disabled={!attendees.length}
+              onPress={() => setWhoOpen(true)}
+              accessibilityRole={attendees.length ? 'button' : undefined}
+              accessibilityLabel={`${invite.respondents.length} har svart${attendees.length ? '. Se hvem som kommer' : ''}`}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg, justifyContent: 'center', alignSelf: 'center' }}
+            >
               <AvatarStack people={invite.respondents} size={26} max={5} />
               <Text variant="footnote" style={{ color: 'rgba(255,255,255,0.7)' }}>
                 {invite.respondents.length} har svart
               </Text>
-            </View>
+              {attendees.length ? <Icon name="chevron-right" size={14} tint="rgba(255,255,255,0.5)" /> : null}
+            </PressableScale>
           ) : null}
 
           <View style={{ marginTop: spacing.xl, gap: spacing.sm }}>
@@ -288,6 +291,14 @@ function InvitationView({ invite }: { invite: InviteView }) {
           ) : null}
         </View>
       </Sheet>
+
+      <AttendeesSheet
+        visible={whoOpen}
+        onClose={() => setWhoOpen(false)}
+        subtitle={placesLabel ?? undefined}
+        role={activity && role?.status === 'confirmed' && role.name ? { label: activity.role.label, name: role.name } : null}
+        coming={attendees.map((p) => ({ id: p.id, name: p.name, avatarUrl: p.avatarUrl, tag: p.organizer ? 'Arrangør' : undefined }))}
+      />
 
       <Sheet visible={nameSheet !== null} onClose={() => setNameSheet(null)} title="Hva heter du?" subtitle="Så vet de hvem som svarer. Du trenger ingen konto.">
         <Input size="lg" autoFocus value={name} onChangeText={setName} placeholder="Fornavn" autoCapitalize="words" maxLength={60} />

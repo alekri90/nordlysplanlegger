@@ -31,12 +31,9 @@ export function ActivityRoleCard({ activity, role, isOrganizer, style }: { activ
     return (
       <Card style={[{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }, style]}>
         <Icon name="award" size={20} color="success" />
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text variant="headline">Du er {lower}</Text>
-          <Text variant="footnote" color="textSecondary">
-            Du kommer i tillegg til deltagerne, bruker ingen plass og deler ikke kostnaden.
-          </Text>
-        </View>
+        <Text variant="headline" style={{ flex: 1 }}>
+          Du er {lower}
+        </Text>
       </Card>
     );
   }
@@ -46,7 +43,8 @@ export function ActivityRoleCard({ activity, role, isOrganizer, style }: { activ
       icon = 'award';
       color = 'success';
       title = `${label}: ${role.name ?? ''}`.trim();
-      body = `Bekreftet · bruker ingen deltagerplass og deler ikke kostnaden`;
+      // Just the whole name: «Badstumester: Lorna Hansen».
+      body = '';
       break;
     case 'choose':
       icon = 'user-check';
@@ -78,16 +76,18 @@ export function ActivityRoleCard({ activity, role, isOrganizer, style }: { activ
           <Text variant="headline">{title}</Text>
           {held && role.status !== 'confirmed' ? <Tag label="Ikke invitert" /> : isProvisional(role) ? <Tag label="Foreløpig" /> : null}
         </View>
-        <Text variant="footnote" color="textSecondary">
-          {body}
-        </Text>
+        {body ? (
+          <Text variant="footnote" color="textSecondary">
+            {body}
+          </Text>
+        ) : null}
       </View>
       {isOrganizer && role.requestId ? <Icon name="chevron-right" size={18} color="textTertiary" /> : null}
     </Card>
   );
   if (!isOrganizer || !role.requestId) return content;
   return (
-    <PressableScale onPress={() => router.push({ pathname: '/rolle/[id]', params: { id: role.requestId! } })} scaleTo={0.985} accessibilityRole="button" accessibilityLabel={`${title}. ${body}`}>
+    <PressableScale onPress={() => router.push({ pathname: '/rolle/[id]', params: { id: role.requestId! } })} scaleTo={0.985} accessibilityRole="button" accessibilityLabel={body ? `${title}. ${body}` : title}>
       {content}
     </PressableScale>
   );

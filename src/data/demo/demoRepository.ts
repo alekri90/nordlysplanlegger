@@ -224,7 +224,7 @@ function demoActivityRole(e: PlannerEvent, organizer: boolean): import('../types
   demoSyncCancelled(r);
   const ds = r.dates
     .filter((d) => d.eventId === e.id)
-    .map((d) => ({ date: d.date, status: dateStatus(d), name: r.candidates.find((c) => c.id === d.assignedCandidateId)?.name.split(' ')[0] ?? null }));
+    .map((d) => ({ date: d.date, status: dateStatus(d), name: r.candidates.find((c) => c.id === d.assignedCandidateId)?.name ?? null }));
   const chosen = ds.find((d) => d.date === e.selectedDate) ?? (ds.length === 1 ? ds[0] : null);
   const mine = r.dates.filter((d) => d.eventId === e.id).map((d) => r.candidates.find((c) => c.id === d.assignedCandidateId)).find((c) => !!c?.userId && c.userId === meId());
   return {
@@ -1377,6 +1377,10 @@ export const demoRepository: Repository = {
       respondents: e.members
         .filter((m) => m.role === 'organizer' || ['responded', 'attending'].includes(m.status))
         .map((m) => ({ ...freshPerson(m.person), name: freshPerson(m.person).name.split(' ')[0] })),
+      attendees: e.members
+        .filter((m) => m.status === 'attending')
+        .sort((a, b) => Number(b.role === 'organizer') - Number(a.role === 'organizer'))
+        .map((m) => ({ ...freshPerson(m.person), organizer: m.role === 'organizer' })),
       pricing: { price: e.price ?? null, maxParticipants: e.maxParticipants ?? null, placesTaken: e.placesTaken ?? null, payingPlaces: e.payingPlaces ?? null, nonPayingPlaces: e.nonPayingPlaces ?? null },
       activity: e.activityType
         ? { activityType: e.activityType, rolePlaces: e.rolePlaces ?? 0, venueCapacity: e.venueCapacity ?? null, theme: e.activityTheme ?? null, role: demoActivityRole(e, false) }

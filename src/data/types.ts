@@ -497,6 +497,8 @@ export interface InviteView {
   groupId?: string | null;
   invitedCount: number;
   respondents: Person[];
+  /** Who is coming (full names): the organizer first, then in the order they said yes. */
+  attendees: (Person & { organizer?: boolean })[];
   /** Places and price, without names. */
   pricing?: InvitePricing | null;
   /** A concrete activity type, and whether its role is confirmed yet (else the event is provisional). */

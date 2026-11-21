@@ -1187,6 +1187,11 @@ export const supabaseRepository: Repository = {
         a ? { activityType: a.activity_type, rolePlaces: a.role_places ?? 0, venueCapacity: a.venue_capacity ?? null, theme: a.theme ?? null, role: toActivityRole(a.role) } : null,
       () => null,
     );
+    const attendees = await sb.rpc('get_invite_attendees', { p_token: token }).then(
+      ({ data: a }): InviteView['attendees'] =>
+        ((a ?? []) as { id: string; name: string; avatar_url: string | null; organizer: boolean }[]).map((p) => ({ id: p.id, name: p.name, avatarUrl: p.avatar_url, organizer: p.organizer })),
+      () => [],
+    );
     const e = data.event;
     const category = (e.category as CategoryId) ?? 'hangout';
     const view: InviteView = {
@@ -1212,6 +1217,7 @@ export const supabaseRepository: Repository = {
       groupId: e.group_id ?? null,
       invitedCount: data.invited_count ?? 0,
       respondents: (data.respondents ?? []).map((p: { id: string; name: string; avatar_url: string | null }) => ({ id: p.id, name: p.name, avatarUrl: p.avatar_url })),
+      attendees,
       pricing,
       activity,
       myResponse: data.my_response

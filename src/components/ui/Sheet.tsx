@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,14 +13,29 @@ type Props = {
   title?: string;
   subtitle?: string;
   children: ReactNode;
+  /** Long content (lists of people): scrolls inside the sheet instead of growing past the screen. */
+  scroll?: boolean;
+  /** After the closing animation — open the next sheet here, never while this one is still up. */
+  onClosed?: () => void;
 };
 
 /** Bottom sheet for short, focused choices (share, more actions, confirmations). */
-export function Sheet({ visible, onClose, title, subtitle, children }: Props) {
+export function Sheet({ visible, onClose, title, subtitle, children, scroll, onClosed }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const [mounted, setMounted] = useState(visible);
   const progress = useSharedValue(0);
+
+  // The latest callback, for when the closing animation ends.
+  const closedRef = useRef(onClosed);
+  useEffect(() => {
+    closedRef.current = onClosed;
+  });
+  const close = () => {
+    setMounted(false);
+    closedRef.current?.();
+  };
 
   // Mount immediately when opened; unmount only after the closing animation.
   if (visible && !mounted) setMounted(true);
@@ -30,7 +45,7 @@ export function Sheet({ visible, onClose, title, subtitle, children }: Props) {
       progress.value = withSpring(1, motion.springSoft);
     } else if (mounted) {
       progress.value = withTiming(0, { duration: motion.fast, easing: Easing.in(Easing.quad) }, (done) => {
-        if (done) scheduleOnRN(setMounted, false);
+        if (done) scheduleOnRN(close);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -52,6 +67,8 @@ export function Sheet({ visible, onClose, title, subtitle, children }: Props) {
             left: 0,
             right: 0,
             bottom: 0,
+            // Never taller than the screen, so the handle and the backdrop stay reachable.
+            maxHeight: height - insets.top - spacing.lg,
             backgroundColor: colors.surface,
             borderTopLeftRadius: radius.xl,
             borderTopRightRadius: radius.xl,
@@ -73,7 +90,13 @@ export function Sheet({ visible, onClose, title, subtitle, children }: Props) {
             {subtitle}
           </Text>
         ) : null}
-        {children}
+        {scroll ? (
+          <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            {children}
+          </ScrollView>
+        ) : (
+          children
+        )}
       </Animated.View>
     </Modal>
   );

@@ -1195,6 +1195,16 @@ console.log('\nPrice, who pays, and answers set by the organizer');
     assert.equal(p.non_paying_places, 1);
   });
 
+  await check('the invitation lists who is coming, with whole names, the organizer first', async () => {
+    await as(null);
+    const [{ a }] = await q(`select get_invite_attendees($1) a`, [r.invite_token]);
+    const [{ n }] = await q(`select count(*)::int n from event_members m join event_invites i on i.event_id = m.event_id where i.token = $1 and m.status = 'attending'`, [r.invite_token]);
+    assert.equal(a.length, n, 'everyone who said yes, nobody else');
+    assert.equal(a[0].organizer, true, 'the organizer first');
+    assert.ok(a.every((p) => p.name && 'avatar_url' in p));
+    assert.deepEqual((await q(`select get_invite_attendees('feil') a`))[0].a, [], 'a wrong link shows nobody');
+  });
+
   await check('a series keeps the price and who doesn\'t pay in the next round', async () => {
     await as(org);
     const [{ r: first }] = await q(`select create_event($1) r`, [{ title: 'Badstu hver uke', category: 'sauna', date_mode: 'fixed', fixed_date: '2027-11-02', time_hint: 'evening', member_user_ids: [mester, kari] }]);
@@ -1374,7 +1384,7 @@ console.log('\nActivity types: Aufguss with a sauna master');
     assert.equal(p.body, 'Badstumester er klar: Ola.');
     assert.ok((await q(`select 1 from notifications where user_id = $1 and data ->> 'kind' = 'role_assigned'`, [ola])).length, 'Ola is told');
     const [e] = await asUser(deltager, `select activity_role(e) a from events e where id = $1`, [events[0]]);
-    assert.deepEqual([e.a.status, e.a.name], ['confirmed', 'Ola']);
+    assert.deepEqual([e.a.status, e.a.name], ['confirmed', 'Ola Mester'], 'the whole name of the sauna master');
   });
 
   await check('with two asked, nobody gets it automatically; the organizer picks one who can', async () => {
