@@ -17,6 +17,8 @@ type Props = {
   /** Photos for the occasion in the title come first ("Halloweenfest" → pumpkins). */
   title: string;
   category: CategoryId;
+  /** An activity type with its own photos (Aufguss) puts them first. */
+  activity?: string | null;
   /** Picking a theme also picks its first photo. */
   onCategory: (category: CategoryId) => void;
   value: string;
@@ -27,9 +29,9 @@ type Props = {
  * The picture is part of the plan, not a setting: ready-made photos per theme a tap away,
  * and your own from the camera roll. There is always one selected.
  */
-export function CoverPicker({ title, category, onCategory, value, onChange }: Props) {
+export function CoverPicker({ title, category, activity, onCategory, value, onChange }: Props) {
   const colors = useColors();
-  const photos = coverOptionsFor(title, category);
+  const photos = coverOptionsFor(title, category, activity);
   const custom = !photos.some((url) => sameImage(url, value)) ? value : null;
   const grid = [...(custom ? [custom] : []), ...photos].slice(0, 5);
 

@@ -77,6 +77,7 @@ function EditForm({ event: e }: { event: PlannerEvent }) {
             <CoverPicker
               title={title}
               category={category}
+              activity={e.activityType}
               onCategory={(c) => {
                 setCategory(c);
                 setCover(defaultCoverFor(title, c));

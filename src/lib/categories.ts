@@ -293,16 +293,28 @@ export function suggestCategory(title: string): CategoryId {
 /** Themes that no longer exist (e.g. the old "poker") fall back to the catch-all. */
 const themeOf = (category: CategoryId) => CATEGORIES[category] ?? CATEGORIES.hangout;
 
+/**
+ * Our own photos, served with the web app from public/covers: «name.jpg» (1600 px) and
+ * «name-480.jpg» for thumbnails. A full address, so it also works in the app and in link previews.
+ */
+export const OWN_PHOTOS = 'https://nordlysplanlegger.vercel.app/covers/';
+
+/** A photo in a list: an Unsplash id, or «own:name» for one of our own in public/covers. */
+export function photoUrl(entry: string, width = 1200): string {
+  return entry.startsWith('own:') ? `${OWN_PHOTOS}${entry.slice(4)}${width <= 480 ? '-480' : ''}.jpg` : unsplash(entry, width);
+}
+
 export function coverOptions(category: CategoryId, width = 1200): string[] {
-  return themeOf(category).photos.map((id) => unsplash(id, width));
+  return themeOf(category).photos.map((id) => photoUrl(id, width));
 }
 
 export function defaultCover(category: CategoryId): string {
-  return unsplash(themeOf(category).photos[0]);
+  return photoUrl(themeOf(category).photos[0]);
 }
 
-/** Smaller variant of a cover URL for thumbnails. Leaves non-Unsplash URLs untouched. */
+/** Smaller variant of a cover URL for thumbnails. Leaves other URLs (uploads) untouched. */
 export function thumb(url: string, width = 400): string {
+  if (url.startsWith(OWN_PHOTOS)) return url.replace(/(-480)?\.jpg$/, width <= 480 ? '-480.jpg' : '.jpg');
   return url.includes('images.unsplash.com') ? url.replace(/w=\d+/, `w=${width}`) : url;
 }
 
@@ -319,6 +331,7 @@ export const PHOTO_SETS: PhotoSet[] = [
     id: 'aufguss',
     keywords: ['aufguss', 'løyly'],
     photos: [
+      'own:aufguss', // the sauna master waving the towel, lake at dusk — the standard Aufguss picture
       '1660735698223-23a4edefa264', // steam rising from the stones
       '1741601272384-7150b6e6b842', // pouring water in a dark, steamy sauna
       '1749561532759-f66ea4b3e66c', // friends with birch whisks, heater in front
@@ -767,8 +780,13 @@ export const PHOTO_SETS: PhotoSet[] = [
   },
 ];
 
-/** The photo set for a title ("Halloweenfest" → Halloween), or null. Earliest, then longest keyword wins. */
-export function photoSetFor(title: string): PhotoSet | null {
+/**
+ * The photo set for a title ("Halloweenfest" → Halloween), or null. Earliest, then longest keyword wins.
+ * An activity type with its own set (Aufguss) uses it whatever the title says («Badstu med jentene»).
+ */
+export function photoSetFor(title: string, activity?: string | null): PhotoSet | null {
+  const typed = activity ? PHOTO_SETS.find((s) => s.id === activity) : undefined;
+  if (typed) return typed;
   const t = title.toLowerCase();
   let best: PhotoSet | null = null;
   let bestIndex = Infinity;
@@ -786,15 +804,15 @@ export function photoSetFor(title: string): PhotoSet | null {
   return best;
 }
 
-/** Photos that fit this title first, then the theme's. */
-export function coverOptionsFor(title: string, category: CategoryId, width = 1200): string[] {
-  const set = photoSetFor(title);
-  const own = set ? set.photos.map((id) => unsplash(id, width)) : [];
+/** Photos that fit this title (or activity type) first, then the theme's. */
+export function coverOptionsFor(title: string, category: CategoryId, activity?: string | null, width = 1200): string[] {
+  const set = photoSetFor(title, activity);
+  const own = set ? set.photos.map((id) => photoUrl(id, width)) : [];
   return [...own, ...coverOptions(category, width).filter((url) => !own.includes(url))];
 }
 
-/** The picture a new plan starts with: the occasion's photo if there is one, else the theme's. */
-export function defaultCoverFor(title: string, category: CategoryId): string {
-  const set = photoSetFor(title);
-  return set ? unsplash(set.photos[0]) : defaultCover(category);
+/** The picture a new plan starts with: the occasion's (or activity type's) photo if there is one, else the theme's. */
+export function defaultCoverFor(title: string, category: CategoryId, activity?: string | null): string {
+  const set = photoSetFor(title, activity);
+  return set ? photoUrl(set.photos[0]) : defaultCover(category);
 }

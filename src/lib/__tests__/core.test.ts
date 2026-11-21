@@ -1,8 +1,9 @@
 // Run with `npm test` (Node's built-in runner, TypeScript via type stripping).
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
-import { coverOptionsFor, defaultCover, defaultCoverFor, PHOTO_SETS, photoSetFor, suggestCategory } from '../categories.ts';
+import { coverOptionsFor, defaultCover, defaultCoverFor, PHOTO_SETS, photoSetFor, photoUrl, suggestCategory, thumb } from '../categories.ts';
 import { easterSunday, seasonalIdeas, suggestIdeas } from '../ideas.ts';
 import { activitiesFor, activity, ALL_ACTIVITIES, INSPIRATION_GROUPS, searchActivities } from '../inspiration.ts';
 import { addDays, countWeekends, dateRange, formatDayMonth, formatLong, periodLabelFor, weekday } from '../dates.ts';
@@ -173,8 +174,29 @@ describe('photos for ideas', () => {
 
   it('photo ids look like Unsplash ids and are not repeated', () => {
     const ids = PHOTO_SETS.flatMap((s) => s.photos);
-    for (const id of ids) assert.match(id, /^\d{10,13}-[0-9a-f]{12}$/);
+    for (const id of ids) assert.match(id, /^(\d{10,13}-[0-9a-f]{12}|own:[a-z0-9-]+)$/);
     assert.equal(new Set(ids).size, ids.length);
+  });
+
+  it('our own photos are in public/covers, full size and small', () => {
+    for (const id of PHOTO_SETS.flatMap((s) => s.photos).filter((p) => p.startsWith('own:'))) {
+      const name = id.slice(4);
+      assert.ok(existsSync(`public/covers/${name}.jpg`), `public/covers/${name}.jpg`);
+      assert.ok(existsSync(`public/covers/${name}-480.jpg`), `public/covers/${name}-480.jpg`);
+    }
+    const full = photoUrl('own:aufguss');
+    assert.equal(full, 'https://nordlysplanlegger.vercel.app/covers/aufguss.jpg');
+    assert.equal(thumb(full, 200), 'https://nordlysplanlegger.vercel.app/covers/aufguss-480.jpg');
+    assert.equal(thumb(thumb(full, 200), 900), full);
+  });
+
+  it('Aufguss starts with its own picture, whatever the title says', () => {
+    const aufguss = photoUrl('own:aufguss');
+    assert.equal(defaultCoverFor('Aufguss', 'sauna'), aufguss);
+    assert.equal(defaultCoverFor('Badstu med jentene', 'sauna', 'aufguss'), aufguss);
+    assert.equal(coverOptionsFor('Badstu med jentene', 'sauna', 'aufguss')[0], aufguss);
+    assert.notEqual(defaultCoverFor('Badstu med jentene', 'sauna'), aufguss, 'plain sauna keeps its own');
+    assert.notEqual(defaultCoverFor('Pokerkveld', 'games', 'poker'), aufguss);
   });
 });
 
@@ -224,7 +246,7 @@ describe('inspiration', () => {
     assert.deepEqual(searchActivities('bowl', october).map((a) => a.title), ['Bowling']);
     assert.deepEqual(searchActivities('aufguss', october).map((a) => a.title), ['Aufguss']);
     assert.equal(activity('Aufguss').category, 'sauna');
-    assert.ok(activity('Aufguss').cover.includes('1660735698223'));
+    assert.ok(activity('Aufguss').cover.endsWith('/covers/aufguss.jpg'));
     assert.ok(activity('Gokart').cover.includes('1779128773287'));
   });
 });

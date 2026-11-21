@@ -35,7 +35,7 @@ export default function CreateWhat() {
   const [photosOpen, setPhotosOpen] = useState(false);
 
   // Four pictures that fit; the chosen one is always among them.
-  const options = coverOptionsFor(draft.title, draft.category);
+  const options = coverOptionsFor(draft.title, draft.category, draft.activityType);
   const four = options.slice(0, 4).includes(draft.coverImageUrl) ? options.slice(0, 4) : [draft.coverImageUrl, ...options.slice(0, 3)];
 
   return (
@@ -110,6 +110,7 @@ export default function CreateWhat() {
         <CoverPicker
           title={draft.title}
           category={draft.category}
+          activity={draft.activityType}
           onCategory={(c) => draft.set({ category: c, coverImageUrl: defaultCoverFor(draft.title, c), coverTouched: true })}
           value={draft.coverImageUrl}
           onChange={(coverImageUrl) => draft.set({ coverImageUrl, coverTouched: true })}

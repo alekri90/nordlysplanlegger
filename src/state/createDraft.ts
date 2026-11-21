@@ -136,7 +136,7 @@ export const useCreateDraft = create<CreateDraft & Actions>((set, get) => ({
     set({
       activityType: type?.id ?? null,
       category,
-      coverImageUrl: coverTouched ? coverImageUrl : defaultCoverFor(title, category),
+      coverImageUrl: coverTouched ? coverImageUrl : defaultCoverFor(title, category, type?.id),
       maxParticipants: type?.requiresPlaces ? (maxParticipants ?? type.defaultPlaces) : null,
       ...(type?.kind !== 'role' && { venue: null, roleCandidates: [], roleNote: '' }),
       price: null,
@@ -150,7 +150,7 @@ export const useCreateDraft = create<CreateDraft & Actions>((set, get) => ({
   setTitle: (title) => {
     const { coverTouched, category: previous, coverImageUrl, activityType: chosen } = get();
     if (chosen) {
-      set({ title, coverImageUrl: coverTouched ? coverImageUrl : defaultCoverFor(title, previous) });
+      set({ title, coverImageUrl: coverTouched ? coverImageUrl : defaultCoverFor(title, previous, chosen) });
       return;
     }
     // Keep a theme or photo the user chose; otherwise follow the title ("Halloweenfest" → a pumpkin, not just "Fest").
