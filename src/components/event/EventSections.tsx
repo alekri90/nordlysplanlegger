@@ -18,7 +18,8 @@ const STATUS_ORDER: Record<string, number> = { polling: 0, draft: 1 };
 
 /**
  * Du er invitert (not answered yet) · Neste (date set) · Dato bestemmes (finding a date, I'm in)
- * · Tidligere (newest first). Anything I said no to is left out.
+ * · Tidligere (newest first). Anything I said no to is left out. An unanswered invitation with a
+ * date is in both: an invitation on Hjem, and on its day in Kalender.
  */
 export function splitEvents(events: PlannerEvent[], meId?: string) {
   const t = today();
@@ -37,7 +38,10 @@ export function splitEvents(events: PlannerEvent[], meId?: string) {
     const unanswered = mine?.role === 'guest' && (mine.status === 'invited' || mine.status === 'opened');
     if ((e.status === 'polling' || e.status === 'draft' || e.spontaneous) && unanswered) invitations.push(e);
     else if (e.status === 'polling' || e.status === 'draft') deciding.push(e);
-    else upcoming.push(e);
+    else {
+      upcoming.push(e);
+      if (unanswered) invitations.push(e);
+    }
   }
   upcoming.sort((a, b) => (a.selectedDate ?? '').localeCompare(b.selectedDate ?? '') || b.createdAt.localeCompare(a.createdAt));
   deciding.sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || b.createdAt.localeCompare(a.createdAt));
