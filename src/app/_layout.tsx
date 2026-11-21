@@ -1,8 +1,8 @@
-import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
-import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
-import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
-import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
-import { Inter_800ExtraBold } from '@expo-google-fonts/inter/800ExtraBold';
+import { AlbertSans_400Regular } from '@expo-google-fonts/albert-sans/400Regular';
+import { AlbertSans_500Medium } from '@expo-google-fonts/albert-sans/500Medium';
+import { AlbertSans_600SemiBold } from '@expo-google-fonts/albert-sans/600SemiBold';
+import { AlbertSans_700Bold } from '@expo-google-fonts/albert-sans/700Bold';
+import { AlbertSans_800ExtraBold } from '@expo-google-fonts/albert-sans/800ExtraBold';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { router, Stack, useSegments } from 'expo-router';
@@ -26,7 +26,7 @@ import { ThemeProvider, useColors, useTheme } from '@/theme';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold });
+  const [fontsLoaded, fontError] = useFonts({ AlbertSans_400Regular, AlbertSans_500Medium, AlbertSans_600SemiBold, AlbertSans_700Bold, AlbertSans_800ExtraBold });
 
   const appearanceReady = useAppearance((s) => s.ready);
 

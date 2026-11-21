@@ -147,21 +147,23 @@ export const darkColors: ColorTokens = {
   backdrop: '#0B0C10',
 };
 
+/** Albert Sans: a geometric, Scandinavian-drawn sans — round and friendly, still crisp at small sizes. */
 export const fonts = {
-  regular: 'Inter_400Regular',
-  medium: 'Inter_500Medium',
-  semibold: 'Inter_600SemiBold',
-  bold: 'Inter_700Bold',
-  extrabold: 'Inter_800ExtraBold',
+  regular: 'AlbertSans_400Regular',
+  medium: 'AlbertSans_500Medium',
+  semibold: 'AlbertSans_600SemiBold',
+  bold: 'AlbertSans_700Bold',
+  extrabold: 'AlbertSans_800ExtraBold',
 } as const;
 
 /** Type scale. Sizes are base sizes; Dynamic Type scales them (capped in <Text>). */
 export const typography = {
-  display: { fontFamily: fonts.extrabold, fontSize: 34, lineHeight: 40, letterSpacing: -1 },
-  title1: { fontFamily: fonts.bold, fontSize: 28, lineHeight: 34, letterSpacing: -0.7 },
-  title2: { fontFamily: fonts.bold, fontSize: 22, lineHeight: 28, letterSpacing: -0.4 },
-  title3: { fontFamily: fonts.semibold, fontSize: 18, lineHeight: 24, letterSpacing: -0.2 },
-  headline: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 22, letterSpacing: -0.1 },
+  // Albert Sans is already snug; only the big sizes are tightened a little.
+  display: { fontFamily: fonts.extrabold, fontSize: 34, lineHeight: 40, letterSpacing: -0.5 },
+  title1: { fontFamily: fonts.bold, fontSize: 28, lineHeight: 34, letterSpacing: -0.3 },
+  title2: { fontFamily: fonts.bold, fontSize: 22, lineHeight: 28, letterSpacing: -0.1 },
+  title3: { fontFamily: fonts.semibold, fontSize: 18, lineHeight: 24 },
+  headline: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 22 },
   body: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 23 },
   bodyMedium: { fontFamily: fonts.medium, fontSize: 16, lineHeight: 23 },
   callout: { fontFamily: fonts.medium, fontSize: 15, lineHeight: 21 },
