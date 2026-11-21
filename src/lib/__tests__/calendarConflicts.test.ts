@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { busyOnDay, conflictsFor, conflictSummary, conflictTime, toBusyItems, type RawCalendarEvent } from '../calendarConflicts.ts';
+import { busyOnDay, conflictsFor, conflictSummary, conflictTime, entryRef, planFromCalendar, toBusyItems, withoutSource, type RawCalendarEvent } from '../calendarConflicts.ts';
 
 const DAY = '2030-05-10';
 const raw = (from: string, to: string, over: Partial<RawCalendarEvent> = {}): RawCalendarEvent => ({ title: 'Tannlege', startDate: new Date(`${DAY}T${from}:00`), endDate: new Date(`${DAY}T${to}:00`), ...over });
@@ -86,5 +86,22 @@ describe('the line', () => {
     assert.equal(conflictSummary(one, { date: DAY, startTime: '18:00' }), 'Du har noe i kalenderen kl. 18:00–20:00');
     assert.equal(conflictSummary(two, { date: DAY, startTime: '18:00' }), 'Du har 2 ting i kalenderen');
     assert.equal(conflictSummary(two, { date: DAY, timeHint: 'any' }), 'Du har 2 ting i kalenderen denne dagen');
+  });
+});
+
+describe('«Opprett i planleggeren» from the calendar', () => {
+  it('keeps the title, the time it starts and the place', () => {
+    const [item] = busy(raw('19:00', '22:00', { title: 'Kundemiddag', location: ' Bryggerestauranten ' }));
+    assert.deepEqual(planFromCalendar(item, DAY), { title: 'Kundemiddag', startTime: '19:00', placeName: 'Bryggerestauranten' });
+  });
+  it('the entry it was made from is no collision, other things still are', () => {
+    const items = busy(raw('19:00', '22:00', { title: 'Kundemiddag' }), raw('19:00', '20:00', { title: 'Foreldremøte' }));
+    const left = withoutSource(items, entryRef(items.find((i) => i.title === 'Kundemiddag')!));
+    assert.deepEqual(titles(conflictsFor(left, { date: DAY, startTime: '19:00' })), ['Foreldremøte']);
+    assert.equal(withoutSource(items, null).length, 2);
+  });
+  it('no time when it started the day before, no title when the calendar had none', () => {
+    const [item] = busy({ title: '', startDate: new Date('2030-05-09T22:00:00'), endDate: new Date(`${DAY}T02:00:00`) });
+    assert.deepEqual(planFromCalendar(item, DAY), { title: '', startTime: null, placeName: '' });
   });
 });

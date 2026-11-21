@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import type { CategoryId, DateMode, Group, PlannerEvent, TimeHint } from '@/data/types';
 import { activityType, type ActivityTypeId } from '@/lib/activities';
 import { defaultCover, defaultCoverFor, suggestCategory } from '@/lib/categories';
+import type { CalendarEntryRef } from '@/lib/calendarConflicts';
 import { weekday } from '@/lib/dates';
 import type { Price } from '@/lib/price';
 import { DEFAULT_REPEAT, type RepeatConfig } from '@/lib/recurrence';
@@ -71,6 +72,8 @@ export type CreateDraft = {
   activityDetails: Record<string, string>;
   /** The first «hvem tar med hva» list. */
   bringItems: string[];
+  /** Made from something in the phone's calendar («Opprett»): never warn about that entry itself. */
+  fromCalendar: CalendarEntryRef | null;
 };
 
 type Actions = {
@@ -123,6 +126,7 @@ const initial = (): CreateDraft => ({
   inviteOverrides: {},
   activityDetails: {},
   bringItems: [],
+  fromCalendar: null,
 });
 
 export const useCreateDraft = create<CreateDraft & Actions>((set, get) => ({

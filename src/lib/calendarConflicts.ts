@@ -8,6 +8,8 @@ export interface BusyItem {
   end: Date;
   /** The arrangement behind it, if it's one of ours. */
   eventId: string | null;
+  /** Where, as written in the calendar. */
+  location: string | null;
 }
 
 /** The parts of a calendar event we look at. */
@@ -21,6 +23,7 @@ export interface RawCalendarEvent {
   notes?: string | null;
   url?: string | null;
   calendarId?: string | null;
+  location?: string | null;
 }
 
 /** The moment being decided on. No time: the whole day counts. */
@@ -47,6 +50,7 @@ export function toBusyItems(events: RawCalendarEvent[], calendarTitles: Record<s
       start: new Date(e.startDate),
       end: new Date(e.endDate),
       eventId: ref(e.notes) ?? ref(e.url),
+      location: e.location?.trim() || null,
     }))
     .sort((a, b) => a.start.getTime() - b.start.getTime());
 }
@@ -102,4 +106,27 @@ export function conflictTime(item: BusyItem, date: string) {
 export function conflictSummary(conflicts: BusyItem[], when: ConflictWhen) {
   if (conflicts.length === 1) return `Du har noe i kalenderen ${conflictTime(conflicts[0], when.date)}`;
   return `Du har ${conflicts.length} ting i kalenderen${when.startTime ? '' : ' denne dagen'}`;
+}
+
+/** Which entry in the phone's calendar a plan was made from. */
+export type CalendarEntryRef = { title: string; start: number };
+
+export const entryRef = (item: BusyItem): CalendarEntryRef => ({ title: item.title, start: item.start.getTime() });
+
+/** Everything except the entry the plan was made from — that one isn't a collision, it's the plan. */
+export function withoutSource(busy: BusyItem[], source: CalendarEntryRef | null): BusyItem[] {
+  return source ? busy.filter((i) => i.title !== source.title || i.start.getTime() !== source.start) : busy;
+}
+
+/**
+ * «Opprett i planleggeren» from something in the phone's calendar, seen on a day: its title, the
+ * time if it starts that day, and the place. A nameless entry («Opptatt») starts with no title.
+ */
+export function planFromCalendar(item: BusyItem, date: string): { title: string; startTime: string | null; placeName: string } {
+  const startsThatDay = item.start >= dayStart(date) && item.start < dayEnd(date);
+  return {
+    title: item.title === 'Opptatt' ? '' : item.title,
+    startTime: startsThatDay ? clock(item.start) : null,
+    placeName: item.location ?? '',
+  };
 }

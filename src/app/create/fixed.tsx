@@ -11,7 +11,7 @@ import { TimePicker } from '@/components/create/TimePicker';
 import { ConflictNote } from '@/components/event/CalendarConflict';
 import { BottomBar, Button, Card, Icon, PageTitle, PressableScale, Screen, ScreenScroll, Text } from '@/components/ui';
 import { useBusyItems } from '@/lib/calendarBusy';
-import { conflictsFor } from '@/lib/calendarConflicts';
+import { conflictsFor, withoutSource } from '@/lib/calendarConflicts';
 import { addMonths, formatLong, monthDates, monthKey, today } from '@/lib/dates';
 import { kitActivity, roleActivity } from '@/lib/activities';
 import { useCreateDraft } from '@/state/createDraft';
@@ -28,7 +28,7 @@ export default function CreateFixed() {
   const days = monthDates(draft.datePreset && draft.fixedDate ? monthKey(draft.fixedDate) : month);
   const planned = usePlannedDays();
   const allBusy = useBusyItems(days[0], days[days.length - 1]);
-  const busy = useMemo(() => withoutOurs(allBusy, planned), [allBusy, planned]);
+  const busy = useMemo(() => withoutSource(withoutOurs(allBusy, planned), draft.fromCalendar), [allBusy, planned, draft.fromCalendar]);
   const hasPlan = (d: string) => d > t && planned.has(d);
   const anyPlan = days.some(hasPlan);
   const moment = (date: string) => ({ date, startTime: draft.timeHint === 'exact' ? draft.startTime : null });

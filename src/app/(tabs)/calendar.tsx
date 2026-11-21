@@ -10,7 +10,7 @@ import { Button, Card, Chip, Divider, EmptyState, ErrorState, EventListSkeleton,
 import { useEvents } from '@/data/hooks';
 import type { PlannerEvent } from '@/data/types';
 import { useBusyItems } from '@/lib/calendarBusy';
-import { busyOnDay, conflictTime } from '@/lib/calendarConflicts';
+import { busyOnDay, conflictTime, entryRef, planFromCalendar, type BusyItem } from '@/lib/calendarConflicts';
 import { addMonths, formatLong, monthDates, monthKey, today } from '@/lib/dates';
 import { useCalendarSyncState } from '@/state/calendarSync';
 import { useCreateDraft } from '@/state/createDraft';
@@ -27,6 +27,7 @@ export default function CalendarTab() {
   const events = useEvents();
   const resetDraft = useCreateDraft((s) => s.reset);
   const setDraft = useCreateDraft((s) => s.set);
+  const setTitle = useCreateDraft((s) => s.setTitle);
   const t = today();
   const [month, setMonth] = useState(monthKey(t));
   const [day, setDay] = useState<string | null>(null);
@@ -60,6 +61,15 @@ export default function CalendarTab() {
   const planOn = (date: string) => {
     resetDraft();
     setDraft({ dateMode: 'fixed', fixedDate: date, datePreset: true });
+    router.push('/create');
+  };
+
+  // «Opprett i planleggeren»: something from the phone's calendar becomes a plan — same title, day, time and place.
+  const planFrom = (item: BusyItem, date: string) => {
+    const { title, startTime, placeName } = planFromCalendar(item, date);
+    resetDraft();
+    setTitle(title);
+    setDraft({ dateMode: 'fixed', fixedDate: date, datePreset: true, placeName, fromCalendar: entryRef(item), ...(startTime ? { startTime, timeHint: 'exact' as const } : null) });
     router.push('/create');
   };
 
@@ -125,7 +135,24 @@ export default function CalendarTab() {
                   {busyDay.map((b, i) => (
                     <View key={`${b.title}${b.start.getTime()}${b.calendar}`}>
                       {i ? <Divider /> : null}
-                      <ListRow title={b.title} subtitle={[conflictTime(b, day!), b.calendar].filter(Boolean).join(' · ')} />
+                      <ListRow
+                        title={b.title}
+                        subtitle={[conflictTime(b, day!), b.location, b.calendar].filter(Boolean).join(' · ')}
+                        trailing={
+                          day! >= t ? (
+                            <Button
+                              title="Opprett"
+                              icon="plus"
+                              size="sm"
+                              variant="secondary"
+                              fullWidth={false}
+                              onPress={() => planFrom(b, day!)}
+                              accessibilityLabel={`Opprett «${b.title}» i planleggeren`}
+                              accessibilityHint="Lager et arrangement med samme navn, dag, tid og sted, så du kan invitere folk"
+                            />
+                          ) : undefined
+                        }
+                      />
                     </View>
                   ))}
                 </Card>

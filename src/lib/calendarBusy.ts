@@ -9,11 +9,11 @@ import { addDays, dateRange, parseISODate } from './dates';
 
 const NOTHING: BusyItem[] = [];
 
-const DEMO_DAYS = [
+const DEMO_DAYS: { every: number; title: string; calendarId: string; from: string; to: string; where?: string }[] = [
   { every: 3, title: 'Jobbmøte', calendarId: 'demo-jobb', from: '10:00', to: '11:00' },
   { every: 7, title: 'Tannlege', calendarId: 'demo-privat', from: '18:00', to: '19:00' },
-  { every: 5, title: 'Foreldremøte', calendarId: 'demo-familie', from: '18:30', to: '20:00' },
-  { every: 11, title: 'Kundemiddag', calendarId: 'demo-jobb', from: '19:00', to: '22:00' },
+  { every: 5, title: 'Foreldremøte', calendarId: 'demo-familie', from: '18:30', to: '20:00', where: 'Skolen' },
+  { every: 11, title: 'Kundemiddag', calendarId: 'demo-jobb', from: '19:00', to: '22:00', where: 'Bryggerestauranten' },
 ];
 
 /** Made-up calendar for the demo, so the warnings can be seen on web. */
@@ -24,6 +24,7 @@ function demoEvents(from: string, to: string): RawCalendarEvent[] {
       calendarId: d.calendarId,
       startDate: `${date}T${d.from}:00`,
       endDate: `${date}T${d.to}:00`,
+      location: d.where ?? null,
     })),
   );
 }
