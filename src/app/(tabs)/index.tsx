@@ -9,18 +9,23 @@ import { splitEvents } from '@/components/event/EventSections';
 import { GroupBubble } from '@/components/group/GroupBubble';
 import { InvitationCard } from '@/components/home/InvitationCard';
 import { DateRow } from '@/components/home/DateRow';
+import { GatherHero } from '@/components/home/GatherHero';
 import { NextEventHero } from '@/components/home/NextEventHero';
+import { TemptingRow } from '@/components/home/TemptingRow';
 import { Button, Card, Divider, ErrorState, EventListSkeleton, Icon, IconButton, PressableScale, Screen, SectionHeader, Skeleton, Text } from '@/components/ui';
 import { useEvents, useGroups, useNotifications } from '@/data/hooks';
 import type { Group } from '@/data/types';
 import { daysBetween, today } from '@/lib/dates';
 import { usePushPermission } from '@/lib/push';
+import { earlierPlans, GATHER_PHOTO, temptingNow, type TemptingCard } from '@/lib/tempting';
 import { useCreateDraft } from '@/state/createDraft';
 import { useMe } from '@/state/session';
 import { gutter, radius, spacing, useColors } from '@/theme';
 
 /** Home is for what needs you and what's next; the full overview lives in Kalender. */
 const LATER_LIMIT = 4;
+/** «Hva frister?» while the calendar is quiet: nothing ahead, or one thing. */
+const TEMPTING_UP_TO = 1;
 
 export default function Home() {
   const colors = useColors();
@@ -40,12 +45,32 @@ export default function Home() {
   const planned = useMemo(() => upcoming.filter((e) => !invitations.includes(e)), [upcoming, invitations]);
   const [next, ...later] = planned;
   const nudge = useMemo(() => findNudge(groups.data ?? []), [groups.data]);
+  // Pictures to get you going while there's little ahead (dated, invitations, still finding a date).
+  const tempting = useMemo(() => {
+    const ahead = [...invitations, ...planned, ...deciding];
+    if (ahead.length > TEMPTING_UP_TO) return [];
+    return temptingNow({ earlier: earlierPlans(events.data ?? [], me?.id, today()), planned: ahead, avoidPhoto: planned[0]?.coverImageUrl ?? GATHER_PHOTO });
+  }, [events.data, me?.id, invitations, planned, deciding]);
+  const noGroups = !groups.isLoading && !groups.data?.length;
   const unread = (notifications.data ?? []).filter((n) => !n.readAt).length;
   // More than one invitation: swipe between them, with the next one peeking in.
   const cardWidth = Math.min(width, 560) - gutter * 2 - (invitations.length > 1 ? 28 : 0);
 
   const startCreate = () => {
     resetDraft();
+    router.push('/create');
+  };
+
+  // A card under «Hva frister?»: its name and picture on step 1 (and its own steps, like Aufguss).
+  // Something you did before comes back with the same picture, place and people.
+  const tryThis = (card: TemptingCard) => {
+    const draft = useCreateDraft.getState();
+    if (card.again) draft.duplicateEvent(card.again, me?.id);
+    else {
+      draft.reset();
+      draft.setTitle(card.title);
+    }
+    if (card.kit) draft.chooseActivity(card.kit);
     router.push('/create');
   };
 
@@ -120,20 +145,7 @@ export default function Home() {
             <ClearanceCards />
 
             <Animated.View entering={FadeInDown.delay(120).duration(400)} style={{ marginTop: spacing.lg }}>
-              {next ? (
-                <NextEventHero event={next} onPress={() => router.push(`/event/${next.id}`)} />
-              ) : (
-                <Card style={{ backgroundColor: colors.feature, borderWidth: 0, borderRadius: radius.xl, padding: spacing.xl }}>
-                  <Icon name="sun" size={24} tint={colors.textOnFeature} />
-                  <Text variant="title2" style={{ color: colors.textOnFeature, marginTop: spacing.md }}>
-                    {deciding.length ? 'Ingen dato satt ennå' : 'Ingenting planlagt ennå'}
-                  </Text>
-                  <Text variant="subhead" style={{ color: colors.textOnFeature, opacity: 0.75, marginTop: 4 }}>
-                    {deciding.length ? 'Når en dato er låst, dukker neste avtale opp her.' : 'Det er her det starter. Planlegg noe, så finner vi en dato som passer gjengen.'}
-                  </Text>
-                  <Button title="Planlegg noe" icon="plus" size="md" onPress={startCreate} style={{ marginTop: spacing.lg }} />
-                </Card>
-              )}
+              {next ? <NextEventHero event={next} onPress={() => router.push(`/event/${next.id}`)} /> : <GatherHero onStart={startCreate} />}
             </Animated.View>
 
             {nudge ? (
@@ -197,10 +209,47 @@ export default function Home() {
                 ) : null}
               </View>
             ) : null}
+
+            {tempting.length ? (
+              <Animated.View entering={FadeInDown.delay(200).duration(400)}>
+                <TemptingRow
+                  cards={tempting}
+                  onPick={tryThis}
+                  onMore={() => {
+                    resetDraft();
+                    router.push('/create/inspiration?fra=hjem');
+                  }}
+                  style={{ marginTop: spacing.xxl }}
+                />
+              </Animated.View>
+            ) : null}
           </>
         )}
 
         {/* At the bottom of the screen when there's room to spare; after the events when there are many. */}
+        {noGroups ? (
+          <View style={{ marginTop: 'auto', paddingTop: spacing.xl }}>
+            <PressableScale
+              onPress={() => router.push('/group/new')}
+              scaleTo={0.98}
+              accessibilityRole="button"
+              accessibilityLabel="Opprett en gjeng. For dere som møtes igjen og igjen."
+            >
+              <Card style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="users" size={20} color="primary" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text variant="headline">Opprett en gjeng</Text>
+                  <Text variant="footnote" color="textSecondary">
+                    For dere som møtes igjen og igjen.
+                  </Text>
+                </View>
+                <Icon name="chevron-right" size={18} color="textTertiary" />
+              </Card>
+            </PressableScale>
+          </View>
+        ) : (
         <View style={{ marginTop: 'auto', paddingTop: spacing.xxl }}>
           <SectionHeader title="Dine gjenger" action={groups.data?.length ? 'Se alle' : undefined} onAction={() => router.push('/(tabs)/groups')} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.xs, paddingRight: gutter }} style={{ marginHorizontal: -spacing.sm }}>
@@ -210,6 +259,7 @@ export default function Home() {
             <GroupBubble name="Ny gjeng" add size={76} onPress={() => router.push('/group/new')} />
           </ScrollView>
         </View>
+        )}
       </ScrollView>
     </Screen>
   );

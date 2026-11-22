@@ -519,6 +519,17 @@ export const PHOTO_SETS: PhotoSet[] = [
     ],
   },
   {
+    // The Løpetur activity type uses this set whatever its title says.
+    id: 'run',
+    keywords: ['løpetur', 'løping', 'løpegruppe', 'løpetrening', 'jogg', 'intervall'],
+    photos: [
+      '1540539234-c14a20fb7c7b', // a group running on the beach
+      '1645238426817-8c3e7d1396cf', // running together on a forest road
+      '1762169786069-be5b81cd42b9', // three jogging in a park
+      '1727849027217-fa9acf71553d', // three running on a road
+    ],
+  },
+  {
     id: 'theatre',
     keywords: ['teater', 'revy'],
     photos: [

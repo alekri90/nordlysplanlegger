@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -18,6 +18,7 @@ import { spacing } from '@/theme';
  */
 export default function Inspiration() {
   const draft = useCreateDraft();
+  const { fra } = useLocalSearchParams<{ fra?: string }>();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState<InspirationGroup | null>(null);
 
@@ -37,7 +38,9 @@ export default function Inspiration() {
     // The activity's own picture, even if another one was chosen before.
     draft.set({ coverTouched: false });
     draft.setTitle(a.title);
-    router.back();
+    // From «Se flere» on the home screen there's no step 1 underneath yet.
+    if (fra === 'hjem') router.replace('/create');
+    else router.back();
   };
 
   return (

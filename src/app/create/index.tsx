@@ -10,10 +10,10 @@ import { CoverPicker } from '@/components/create/CoverPicker';
 import { StepHeader } from '@/components/create/StepHeader';
 import { BottomBar, Button, Divider, Icon, Input, PageTitle, PressableScale, Screen, ScreenScroll, Sheet, Text } from '@/components/ui';
 import { useEvents } from '@/data/hooks';
-import type { PlannerEvent } from '@/data/types';
 import { coverOptionsFor, defaultCoverFor, thumb } from '@/lib/categories';
 import { formatLong, today } from '@/lib/dates';
 import { eventDateLine } from '@/lib/eventText';
+import { earlierPlans } from '@/lib/tempting';
 import { useCreateDraft } from '@/state/createDraft';
 import { useMe } from '@/state/session';
 import { radius, spacing, useColors } from '@/theme';
@@ -30,7 +30,7 @@ export default function CreateWhat() {
 
   // «Gjenta et tidligere arrangement»: same picture, place and people as last time.
   const events = useEvents();
-  const earlier = useMemo(() => earlierPlans(events.data ?? [], me?.id), [events.data, me?.id]);
+  const earlier = useMemo(() => earlierPlans(events.data ?? [], me?.id, today()), [events.data, me?.id]);
   const [againOpen, setAgainOpen] = useState(false);
   const [photosOpen, setPhotosOpen] = useState(false);
 
@@ -164,21 +164,4 @@ function LinkRow({ icon, label, onPress }: { icon: React.ReactNode; label: strin
       <Icon name="chevron-right" size={18} color="textTertiary" />
     </PressableScale>
   );
-}
-
-/** Plans you've been part of that are over, newest first, one per title. */
-function earlierPlans(events: PlannerEvent[], meId?: string, limit = 8): PlannerEvent[] {
-  const t = today();
-  const seen = new Set<string>();
-  return events
-    .filter((e) => e.status === 'completed' || (e.status !== 'cancelled' && !!e.selectedDate && e.selectedDate < t))
-    .filter((e) => e.members.find((m) => m.userId === meId)?.status !== 'declined')
-    .sort((a, b) => (b.selectedDate ?? b.createdAt).localeCompare(a.selectedDate ?? a.createdAt))
-    .filter((e) => {
-      const key = e.title.trim().toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .slice(0, limit);
 }
