@@ -1,4 +1,4 @@
-# Nordlys Planlegger
+# Samle gjengen
 
 > Få gjengen samlet.
 

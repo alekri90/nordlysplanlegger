@@ -1,6 +1,6 @@
 {
-  "name": "Nordlys Planlegger",
-  "short_name": "Planlegger",
+  "name": "Samle gjengen",
+  "short_name": "Samle",
   "description": "Få gjengen samlet. Finn en dato som passer alle.",
   "lang": "nb",
   "start_url": "/",

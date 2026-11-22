@@ -79,7 +79,7 @@ export function buildIcs(e: CalendarEventInput, start: Date, end: Date, allDay: 
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Nordlys Planlegger//NO',
+    'PRODID:-//Samle gjengen//NO',
     'BEGIN:VEVENT',
     `UID:${e.date}-${encodeURIComponent(e.title)}@nordlys-planlegger`,
     `DTSTAMP:${icsDate(new Date(), false)}`,

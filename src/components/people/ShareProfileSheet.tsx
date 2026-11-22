@@ -47,7 +47,7 @@ export function ShareProfileSheet({ visible, onClose }: { visible: boolean; onCl
           variant="ink"
           icon="share"
           style={{ flex: 1 }}
-          onPress={() => Share.share(Platform.OS === 'ios' ? { url, message: `Legg meg til på Nordlys Planlegger: ${url}` } : { message: `Legg meg til på Nordlys Planlegger: ${url}` })}
+          onPress={() => Share.share(Platform.OS === 'ios' ? { url, message: `Legg meg til på Samle gjengen: ${url}` } : { message: `Legg meg til på Samle gjengen: ${url}` })}
         />
       </View>
     </Sheet>

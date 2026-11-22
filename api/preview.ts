@@ -5,7 +5,7 @@
  * invites to what, with the picture. People always get the app itself.
  */
 
-const SITE = 'Nordlys Planlegger';
+const SITE = 'Samle gjengen';
 const FALLBACK_IMAGE = 'https://nordlysplanlegger.vercel.app/icon-512.png';
 
 type Card = { title: string; description: string; image: string };

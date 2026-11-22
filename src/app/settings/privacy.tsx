@@ -31,7 +31,7 @@ export default function Privacy() {
   const exportData = async () => {
     try {
       const json = await repo.exportMyData();
-      await Share.share({ message: json, title: 'Mine data fra Nordlys Planlegger' });
+      await Share.share({ message: json, title: 'Mine data fra Samle gjengen' });
     } catch {
       toast({ message: 'Kunne ikke eksportere akkurat nå', tone: 'error' });
     }

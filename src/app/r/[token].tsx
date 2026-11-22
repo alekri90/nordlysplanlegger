@@ -182,7 +182,7 @@ function Answering({ v }: { v: RoleRequestView }) {
         />
         {!me ? (
           <Text variant="footnote" color="textSecondary" align="center" style={{ marginTop: spacing.sm }}>
-            Har du Nordlys-appen? Åpner du lenken der, ser du også det du har planlagt.
+            Har du appen Samle gjengen? Åpner du lenken der, ser du også det du har planlagt.
           </Text>
         ) : null}
 

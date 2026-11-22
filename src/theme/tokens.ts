@@ -1,7 +1,7 @@
 import { Platform, type TextStyle, type ViewStyle } from 'react-native';
 
 /**
- * Design tokens for Nordlys Planlegger.
+ * Design tokens for Samle gjengen.
  * Warm, light and calm by default; dark is soft charcoal (never pure black) with the same coral–pink signature.
  * Coral is the social "do something" colour; ink (near-black) moves you forward in a flow.
  */

@@ -95,7 +95,7 @@ export default function Profile() {
         </Card>
 
         <Text variant="caption" color="textTertiary" align="center" style={{ marginTop: spacing.xl }}>
-          Nordlys Planlegger {Constants.expoConfig?.version ?? ''}
+          Samle gjengen {Constants.expoConfig?.version ?? ''}
           {isDemoMode ? ' · Demomodus' : ''}
         </Text>
       </ScrollView>

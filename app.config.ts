@@ -7,7 +7,9 @@ const webHost = new URL(WEB_URL).host;
 const EAS_PROJECT_ID = process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? '623cc93d-c24b-46f6-aac0-0fa470305919';
 
 const config: ExpoConfig = {
-  name: 'Nordlys Planlegger',
+  // «Samle gjengen» in the App Store and on Android; «Samle» under the icon on the iPhone. The bundle
+  // id, slug, scheme and web address keep the old name: changing them would make it a different app.
+  name: 'Samle gjengen',
   slug: 'nordlys-planlegger',
   scheme: 'nordlysplanlegger',
   version: '1.4.0',
@@ -25,8 +27,8 @@ const config: ExpoConfig = {
     // «Spontant» invitations are time-sensitive: they come through Focus (not critical alerts).
     entitlements: { 'com.apple.developer.usernotifications.time-sensitive': true },
     infoPlist: {
-      // Under the icon on the home screen; the App Store name stays "Nordlys Planlegger".
-      CFBundleDisplayName: 'Planlegger',
+      // Under the icon on the home screen (the whole name would be cut).
+      CFBundleDisplayName: 'Samle',
       // «Legg i kalender» on a single event still only asks to add.
       NSCalendarsWriteOnlyAccessUsageDescription: 'Lar deg legge arrangementer rett i kalenderen din.',
       // Lets us check if share targets are installed before deep linking into them.

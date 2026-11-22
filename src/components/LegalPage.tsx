@@ -27,7 +27,7 @@ export function LegalPage({ title, sections, contactFirst }: { title: string; se
           {title}
         </Text>
         <Text variant="footnote" color="textTertiary" style={{ marginTop: spacing.xs }}>
-          Nordlys Planlegger · Sist oppdatert {LEGAL.updated}
+          Samle gjengen · Sist oppdatert {LEGAL.updated}
         </Text>
         <View style={{ gap: spacing.xl, marginTop: spacing.xl }}>
           {contactFirst ? contact : null}

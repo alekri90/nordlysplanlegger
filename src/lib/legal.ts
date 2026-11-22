@@ -7,7 +7,7 @@ export const LEGAL = {
   /** Shown as the contact address on both pages. Empty → the line is hidden. */
   contactEmail: 'alekri90@gmail.com',
   owner: 'Alexander Kristensen',
-  updated: '1. november 2026',
+  updated: '22. november 2026',
 };
 
 export type LegalSection = { title: string; paragraphs: string[] };
@@ -16,12 +16,12 @@ export const PRIVACY: LegalSection[] = [
   {
     title: 'Kort fortalt',
     paragraphs: [
-      'Nordlys Planlegger hjelper vennegjenger å finne en dato som passer. Vi lagrer bare det som trengs for å gjøre det, vi viser ingen reklame, vi sporer deg ikke og vi selger aldri opplysninger om deg.',
+      'Samle gjengen hjelper vennegjenger å finne en dato som passer. Vi lagrer bare det som trengs for å gjøre det, vi viser ingen reklame, vi sporer deg ikke og vi selger aldri opplysninger om deg.',
     ],
   },
   {
     title: 'Hvem er ansvarlig',
-    paragraphs: [`${LEGAL.owner} er behandlingsansvarlig for opplysningene i Nordlys Planlegger.`],
+    paragraphs: [`${LEGAL.owner} er behandlingsansvarlig for opplysningene i Samle gjengen.`],
   },
   {
     title: 'Hva vi lagrer',
@@ -71,7 +71,7 @@ export const TERMS: LegalSection[] = [
   {
     title: 'Tjenesten',
     paragraphs: [
-      'Nordlys Planlegger er en gratis tjeneste for å planlegge sosiale arrangementer med venner. Tjenesten leveres som den er, og vi kan endre eller avslutte funksjoner.',
+      'Samle gjengen er en gratis tjeneste for å planlegge sosiale arrangementer med venner. Tjenesten leveres som den er, og vi kan endre eller avslutte funksjoner.',
     ],
   },
   {
@@ -111,7 +111,7 @@ export const CHILD_SAFETY: LegalSection[] = [
   {
     title: 'Null toleranse for seksuell utnyttelse av barn',
     paragraphs: [
-      'Nordlys Planlegger har null toleranse for seksuelt misbruk og seksuell utnyttelse av barn (CSAE), inkludert overgrepsmateriale (CSAM), grooming, seksualisering av mindreårige og all annen kontakt eller innhold som utsetter barn for fare.',
+      'Samle gjengen har null toleranse for seksuelt misbruk og seksuell utnyttelse av barn (CSAE), inkludert overgrepsmateriale (CSAM), grooming, seksualisering av mindreårige og all annen kontakt eller innhold som utsetter barn for fare.',
       'Slikt innhold og slik oppførsel er forbudt i vilkårene våre. Profiler som bryter dette stenges permanent.',
     ],
   },
@@ -140,7 +140,7 @@ export const CHILD_SAFETY: LegalSection[] = [
   {
     title: 'In English',
     paragraphs: [
-      'Nordlys Planlegger has zero tolerance for child sexual abuse and exploitation (CSAE), including child sexual abuse material (CSAM) and grooming. Users must be at least 13. Anyone can report a person, an event or a group in the app (reason: "Bekymring for barns sikkerhet" – child safety concern) or by e-mail. Child safety reports are handled first, always within 24 hours: the content is removed, the account is banned and the case is reported to the Norwegian police (Kripos) and, where applicable, NCMEC. Contact: the e-mail address at the top of this page.',
+      'Samle gjengen has zero tolerance for child sexual abuse and exploitation (CSAE), including child sexual abuse material (CSAM) and grooming. Users must be at least 13. Anyone can report a person, an event or a group in the app (reason: "Bekymring for barns sikkerhet" – child safety concern) or by e-mail. Child safety reports are handled first, always within 24 hours: the content is removed, the account is banned and the case is reported to the Norwegian police (Kripos) and, where applicable, NCMEC. Contact: the e-mail address at the top of this page.',
     ],
   },
 ];

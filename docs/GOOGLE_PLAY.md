@@ -18,13 +18,13 @@ Nettbrett-skjermbilder er valgfrie. Hopp over dem.
 Play Console → appen → **Vekst → Butikkoppføring → Hovedoppføring**. Standardspråk: **norsk (bokmål) – no-NO**.
 
 **Appnavn** (maks 30 tegn)
-> Nordlys Planlegger
+> Samle gjengen
 
 **Kort beskrivelse** (maks 80 tegn)
 > Finn en dato som passer alle – uten endeløse meldingstråder.
 
 **Full beskrivelse** (maks 4000 tegn)
-> Det er alltid noen som ikke kan. Nordlys Planlegger finner dagen der flest kan – på sekunder.
+> Det er alltid noen som ikke kan. Samle gjengen finner dagen der flest kan – på sekunder.
 >
 > SLIK FUNGERER DET
 > • Lag et arrangement på under et halvt minutt og velg noen datoer
@@ -108,7 +108,7 @@ For hver datatype: **Samlet inn** ja, **Delt** nei, **Behandles midlertidig** ne
 2. **Testere:** lag en e-postliste med minst 12 Google-kontoer (helst 14–15).
 3. Last opp `.aab`-filen fra EAS (første gang manuelt; last den ned fra byggesiden på expo.dev).
 4. **Versjonsnotat:**
-   > Første testversjon av Nordlys Planlegger. Lag et arrangement, del lenken med gjengen og se hvilken dag som passer best. Gi oss gjerne tilbakemelding!
+   > Første testversjon av Samle gjengen. Lag et arrangement, del lenken med gjengen og se hvilken dag som passer best. Gi oss gjerne tilbakemelding!
 5. Send til gjennomgang. Når den er godkjent: kopier **lenken for å bli med i testen** og send den til testerne.
 6. Testerne trykker lenken → «Bli tester» → installerer fra Play Store. De må være med i **14 dager sammenhengende**.
 7. Etter 14 dager: **Søk om produksjonstilgang** på oversiktssiden og svar på spørsmålene om testingen.

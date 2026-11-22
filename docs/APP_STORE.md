@@ -17,7 +17,7 @@ Alt som skal limes inn i App Store Connect, og stegene i riktig rekkefølge.
 npx eas-cli@latest build --platform ios --profile production --auto-submit --non-interactive
 ```
 
-Sertifikater og App Store Connect-nøkkel ligger hos EAS, så det går uten spørsmål. Bygget dukker opp i TestFlight 10–30 minutter etter at det er ferdig. Navnet under ikonet er «Planlegger»; i App Store heter appen «Nordlys Planlegger».
+Sertifikater og App Store Connect-nøkkel ligger hos EAS, så det går uten spørsmål. Bygget dukker opp i TestFlight 10–30 minutter etter at det er ferdig. Navnet under ikonet er «Samle»; i App Store heter appen «Samle gjengen» (App Store Connect → App-informasjon → Navn). Bundle-ID-en er fortsatt `no.nordlys.planlegger`.
 
 ## 2. App Store-oppføring
 
@@ -30,7 +30,7 @@ App Store Connect → appen → **App Store** → versjon 1.0.
 > Finn en dato som passer alle – uten endeløse meldingstråder. Gjestene trykker på dagene de ikke kan, og du ser med en gang hvilken dag som fungerer.
 
 **Beskrivelse**
-> Det er alltid noen som ikke kan. Nordlys Planlegger finner dagen der flest kan – på sekunder.
+> Det er alltid noen som ikke kan. Samle gjengen finner dagen der flest kan – på sekunder.
 >
 > SLIK FUNGERER DET
 > • Lag et arrangement på under et halvt minutt og velg noen datoer

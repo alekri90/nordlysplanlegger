@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Linking, RefreshControl, ScrollView, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { AppLogo } from '@/components/brand/AppLogo';
+import { AppLogo, BRAND } from '@/components/brand/AppLogo';
 import { ClearanceCards } from '@/components/event/ClearanceCards';
 import { splitEvents } from '@/components/event/EventSections';
 import { GroupBubble } from '@/components/group/GroupBubble';
@@ -21,7 +21,7 @@ import { usePushPermission } from '@/lib/push';
 import { featuredCards, GANG_PHOTO, type TemptingCard } from '@/lib/tempting';
 import { useCreateDraft } from '@/state/createDraft';
 import { useMe } from '@/state/session';
-import { gutter, radius, spacing, useColors } from '@/theme';
+import { fonts, gutter, radius, spacing, useColors } from '@/theme';
 
 /** Home is for what needs you and what's next; the full overview lives in Kalender. */
 const LATER_LIMIT = 4;
@@ -81,8 +81,12 @@ export default function Home() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />}
       >
         <Animated.View entering={FadeInDown.duration(380)} style={{ marginTop: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <View style={{ flex: 1, alignItems: 'flex-start' }}>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <AppLogo size={40} />
+            {/* The logo already says the name to VoiceOver. */}
+            <Text variant="title2" style={{ fontFamily: fonts.extrabold, letterSpacing: -0.4 }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              {BRAND.short}
+            </Text>
           </View>
           <IconButton icon="bell" accessibilityLabel={unread ? `Varsler, ${unread} nye` : 'Varsler'} badge={unread || false} onPress={() => router.push('/notifications')} />
           {quiet ? null : <Button title="Planlegg" icon="plus" size="sm" fullWidth={false} onPress={startCreate} accessibilityHint="Lag et arrangement og finn en dato" />}

@@ -1,11 +1,11 @@
 import { Image } from 'expo-image';
 
 export const BRAND = {
-  name: 'Nordlys Planlegger',
-  /** The product name people use. "Nordlys" is the parent brand (Nordlys Kapital). */
-  product: 'Planlegger',
-  parent: 'Nordlys',
-  tagline: 'Få gjengen samlet.',
+  /** The name in the App Store, on the web and in the texts. */
+  name: 'Samle gjengen',
+  /** Under the icon and next to the logo, where the whole name doesn't fit. */
+  short: 'Samle',
+  tagline: 'Finn en dag som passer alle.',
 } as const;
 
 /** Official logo: calendar + wave (transparent PNG, cropped square). Also the source for the generated app icons. */

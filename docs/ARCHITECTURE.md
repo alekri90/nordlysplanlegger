@@ -1,4 +1,4 @@
-# Nordlys Planlegger — arkitektur
+# Samle gjengen — arkitektur
 
 > Få gjengen samlet.
 
