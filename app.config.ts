@@ -82,7 +82,15 @@ const config: ExpoConfig = {
   plugins: [
     'expo-router',
     // Google Play: shrink and obfuscate the Android code (R8) and drop unused resources.
-    ['expo-build-properties', { android: { enableMinifyInReleaseBuilds: true, enableShrinkResourcesInReleaseBuilds: true } }],
+    // iOS: the UIKit scene life cycle, which the iOS 27 SDK (Xcode 27, see eas.json) requires on SDK 57.
+    // SDK 58 has it built in, so drop `ios` here when upgrading.
+    [
+      'expo-build-properties',
+      {
+        android: { enableMinifyInReleaseBuilds: true, enableShrinkResourcesInReleaseBuilds: true },
+        ios: { enableSceneSupport: true },
+      },
+    ],
     'expo-status-bar',
     'expo-image',
     'expo-font',
