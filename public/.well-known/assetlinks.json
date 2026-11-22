@@ -4,7 +4,9 @@
     "target": {
       "namespace": "android_app",
       "package_name": "no.nordlys.planlegger",
-      "sha256_cert_fingerprints": ["REPLACE_WITH_SHA256_FROM_eas_credentials"]
+      "sha256_cert_fingerprints": [
+        "4A:E9:54:37:30:AB:F3:68:DE:CE:6D:EE:26:04:A3:58:7A:19:61:26:23:CF:15:BF:83:51:A9:93:1F:6C:DA:BE"
+      ]
     }
   }
 ]
