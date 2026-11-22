@@ -36,6 +36,7 @@ export const CATEGORIES: Record<CategoryId, Category> = {
     icon: 'sunset',
     keywords: ['badstu', 'sauna', 'aufguss', 'løyly', 'bad', 'spa', 'kaldbad', 'isbad', 'sjøbad'],
     photos: [
+      'own:badstu-sjobad', // wooden sauna on the rocks, smoke from the chimney, ladder into the sea at dusk
       '1579457870378-16e766c0c266', // friends at the shore, sunset
       '1739869481946-c054e37a55b1', // sauna interior with people
       '1758599669742-e90b390b50bc', // silhouettes watching sunset over water
@@ -171,6 +172,7 @@ export const CATEGORIES: Record<CategoryId, Category> = {
     icon: 'map',
     keywords: ['tur', 'fjell', 'topptur', 'hike', 'hiking', 'telt', 'padling', 'kajakk', 'sopp', 'høsttur', 'bærtur'],
     photos: [
+      'own:sondagstur', // walking the coastal path at sunset, islands in the sea
       '1629185752152-fe65698ddee4', // hiking towards peaks
       '1520880867055-1e30d1cb001c', // friends on mountain edge
       '1490578474895-699cd4e2cf59', // sitting on trail
@@ -648,6 +650,7 @@ export const PHOTO_SETS: PhotoSet[] = [
     id: 'pizza',
     keywords: ['pizza'],
     photos: [
+      'own:pizzakveld', // margherita by candlelight
       '1600628421055-4d30de868b8f', // homemade pizza
       '1682655012950-e5fe252779ae', // table full of pizzas
       '1622455331494-966b1b4eda44', // eating pizza together

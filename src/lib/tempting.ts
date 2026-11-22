@@ -1,16 +1,15 @@
 import type { CategoryId, PlannerEvent } from '../data/types';
 // Relative with .ts so the unit tests (plain Node) can load this file too.
 import { ACTIVITY_TYPES, type ActivityTypeId } from './activities.ts';
-import { coverOptionsFor, photoSetFor, suggestCategory, unsplash } from './categories.ts';
+import { coverOptionsFor, defaultCoverFor, photoSetFor, photoUrl, suggestCategory } from './categories.ts';
 import { seasonalIdeas } from './ideas.ts';
 import { activity } from './inspiration.ts';
 
 /**
- * «Hva frister?» on the home screen: a row of pictures that make you want to plan something.
- * Shown while there's little in the calendar (nothing, or one thing); gone once two plans are ahead.
- *
- * The order: what you've done before («Gjør igjen»), then what fits the season, then the rest as
- * written below. The pictures come from the same photo sets as everything else (src/lib/categories.ts).
+ * «Hva frister?» on the home screen: three pictures that make you want to plan something (FEATURED),
+ * shown while there's little in the calendar (nothing, or one thing); gone once two plans are ahead.
+ * «Se flere» opens the longer list (temptingNow): what you've done before («Gjør igjen»), then what
+ * fits the season, then the rest as written below. The pictures come from the same photo sets as everything else (src/lib/categories.ts).
  * Like the other suggestions: no drinking. Pokerkveld is here because it has its own steps.
  */
 export type Temptation = {
@@ -67,8 +66,13 @@ export const TEMPTING: Temptation[] = [
   { title: 'St. Hans', seasonal: true },
 ];
 
-/** The picture on the empty home screen: friends around a long table. */
-export const GATHER_PHOTO = unsplash('1528605248644-14dd04022da1', 1200);
+/** The three on the home screen: the big one first, then the two beside it. Pictures in categories.ts. */
+export const FEATURED: Temptation[] = [{ title: 'Badstu og sjøbad' }, { title: 'Pizzakveld' }, { title: 'Søndagstur' }];
+
+/** The picture on the empty home screen: three friends laughing at a candlelit table. */
+export const GATHER_PHOTO = photoUrl('own:samle');
+/** «Opprett en gjeng»: friends laughing together. */
+export const GANG_PHOTO = photoUrl('own:gjeng', 480);
 
 export type TemptingCard = {
   key: string;
@@ -78,7 +82,16 @@ export type TemptingCard = {
   kit: ActivityTypeId | null;
   /** Something you did before: plan it again with the same picture, place and people. */
   again: PlannerEvent | null;
+  /** Why it's here: done before, fits the season, or just a good idea. */
+  reason: 'again' | 'season' | 'idea';
 };
+
+export function featuredCards(): TemptingCard[] {
+  return FEATURED.map((t) => {
+    const category = t.kit ? ACTIVITY_TYPES[t.kit].category : suggestCategory(t.title);
+    return { key: t.title, title: t.title, cover: defaultCoverFor(t.title, category, t.kit), category, kit: t.kit ?? null, again: null, reason: 'idea' };
+  });
+}
 
 /** Earlier plans you were part of, one per name, newest first. «Gjenta» on step 1 uses the same list. */
 export function earlierPlans(events: PlannerEvent[], meId: string | undefined, today: string, limit = 8): PlannerEvent[] {
@@ -133,7 +146,7 @@ export function temptingNow({
   };
 
   for (const e of earlier.slice(0, 2)) {
-    add({ key: `again-${e.id}`, title: e.title, cover: e.coverImageUrl, category: e.category, kit: (e.activityType as ActivityTypeId | null | undefined) ?? null, again: e });
+    add({ key: `again-${e.id}`, title: e.title, cover: e.coverImageUrl, category: e.category, kit: (e.activityType as ActivityTypeId | null | undefined) ?? null, again: e, reason: 'again' });
   }
 
   const season = new Set(seasonalIdeas(today).map((t) => t.toLowerCase()));
@@ -145,7 +158,7 @@ export function temptingNow({
     // A picture not shown yet: the first that fits, or the next one in its set.
     const cover = coverOptionsFor(t.title, category, t.kit).find((url) => !photos.has(photoKey(url)));
     if (!cover) continue;
-    add({ key: t.title, title: t.title, cover, category, kit: t.kit ?? null, again: null });
+    add({ key: t.title, title: t.title, cover, category, kit: t.kit ?? null, again: null, reason: t.seasonal ? 'season' : 'idea' });
   }
   return cards;
 }

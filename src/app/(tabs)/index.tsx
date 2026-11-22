@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Linking, RefreshControl, ScrollView, useWindowDimensions, View } from 'react-native';
@@ -11,13 +12,13 @@ import { InvitationCard } from '@/components/home/InvitationCard';
 import { DateRow } from '@/components/home/DateRow';
 import { GatherHero } from '@/components/home/GatherHero';
 import { NextEventHero } from '@/components/home/NextEventHero';
-import { TemptingRow } from '@/components/home/TemptingRow';
+import { TemptingGrid } from '@/components/home/TemptingGrid';
 import { Button, Card, Divider, ErrorState, EventListSkeleton, Icon, IconButton, PressableScale, Screen, SectionHeader, Skeleton, Text } from '@/components/ui';
 import { useEvents, useGroups, useNotifications } from '@/data/hooks';
 import type { Group } from '@/data/types';
 import { daysBetween, today } from '@/lib/dates';
 import { usePushPermission } from '@/lib/push';
-import { earlierPlans, GATHER_PHOTO, temptingNow, type TemptingCard } from '@/lib/tempting';
+import { featuredCards, GANG_PHOTO, type TemptingCard } from '@/lib/tempting';
 import { useCreateDraft } from '@/state/createDraft';
 import { useMe } from '@/state/session';
 import { gutter, radius, spacing, useColors } from '@/theme';
@@ -45,12 +46,10 @@ export default function Home() {
   const planned = useMemo(() => upcoming.filter((e) => !invitations.includes(e)), [upcoming, invitations]);
   const [next, ...later] = planned;
   const nudge = useMemo(() => findNudge(groups.data ?? []), [groups.data]);
-  // Pictures to get you going while there's little ahead (dated, invitations, still finding a date).
-  const tempting = useMemo(() => {
-    const ahead = [...invitations, ...planned, ...deciding];
-    if (ahead.length > TEMPTING_UP_TO) return [];
-    return temptingNow({ earlier: earlierPlans(events.data ?? [], me?.id, today()), planned: ahead, avoidPhoto: planned[0]?.coverImageUrl ?? GATHER_PHOTO });
-  }, [events.data, me?.id, invitations, planned, deciding]);
+  // Three pictures to get you going while there's little ahead (dated, invitations, still finding a date).
+  const tempting = useMemo(() => ([...invitations, ...planned, ...deciding].length > TEMPTING_UP_TO ? [] : featuredCards()), [invitations, planned, deciding]);
+  // Nothing dated: «Hvem vil du samle?» is the call to action, so «Planlegg» steps aside.
+  const quiet = !events.isLoading && !events.isError && !next;
   const noGroups = !groups.isLoading && !groups.data?.length;
   const unread = (notifications.data ?? []).filter((n) => !n.readAt).length;
   // More than one invitation: swipe between them, with the next one peeking in.
@@ -64,13 +63,7 @@ export default function Home() {
   // A card under «Hva frister?»: its name and picture on step 1 (and its own steps, like Aufguss).
   // Something you did before comes back with the same picture, place and people.
   const tryThis = (card: TemptingCard) => {
-    const draft = useCreateDraft.getState();
-    if (card.again) draft.duplicateEvent(card.again, me?.id);
-    else {
-      draft.reset();
-      draft.setTitle(card.title);
-    }
-    if (card.kit) draft.chooseActivity(card.kit);
+    useCreateDraft.getState().startFromIdea(card, me?.id);
     router.push('/create');
   };
 
@@ -92,7 +85,7 @@ export default function Home() {
             <AppLogo size={40} />
           </View>
           <IconButton icon="bell" accessibilityLabel={unread ? `Varsler, ${unread} nye` : 'Varsler'} badge={unread || false} onPress={() => router.push('/notifications')} />
-          <Button title="Planlegg" icon="plus" size="sm" fullWidth={false} onPress={startCreate} accessibilityHint="Lag et arrangement og finn en dato" />
+          {quiet ? null : <Button title="Planlegg" icon="plus" size="sm" fullWidth={false} onPress={startCreate} accessibilityHint="Lag et arrangement og finn en dato" />}
         </Animated.View>
 
         {permission === 'denied' && !pushHidden ? (
@@ -212,7 +205,7 @@ export default function Home() {
 
             {tempting.length ? (
               <Animated.View entering={FadeInDown.delay(200).duration(400)}>
-                <TemptingRow
+                <TemptingGrid
                   cards={tempting}
                   onPick={tryThis}
                   onMore={() => {
@@ -233,16 +226,14 @@ export default function Home() {
               onPress={() => router.push('/group/new')}
               scaleTo={0.98}
               accessibilityRole="button"
-              accessibilityLabel="Opprett en gjeng. For dere som møtes igjen og igjen."
+              accessibilityLabel="Opprett en gjeng. For dere som møtes ofte."
             >
               <Card style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon name="users" size={20} color="primary" />
-                </View>
+                <Image source={{ uri: GANG_PHOTO }} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surfaceMuted }} contentFit="cover" accessibilityIgnoresInvertColors />
                 <View style={{ flex: 1 }}>
                   <Text variant="headline">Opprett en gjeng</Text>
                   <Text variant="footnote" color="textSecondary">
-                    For dere som møtes igjen og igjen.
+                    For dere som møtes ofte.
                   </Text>
                 </View>
                 <Icon name="chevron-right" size={18} color="textTertiary" />

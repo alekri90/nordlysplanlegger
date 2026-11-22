@@ -4,8 +4,8 @@ import { describe, it } from 'node:test';
 
 import type { PlannerEvent } from '../../data/types.ts';
 import { ACTIVITY_TYPES } from '../activities.ts';
-import { defaultCover, photoSetFor, suggestCategory } from '../categories.ts';
-import { earlierPlans, GATHER_PHOTO, TEMPTING, temptingNow } from '../tempting.ts';
+import { defaultCover, defaultCoverFor, photoSetFor, suggestCategory } from '../categories.ts';
+import { earlierPlans, featuredCards, GANG_PHOTO, GATHER_PHOTO, TEMPTING, temptingNow } from '../tempting.ts';
 
 const ME = 'me';
 const day = (iso: string) => new Date(`${iso}T12:00:00`);
@@ -25,6 +25,22 @@ function past(id: string, title: string, date: string, over: Partial<PlannerEven
 }
 
 describe('Hva frister?', () => {
+  it('the three on the home screen, with our own pictures', () => {
+    const cards = featuredCards();
+    assert.deepEqual(
+      cards.map((c) => [c.title, c.cover.split('/').pop()]),
+      [
+        ['Badstu og sjøbad', 'badstu-sjobad.jpg'],
+        ['Pizzakveld', 'pizzakveld.jpg'],
+        ['Søndagstur', 'sondagstur.jpg'],
+      ],
+    );
+    // A plan started from a card gets the same picture by default.
+    for (const c of cards) assert.equal(defaultCoverFor(c.title, c.category), c.cover);
+    assert.ok(GATHER_PHOTO.endsWith('/samle.jpg') && GANG_PHOTO.endsWith('/gjeng-480.jpg'));
+  });
+
+
   it('every suggestion has a picture of its own, not the catch-all', () => {
     for (const t of TEMPTING) {
       const category = t.kit ? ACTIVITY_TYPES[t.kit].category : suggestCategory(t.title);

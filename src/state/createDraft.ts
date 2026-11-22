@@ -87,6 +87,8 @@ type Actions = {
   prefillFromEvent: (event: PlannerEvent, me?: string) => void;
   /** A new plan based on an earlier one (same picture, place, time and people), from step 1. */
   duplicateEvent: (event: PlannerEvent, me?: string) => void;
+  /** A new plan from an idea card («Hva frister?»): its name and picture, its own steps, or a repeat. */
+  startFromIdea: (idea: { title: string; kit: ActivityTypeId | null; again: PlannerEvent | null }, me?: string) => void;
 };
 
 const initial = (): CreateDraft => ({
@@ -216,5 +218,14 @@ export const useCreateDraft = create<CreateDraft & Actions>((set, get) => ({
       guestIds: event.members.filter((m) => !m.userId).map((m) => m.person.id),
       source: 'new',
     });
+  },
+  startFromIdea: (idea, me) => {
+    const { duplicateEvent, reset, setTitle, chooseActivity } = get();
+    if (idea.again) duplicateEvent(idea.again, me);
+    else {
+      reset();
+      setTitle(idea.title);
+    }
+    if (idea.kit) chooseActivity(idea.kit);
   },
 }));
