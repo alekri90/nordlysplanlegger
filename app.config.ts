@@ -1,8 +1,11 @@
 import type { ExpoConfig } from 'expo/config';
 
 // Public, non-secret configuration only. Secrets never go in the client.
-const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://nordlysplanlegger.vercel.app';
-const webHost = new URL(WEB_URL).host;
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://samlegjengen.no';
+// Links open the app on the new address and on the old one, which links already shared in group chats
+// and older app versions use. Both are the same Vercel project, so both serve the association files.
+const LINK_HOSTS = [...new Set([new URL(WEB_URL).host, 'samlegjengen.no', 'nordlysplanlegger.vercel.app'])];
+const LINK_PATHS = ['/i/', '/g/', '/a/', '/r/', '/@'];
 // Public identifier from `eas init`, not a secret. The env var can override it.
 const EAS_PROJECT_ID = process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? '623cc93d-c24b-46f6-aac0-0fa470305919';
 
@@ -23,7 +26,7 @@ const config: ExpoConfig = {
   ios: {
     bundleIdentifier: 'no.nordlys.planlegger',
     supportsTablet: false,
-    associatedDomains: [`applinks:${webHost}`],
+    associatedDomains: LINK_HOSTS.map((host) => `applinks:${host}`),
     // «Spontant» invitations are time-sensitive: they come through Focus (not critical alerts).
     entitlements: { 'com.apple.developer.usernotifications.time-sensitive': true },
     infoPlist: {
@@ -61,13 +64,7 @@ const config: ExpoConfig = {
       {
         action: 'VIEW',
         autoVerify: true,
-        data: [
-          { scheme: 'https', host: webHost, pathPrefix: '/i/' },
-          { scheme: 'https', host: webHost, pathPrefix: '/g/' },
-          { scheme: 'https', host: webHost, pathPrefix: '/a/' },
-          { scheme: 'https', host: webHost, pathPrefix: '/r/' },
-          { scheme: 'https', host: webHost, pathPrefix: '/@' },
-        ],
+        data: LINK_HOSTS.flatMap((host) => LINK_PATHS.map((pathPrefix) => ({ scheme: 'https', host, pathPrefix }))),
         category: ['BROWSABLE', 'DEFAULT'],
       },
     ],

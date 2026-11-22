@@ -298,6 +298,8 @@ const themeOf = (category: CategoryId) => CATEGORIES[category] ?? CATEGORIES.han
 /**
  * Our own photos, served with the web app from public/covers: «name.jpg» (1600 px) and
  * «name-480.jpg» for thumbnails. A full address, so it also works in the app and in link previews.
+ * It stays on the old address (samlegjengen.no serves the same files): events store these URLs, and
+ * `thumb()` recognises our photos by this prefix.
  */
 export const OWN_PHOTOS = 'https://nordlysplanlegger.vercel.app/covers/';
 

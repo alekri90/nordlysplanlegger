@@ -6,7 +6,7 @@ Alt som skal limes inn i App Store Connect, og stegene i riktig rekkefølge.
 
 - Apple Developer Program og Expo-konto (`nordlys-kapital`).
 - Prosjektet er koblet til EAS. ID-en `623cc93d-c24b-46f6-aac0-0fa470305919` står som standardverdi i `app.config.ts` (offentlig, ikke hemmelig).
-- Miljøvariabler i EAS (miljø *production*, *Plain text*): `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_WEB_URL` = `https://nordlysplanlegger.vercel.app`.
+- Miljøvariabler i EAS (miljø *production*, *Plain text*): `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_WEB_URL` = `https://samlegjengen.no`.
 - Appen finnes i App Store Connect (ASC App ID `6819851126`, pakke-ID `no.nordlys.planlegger`), og bygg sendes til TestFlight.
 - Universal links: Team ID `9795ZWN3D3` ligger i `public/.well-known/apple-app-site-association`.
 - Rapportering og blokkering (retningslinje 1.2), støtteside, kontoslett i appen, personvernmanifest.
@@ -57,8 +57,8 @@ App Store Connect → appen → **App Store** → versjon 1.0.
 **Kategori:** Sosiale nettverk (primær), Livsstil (sekundær)
 
 **Nettadresser**
-- Støtte: `https://nordlysplanlegger.vercel.app/support`
-- Personvernerklæring: `https://nordlysplanlegger.vercel.app/personvern`
+- Støtte: `https://samlegjengen.no/support`
+- Personvernerklæring: `https://samlegjengen.no/personvern`
 
 **Opphavsrett:** `2026 Alexander Kristensen`
 

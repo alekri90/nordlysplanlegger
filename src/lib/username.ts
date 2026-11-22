@@ -54,7 +54,7 @@ export function usernameFromName(name: string): string {
   return sanitizeUsernameInput(first).toLowerCase();
 }
 
-/** Profile link: https://nordlysplanlegger.vercel.app/@alexk */
+/** Profile link: https://samlegjengen.no/@alexk */
 export function profilePath(username: string) {
   return `/@${username}`;
 }

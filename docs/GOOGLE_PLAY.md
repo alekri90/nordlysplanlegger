@@ -52,12 +52,12 @@ Play Console → appen → **Vekst → Butikkoppføring → Hovedoppføring**. S
 
 **Kategori:** Sosiale (app). **Tagger:** Arrangementer, Planlegging (velg de nærmeste som finnes).
 
-**Kontaktinformasjon:** e-post `alekri90@gmail.com`, nettsted `https://nordlysplanlegger.vercel.app`.
+**Kontaktinformasjon:** e-post `alekri90@gmail.com`, nettsted `https://samlegjengen.no`.
 
 ## Appinnhold (Policy → Appinnhold)
 
 **Personvernregler**
-> https://nordlysplanlegger.vercel.app/personvern
+> https://samlegjengen.no/personvern
 
 **Annonser:** Nei, appen inneholder ikke annonser.
 
@@ -77,7 +77,7 @@ Svar **Nei** på deling av fysisk posisjon og kjøp i appen. Resultatet blir van
 **Sletting av data / konto**
 - Kan brukere lage konto? **Ja**
 - Nettadresse for kontosletting:
-  > https://nordlysplanlegger.vercel.app/support
+  > https://samlegjengen.no/support
 
   Siden forklarer sletting i appen, på nett og per e-post, og hva som slettes.
 

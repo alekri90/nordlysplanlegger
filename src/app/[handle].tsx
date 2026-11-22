@@ -24,7 +24,7 @@ import { useMe, useSession } from '@/state/session';
 import { gutter, radius, spacing, useColors } from '@/theme';
 
 /**
- * Profile link: nordlysplanlegger.vercel.app/@alexk — in the app and as a mobile web page.
+ * Profile link: samlegjengen.no/@alexk — in the app and as a mobile web page.
  * Shows only photo, name, @username, and what you have in common. Never e-mail or phone.
  *
  * Someone else: who they are, three quick actions (venn · inviter · gjeng), what you have coming
